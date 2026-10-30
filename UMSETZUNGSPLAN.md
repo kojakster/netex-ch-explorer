@@ -70,7 +70,8 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 | **Codes und Stammdaten** | Immer den gesendeten Code zeigen. Bedeutung nur aus der Datei selbst oder aus der Mappingtabelle (mit Blatt, Zeile, Guide-Stand), sonst „keine Erläuterung in den Stammdaten“. |
 | **Frames** | Frame-Typ und Frame-ID aus der tatsächlichen XML-Struktur; Frame ist eindeutig als (Datei, Frame-ID). |
 | **Robustheit** | Fehlerhafte Dateien werden so weit wie möglich geladen; Fehler erscheinen als Diagnose, nie als Absturz. |
-| **Diagnosen getrennt** | Arten: Datei/ZIP, XML-Syntax, XSD, Profilregel (Schematron), Referenz (`unresolved`, `ambiguous`), Projektion (z. B. „nicht berechenbar“, Widerspruch). Nie vermischen. |
+| **Diagnosen getrennt** | Arten: Datei/ZIP, XML-Syntax, XSD, Profilregel (Schematron), Referenz (`unresolved`, `ambiguous`, `external_or_unloaded`), Projektion (z. B. „nicht berechenbar“, Widerspruch). Nie vermischen. |
+| **Schweregrade** | Drei Stufen, jede mit Symbol **und** Text: **⚠ Fehler** (verletzt XSD oder Regel, Datei kaputt), **Warnung** (vermutlich problematisch, z. B. Widerspruch zwischen berechneter Zeit und `JourneyPart`), **ℹ Hinweis** (kein Fehler, nur zum Verständnis, z. B. `external_or_unloaded`, fehlendes `DepartureDayOffset` → Standardwert 0, Nacht der Zeitumstellung). |
 
 ## 4. Datenquellen
 
