@@ -99,7 +99,7 @@ netex-ch-explorer/
 |---|---|
 | Python | 3.12+ (lokal 3.13); Abhängigkeiten mit Lockfile. |
 | Einlesen | **pyexpat**: pro Element Byte-Offset, Zeile, Spalte; eigene Verschachtelungs- und Namespace-Behandlung; Kommentare werden für die Versionserkennung gelesen. Keine externen Entitäten, kein Netzwerkzugriff. |
-| Index | SQLite im Arbeitsspeicher je geöffnetem Datensatz. Pfadformen einmal in eigener Tabelle; Objekte speichern Datei, Offset, Zeile, Spalte, Frame. Vollständiger Pfad mit Positionsnummern wird beim Anzeigen berechnet. |
+| Index | SQLite im Arbeitsspeicher je geöffnetem Datensatz; Datei wird beim Öffnen direkt eingelesen (keine Datenbankdatei, kein Hintergrundprozess). Pfadformen einmal in eigener Tabelle; Objekte speichern Datei, Offset, Zeile, Spalte, Frame. Vollständiger Pfad mit Positionsnummern wird beim Anzeigen berechnet. |
 | Referenzen | Aus allen `…Ref`-Elementen (auch in `Extensions`). Auflösung über (ID, erwarteter Typ aus Ref-Name bzw. `nameOfRefClass`); `version` und `versionRef` beide lesen. Status: `resolved`, `unresolved`, `ambiguous`, `external_or_unloaded`. |
 | Prüfung | lxml nur für XSD und Schematron. |
 | Oberfläche | React + TypeScript + Vite; CodeMirror 6 (nur lesen, exakte Bereichsmarkierung, Frame-Bereiche farbig am Rand); keine Graph-Bibliothek. |
@@ -215,6 +215,6 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 ## 13. Offene Fragen an den Benutzer (beim Schreiben entstanden)
 
 1. ~~Referenzgraph~~ → geklärt: keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (siehe Abschnitt 7).
-2. **Vereinfachung Index und Import:** Die Guide-Beispiele sind 4–56 KB gross. Vorschlag: Index nur im Arbeitsspeicher und **kein Hintergrund-Importjob** in der ersten Ausbaustufe (Laden dauert Millisekunden). Beides kommt erst mit grossen Lieferungen. Einverstanden?
+2. ~~Index und Import~~ → geklärt: Index nur im Arbeitsspeicher, Datei wird beim Öffnen direkt eingelesen; keine Datenbankdatei, kein Hintergrundprozess. Grosse Lieferungen bleiben zurückgestellt.
 3. **Schematron:** Im Guide-Repo liegt nur `general_rules.sch` (4 Regeln). Die übrigen Regeln erzeugt das Build-Werkzeug des Guides aus den Templates. Erste Ausbaustufe nur mit `general_rules.sch`, und die erzeugten Regeln später (nach Prüfung des Build-Werkzeugs)?
 4. **Widerspruch in `decisions.md`:** „Plattformen“ verlangt Tests auf macOS und Windows, „Windows“ sagt „derzeit nicht testbar“. Vorschlag: „Plattformen“ an „Windows“ anpassen.
