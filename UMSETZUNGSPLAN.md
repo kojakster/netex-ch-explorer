@@ -145,17 +145,20 @@ Nicht eigens dargestellte Inhalte (Kurswagen, Formation, Flügelung, Durchbindun
 
 Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie eine NeTEx-Datei aufgebaut ist. Visualisiert werden alle Daten der Datei; Ausstattung von Haltestellen (Toiletten, Ticketautomaten usw.) erhält keine eigene Darstellung, bleibt im Objekt-Explorer und XML aber sichtbar.
 
-**Frame-Farben als roter Faden** (klare Farben, zentral in `frontend/src/theme/frames.ts`, Legende immer sichtbar, immer mit Frame-Name als Text):
+**Frame-Farben als roter Faden** (klare Farben; Standardwerte in der Einstellungsdatei `frame-colors.json`, änderbar ohne Codeänderung, ungültige/fehlende Einträge → Standardwert; Legende immer sichtbar, immer mit Frame-Name als Text). Kleinster Farbabstand ΔE76 = 33, Schriftkontrast ≥ 4,5:1:
 
-| Frame | Farbe |
-|---|---|
-| `TimetableFrame` | Blau |
-| `ServiceFrame` | Grün |
-| `SiteFrame` | Orange |
-| `ServiceCalendarFrame` | Gelb (schwarze Schrift) |
-| `ResourceFrame` | Rot |
-| `CompositeFrame` | Grau |
-| unbekannter Frame | Violett |
+| Bedeutung | Farbe | Wert | Schrift |
+|---|---|---|---|
+| `TimetableFrame` | Blau | `#0057B8` | weiss |
+| `ServiceFrame` | Grün | `#1B8A2F` | schwarz |
+| `SiteFrame` | Orange | `#F57C00` | schwarz |
+| `ServiceCalendarFrame` | Gelb | `#FFD600` | schwarz |
+| `ResourceFrame` | Rot | `#D32F2F` | weiss |
+| `CompositeFrame` | Violett | `#7B1FA2` | weiss |
+| unbekannter Frame | Braun | `#6D4C2F` | weiss |
+| für den Fahrplan nicht relevant | Grau | `#8A8A8A` | schwarz |
+
+**Grau** bedeutet „für den Fahrplan nicht relevant“ (z. B. Toiletten, Ticketautomaten, Ausstattung und Barrierefreiheit von Haltestellen), nicht einen Frame; der Frame-Name bleibt als Text sichtbar. `StopPlace` und `Quay` bleiben orange. Welche Elementtypen grau sind, steht in einer Konfigurationsliste; die Startliste wird dem Benutzer nach Prüfung der Guide-Beispiele vorgelegt. Eine Einstellungsseite in der Oberfläche ist später möglich.
 
 Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung mit `ResourceFrame`).
 
