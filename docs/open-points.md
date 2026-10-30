@@ -17,7 +17,7 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 6. ~~Ordnerstruktur~~ → geklärt, siehe decisions.md. Umzug von `CLAUDE.md`, `docs/` und Plan nach `netex-ch-explorer/` erledigt (30.10.2026).
 7. ~~Git-Repository~~ → erledigt 30.10.2026: `netex-ch-explorer/` ist ein lokales Git-Repo (Branch `main`, kein Remote). Guide und Lieferdaten liegen ausserhalb und sind zusätzlich per `.gitignore` ausgeschlossen.
 8. **Glossar Englisch/Deutsch** (Benutzer reicht nach): Quelle und Ablage klären; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
-9. **(In Klärung) Windows-Testweg:** Wie wird Windows getestet, solange kein Windows-Rechner verfügbar ist?
+9. ~~Windows-Testweg~~ → geklärt: Test von Hand, sobald der Benutzer an einem Windows-PC ist. Bis dahin plattformneutral bauen (siehe decisions.md „Plattformen“); README enthält eine kurze Windows-Testanleitung.
 
 ## Findings zum Implementierungsplan
 

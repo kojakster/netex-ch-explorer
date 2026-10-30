@@ -214,11 +214,11 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 ## 12. Dokumentation
 
-`README.md` (Installation von null, Start, Bedienung, Tests ausführen, bekannte Grenzen, Windows ungetestet), `fixtures/README.md` (Herkunft der synthetischen Daten, Weitergabe erlaubt), `docs/mapping.md` (jede fachliche Regel mit Guide-Beleg), `docs/api.md`, `docs/assumptions.md` (Annahmen, Widersprüche im Guide), `docs/test-report.md`. Entscheidungen weiterhin in `docs/decisions.md`.
+`README.md` (Installation von null, Start, Bedienung, Tests ausführen, bekannte Grenzen, **Windows-Testanleitung** für den ersten Test am Windows-PC), `fixtures/README.md` (Herkunft der synthetischen Daten, Weitergabe erlaubt), `docs/mapping.md` (jede fachliche Regel mit Guide-Beleg), `docs/api.md`, `docs/assumptions.md` (Annahmen, Widersprüche im Guide), `docs/test-report.md`. Entscheidungen weiterhin in `docs/decisions.md`.
 
 ## 13. Offene Fragen an den Benutzer (beim Schreiben entstanden)
 
 1. ~~Referenzgraph~~ → geklärt: keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (siehe Abschnitt 7).
 2. ~~Index und Import~~ → geklärt: Index nur im Arbeitsspeicher, Datei wird beim Öffnen direkt eingelesen; keine Datenbankdatei, kein Hintergrundprozess. Grosse Lieferungen bleiben zurückgestellt.
 3. ~~Schematron~~ → geklärt: Phase 4 mit XSD + `general_rules.sch` (4 allgemeine Regeln); **Entscheidungspunkt nach Phase 3** über die ~350 Schweizer Profilregeln aus den Vorlagen (siehe Abschnitt 8).
-4. ~~Widerspruch Plattformen/Windows~~ → geklärt: Windows bald nötig und wichtiger als Webversion; „Plattformen“ angepasst. Offen: Windows-Testweg (docs/open-points.md).
+4. ~~Widerspruch Plattformen/Windows~~ → geklärt: Windows bald nötig und wichtiger als Webversion; „Plattformen“ angepasst. Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
