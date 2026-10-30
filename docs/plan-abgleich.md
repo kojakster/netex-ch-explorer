@@ -13,7 +13,7 @@ Zeigt für jeden Abschnitt von [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](../NETEX_
 | **4 Verifikation vor Mappings** (Guide prüfen, Herkunft dokumentieren, keine ungeprüften Ketten) | 6 Fachliche Abbildung | Übernommen: jede Regel mit Beleg in `docs/mapping.md`. Fachliche Ketten sind jetzt am Guide verifiziert ([research/guide-2.0.md](research/guide-2.0.md)). |
 | **4 Versionsangaben nicht vermischen** | 8 Versionserkennung | Übernommen, konkretisiert (Wurzelattribut allein entscheidet nie). |
 | **5 Architektur: React/Vite** | 5 | Übernommen. |
-| **5 Cytoscape.js** | 13 offene Frage 1 | **Offen:** Liste statt Graph in der ersten Ausbaustufe vorgeschlagen. |
+| **5 Cytoscape.js** | 7 Oberfläche | **Entfällt** (Benutzer, 30.10.2026): keine Graph-Bibliothek; stattdessen Frame-Farben als roter Faden, Herkunftskette als farbige Kästchen, farbige Referenzliste, XML-Ansicht mit farbigen Frame-Bereichen. |
 | **5 Monaco** | 5 | **Ersetzt** durch CodeMirror 6 (Entscheid „XML-Anzeige“). |
 | **5 Python/FastAPI** | 5 | Übernommen; FastAPI nur dünne Schicht über einem server-unabhängigen Kern (Entscheid „Betriebsformen“). |
 | **5 lxml für Parsing** | 5 | **Geändert:** pyexpat zum Einlesen, lxml nur für Prüfung (Entscheid „XML-Parser“). |
@@ -27,7 +27,7 @@ Zeigt für jeden Abschnitt von [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](../NETEX_
 | **6 Beispielobjekte** (`JourneyPattern`, `TimetabledPassingTime`, `DayType`, `ServiceFacilitySet` …) | 6 Fachliche Abbildung | **Geändert gemäss Guide 2.0:** Zeiten über `TimeDemandType` (berechnet), `TimetabledPassingTime` ist im Guide veraltet; Betriebstage über `AvailabilityCondition`/`ValidDayBits`, `DayType` nur Feiertage. |
 | **6 Frame-Farbkonzept** | 7 Oberfläche | Übernommen; ergänzt um `CompositeFrame`, `ServiceCalendarFrame`. |
 | **6 XML-Positionen** (lxml nur Zeilen, ggf. ungenau markieren) | 5 Einlesen | **Verbessert:** exakte Positionen mit pyexpat. |
-| **7 UI-Entwurf** (drei Spalten, Synchronisation, Breadcrumb, Begrenzung Graph) | 7 Oberfläche | Übernommen; Graph-Begrenzung hängt an offener Frage 1. Neu: Sprachumschaltung, Beispielauswahl. |
+| **7 UI-Entwurf** (drei Spalten, Synchronisation, Breadcrumb, Begrenzung Graph) | 7 Oberfläche | Übernommen; Graph entfällt; ersetzt durch farbige Herkunftskette und Referenzliste. Neu: Sprachumschaltung, Beispielauswahl. |
 | **8 ProfileDetector** | 8 Versionserkennung | Übernommen. |
 | **8 ProfileAdapter** | 5 `profiles` | Übernommen: Adapter „generisch“ und „CH 2.0“. |
 | **8 Validierung** (Syntax, XSD nur passend, Profil nur belegt, Referenzstatus) | 3 Diagnosen, 8 Validierung | Übernommen; „geprüft gegen Entwurf <Commit>“ statt „gültig“. Status `external_or_unloaded` bleibt: Haltestellen fehlen in `NETWORK_OFFER`-Dateien laut Guide (ATLAS), Ziele in nicht geöffneten Dateien. |

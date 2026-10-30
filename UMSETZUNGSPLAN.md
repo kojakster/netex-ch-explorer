@@ -102,7 +102,7 @@ netex-ch-explorer/
 | Index | SQLite im Arbeitsspeicher je geöffnetem Datensatz. Pfadformen einmal in eigener Tabelle; Objekte speichern Datei, Offset, Zeile, Spalte, Frame. Vollständiger Pfad mit Positionsnummern wird beim Anzeigen berechnet. |
 | Referenzen | Aus allen `…Ref`-Elementen (auch in `Extensions`). Auflösung über (ID, erwarteter Typ aus Ref-Name bzw. `nameOfRefClass`); `version` und `versionRef` beide lesen. Status: `resolved`, `unresolved`, `ambiguous`, `external_or_unloaded`. |
 | Prüfung | lxml nur für XSD und Schematron. |
-| Oberfläche | React + TypeScript + Vite; CodeMirror 6 (nur lesen, exakte Bereichsmarkierung). |
+| Oberfläche | React + TypeScript + Vite; CodeMirror 6 (nur lesen, exakte Bereichsmarkierung, Frame-Bereiche farbig am Rand); keine Graph-Bibliothek. |
 | Texte | Keine Texte im Code. Sprachdateien `de-CH.json`, `en.json`; Kern liefert Schlüssel + Parameter; kleine eigene Übersetzungsfunktion. Deutsche Fachbegriffe vorläufig bis zum Glossar. |
 | Plattformen | macOS; Windows plattformneutral programmiert, aber als „nicht getestet“ gekennzeichnet. |
 
@@ -143,12 +143,30 @@ Nicht eigens dargestellte Inhalte (Kurswagen, Formation, Flügelung, Durchbindun
 
 ## 7. Oberfläche
 
+Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie eine NeTEx-Datei aufgebaut ist. Visualisiert werden alle Daten der Datei; Ausstattung von Haltestellen (Toiletten, Ticketautomaten usw.) erhält keine eigene Darstellung, bleibt im Objekt-Explorer und XML aber sichtbar.
+
+**Frame-Farben als roter Faden** (klare Farben, zentral in `frontend/src/theme/frames.ts`, Legende immer sichtbar, immer mit Frame-Name als Text):
+
+| Frame | Farbe |
+|---|---|
+| `TimetableFrame` | Blau |
+| `ServiceFrame` | Grün |
+| `SiteFrame` | Orange |
+| `ServiceCalendarFrame` | Gelb (schwarze Schrift) |
+| `ResourceFrame` | Rot |
+| `CompositeFrame` | Grau |
+| unbekannter Frame | Violett |
+
+Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung mit `ResourceFrame`).
+
 - Für Desktop ausgelegt; bei schmalerem Fenster bedienbar.
 - **Links:** aktiver Guide-Stand (mit „in Entwicklung“), Auswahl der Beispiele bzw. „Datei öffnen“, Versionserkennung, Liste der Fahrten der Datei, einfache Objektsuche, Diagnosen.
-- **Mitte:** umschaltbar „Fahrt“ / „Objekt“. Fahrt: Kopf mit Zugnummer, Linie, Verkehrsmittel, Betriebstagen; Tabelle Halt – Ein-/Aussteigen – Ankunft – Abfahrt – Angebote. Objekt: Eigenschaften und Referenzen ein-/ausgehend als Liste (siehe offene Frage 1).
-- **Rechts:** Herkunft der gewählten Angabe (Kette), Frame mit Farbe, Textlabel und ID, XML-Ausschnitt mit Markierung.
-- Klick auf eine Angabe synchronisiert Auswahl, Herkunft und XML-Markierung. Zurück-Navigation (Verlauf) bleibt erhalten.
-- Frame-Farben zentral in `frontend/src/theme/frames.ts` für `CompositeFrame`, `ResourceFrame`, `SiteFrame`, `ServiceFrame`, `ServiceCalendarFrame`, `TimetableFrame` und unbekannte Frames; Farbe nie als einzige Information.
+- **Mitte:** umschaltbar „Fahrt“ / „Objekt“.
+  - Fahrt: Kopf mit Zugnummer, Linie, Verkehrsmittel, Betriebstagen; Tabelle Halt – Ein-/Aussteigen – Ankunft – Abfahrt – Angebote. **Jede Angabe trägt die Farbmarkierung ihres Frames.**
+  - Objekt: Eigenschaften und Referenzen ein-/ausgehend als **farbige Liste** (Farbe des Ziel-Frames), jede anklickbar.
+- **Rechts:** **Herkunftskette** der gewählten Angabe als farbige Kästchen in einer Reihe (z. B. `ServiceJourney` → `ServiceJourneyPattern` → `ScheduledStopPoint` → `PassengerStopAssignment` → `StopPlace`), jedes Kästchen anklickbar; bei berechneten Werten die Rechenkette. Darunter XML-Ausschnitt mit exakter Markierung und **Frame-Bereichen farbig am Rand**.
+- Klick auf eine Angabe synchronisiert Auswahl, Herkunftskette und XML-Markierung. Zurück-Navigation (Verlauf) bleibt erhalten.
+- Keine Graph-Bibliothek; einfache Kästchen in HTML/CSS.
 - Sprachumschaltung Deutsch/Englisch.
 
 ## 8. Versionserkennung und Validierung (Grundstufe)
@@ -196,7 +214,7 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 ## 13. Offene Fragen an den Benutzer (beim Schreiben entstanden)
 
-1. **Referenzgraph:** Der ursprüngliche Plan sieht einen grafischen Referenzgraphen (Cytoscape.js) vor. Für das Verstehen reicht in der ersten Ausbaustufe vermutlich eine **Liste** der ein- und ausgehenden Referenzen mit Navigation; der Graph wäre eine zusätzliche Bibliothek und Ansicht. Graph jetzt, später oder gar nicht?
+1. ~~Referenzgraph~~ → geklärt: keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (siehe Abschnitt 7).
 2. **Vereinfachung Index und Import:** Die Guide-Beispiele sind 4–56 KB gross. Vorschlag: Index nur im Arbeitsspeicher und **kein Hintergrund-Importjob** in der ersten Ausbaustufe (Laden dauert Millisekunden). Beides kommt erst mit grossen Lieferungen. Einverstanden?
 3. **Schematron:** Im Guide-Repo liegt nur `general_rules.sch` (4 Regeln). Die übrigen Regeln erzeugt das Build-Werkzeug des Guides aus den Templates. Erste Ausbaustufe nur mit `general_rules.sch`, und die erzeugten Regeln später (nach Prüfung des Build-Werkzeugs)?
 4. **Widerspruch in `decisions.md`:** „Plattformen“ verlangt Tests auf macOS und Windows, „Windows“ sagt „derzeit nicht testbar“. Vorschlag: „Plattformen“ an „Windows“ anpassen.
