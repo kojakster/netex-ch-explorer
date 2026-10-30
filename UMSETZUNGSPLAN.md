@@ -31,11 +31,12 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 4. Nach dem Laden: Liste der Fahrten der Datei (Zugnummer, Linie, erster/letzter Halt) und eine **einfache Objektsuche** nach ID oder Name. Keine weitergehende Suche (Schwerpunkt ist die Fahrplandarstellung mit Herkunft).
 5. Fahrtansicht für eine `ServiceJourney` als Fahrplan: Halte mit Ein-/Aussteige-Eigenschaften, Ankunft/Abfahrt (auch berechnete Zeiten), Mitternacht, Betriebstage, Angebote.
 6. Herkunft jeder angezeigten Angabe bis zur exakten Stelle im XML.
-7. Objekt-Explorer mit Referenzen vor- und rückwärts und Frame-Zugehörigkeit.
-8. Stammdaten: Code und Bedeutung aus der Mappingtabelle.
-9. Eigene Dateien öffnen: XML, mehrere XML, ZIP.
-10. Validierung Grundstufe: XSD und Guide-Schematron mit Stelle und Link zum Guide-Kapitel.
-11. Oberfläche in Deutsch und Englisch, alle Texte in Sprachdateien.
+7. Visuelle Führung: klare Frame-Farben mit Legende, Herkunftskette als farbige Kästchen, XML-Ansicht mit farbigen Frame-Bereichen; Farben in `frame-colors.json` einstellbar.
+8. Objekt-Explorer mit Referenzen vor- und rückwärts und Frame-Zugehörigkeit.
+9. Stammdaten: Code und Bedeutung aus der Mappingtabelle.
+10. Eigene Dateien öffnen: XML, mehrere XML, ZIP.
+11. Validierung Grundstufe: XSD und die 4 allgemeinen Guide-Regeln (`general_rules.sch`), mit Stelle und Link zum Guide-Kapitel. Schweizer Profilregeln aus den Vorlagen: Entscheidungspunkt nach Phase 3.
+12. Oberfläche in Deutsch und Englisch, alle Texte in Sprachdateien.
 
 ### Später (nicht in diesem Plan, Schnittstellen nicht verbauen)
 
@@ -44,12 +45,17 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 - Auswahl mehrerer Guide-Stände in der Oberfläche (Lock-Datei ist dafür schon eine Liste).
 - Grosse Lieferungen (z. B. 1.10-Lieferung, 12 GB), Adapter für CH 1.10.
 - Weitere Oberflächensprachen.
+- Schweizer Profilregeln aus den Guide-Vorlagen (~350 Regeln), falls nach Phase 3 gewünscht.
+- Einstellungsseite für die Farben in der Oberfläche.
+- Auswertung der Zellfarben der Mappingtabelle (neu / nicht mehr verwendet) für die Validierung.
 
 ### Nichtziele
 
 - Kein Fahrplanauskunftssystem, keine Verbindungssuche, keine Gesamtnetz-Darstellung.
 - Keine Korrektur oder Veränderung von Dateien; das Tool liest nur.
 - Keine Profile anderer Länder.
+- Keine Suche nach Linie, Zugnummer oder Haltestelle.
+- Keine eigene Darstellung der Haltestellen-Ausstattung (Toiletten, Automaten usw.); sie bleibt im Objekt-Explorer sichtbar und wird grau dargestellt.
 - Keine Aussage „gültig“ nur weil eine Datei lesbar ist; Prüfungen gegen den Entwurf heissen „geprüft gegen Entwurf <Commit>“.
 
 ## 3. Verbindliche Regeln für Daten und Anzeige
