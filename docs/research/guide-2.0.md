@@ -54,3 +54,25 @@ Stand 30.10.2026. Per Skript verifiziert an einem flachen Klon des Branches `nex
   - Zugnummernwechsel (11)
   - Teillinien/Subunternehmer (22)
   - Perron/sloid-Problem (09)
+
+## Fahrten über Mitternacht
+
+Geprüft am Stand `b7ac158`.
+
+| # | Regel | Quelle |
+|---|---|---|
+| 1 | Zeiten sind Ortszeit `hh:mm:ss` (24 h) ohne Zeitzone/UTC-Offset, damit Fahrten nicht für Sommer- und Winterzeit doppelt geführt werden müssen. | `src/08_timetable.md`, `src/03_xml_modelling.md` („Time Formatting and Journey after Midnight“) |
+| 2 | Betriebstage einer Fahrt kommen aus `AvailabilityConditionRef` → `AvailabilityCondition`/`ValidDayBits`, nicht aus `DayType` (`DayType`/`DayTypeAssignment` nur für Feiertage). `OperatingDay`/`OperatingPeriod` werden im CH-Profil nicht verwendet. Ein einzelner Tag wird als `FromDate` `…T00:00:00` / `ToDate` `…T23:59:59` beschrieben. | `src/08_timetable.md` („Day Governance“), `src/07_service_calendars.md`, `src/03_xml_modelling.md`, `src/A4_annex_glossary.md` |
+| 3 | Fall 1: Abfahrt nach Mitternacht, Fahrt gehört aber zum Vortag → `DepartureDayOffset` = `1` (Beispiel im Text: S1 um 00:11). | `src/uc10_midnight_passing.md` |
+| 4 | `DepartureDayOffset` ist optional („0 for current operating day. Could also be negative.“). Negativ „sehr selten“, z. B. wenn ein Zug am Vortag bei einem anderen Betreiber startet und der Betriebstag erhalten bleiben soll. | `src/templates/ServiceJourney.xml`, `src/08_timetable.md` |
+| 5 | Fall 2: Mitternacht wird während der Fahrt überschritten → kein eigenes Element. `TimeDemandType`/`TimingLink` enthalten nur relative Dauern; der Tageswechsel folgt implizit aus dem Aufsummieren von `DepartureTime` und `RunTime`/`WaitTime`. | `src/uc10_midnight_passing.md`, `src/03_xml_modelling.md` |
+| 6 | `JourneyPart` trägt den Tag ausdrücklich: `StartTime`/`StartTimeDayOffset`, `EndTime`/`EndTimeDayOffset`. | `src/uc05_journey_parts.md`, Beispiele 08, 21 |
+
+Vorkommen in den Beispielen:
+
+- `DepartureDayOffset`: in 12 Beispielen gesetzt, fast immer `0`. Einziger Wert `1`: **Beispiel 15** (`DepartureTime` `04:34:00`, Zeile 475–476), die Fahrt gehört also zum vorherigen Betriebstag.
+- **Beispiel 21** (Kurswagen Zürich–Bremen, `ServiceJourney` `ch:1:ServiceJourney:KW37`):
+  - `JourneyPart` 2: 23:40 → 06:12 mit `EndTimeDayOffset` `1`.
+  - `JourneyPart` 3: 06:44 mit `StartTimeDayOffset` `1`.
+  - Die anschliessende `ServiceJourney` 2746 hat `DepartureTime` 06:44 mit `DepartureDayOffset` `0`. Das ist konsistent, wenn ihre Betriebstage um einen Tag gegenüber KW37 verschoben sind. Prüfbar ist das nur über die `ValidDayBits`; bei der Umsetzung kontrollieren.
+- Templates mit `DayOffset`-Elementen: `ServiceJourney`, `TemplateServiceJourney`, `JourneyPart`, `CheckConstraint`, `CompoundTrain`, `Destination`, `Train`, `TrainComponent`, `TrainElement`.
