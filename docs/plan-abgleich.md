@@ -5,7 +5,7 @@ Zeigt für jeden Abschnitt von [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](../NETEX_
 | Ursprünglicher Abschnitt | Im neuen Plan | Änderung / Begründung |
 |---|---|---|
 | **1 Arbeitsauftrag** (lauffähiger Prototyp, Tests, README; nichts erfinden; Phasen mit Tests; Unklarheiten dokumentieren) | 1 Ziel, 3 Regeln, 10 Phasen, 12 Doku | Übernommen. Neu: Unklarheiten werden dem Benutzer **vorgelegt**, nicht nur dokumentiert (CLAUDE.md, Grundsätze). „Nicht vom europäischen Profil schliessen“ entfällt: nur CH-Profile im Umfang (Entscheid „Umfang Profile“). |
-| **2 Zielbild/Nutzerablauf** (Upload, Suche, nur eine Fahrt, Klick → XML, Referenzen, Frames, Diagnosen) | 1 Ziel, 7 Oberfläche | Übernommen. Einstieg neu über **Beispielauswahl** aus dem Guide (Entscheid „Alle Guide-Beispiele ladbar“). Port 5173 bleibt Vite-Standard. |
+| **2 Zielbild/Nutzerablauf** (Upload, Suche, nur eine Fahrt, Klick → XML, Referenzen, Frames, Diagnosen) | 1 Ziel, 2 Umfang, 6, 7 Oberfläche | Übernommen. Einstieg neu über **Beispielauswahl** aus dem Guide (Entscheid „Alle Guide-Beispiele ladbar“). **Suche vereinfacht** (Benutzer, 30.10.2026): Datei wählen, Liste der Fahrten der Datei, einfache Objektsuche nach ID/Name; keine Suche nach Linie/Zugnummer/Haltestelle. Zugnummer und Halt-Eigenschaften (Ein-/Aussteigen, Bedarfshalt) in der Fahrtansicht. Port 5173 bleibt Vite-Standard. |
 | **3 Scope MVP** | 2 Umfang | Inhaltlich übernommen. **Geändert:** „Streaming ohne vollständiges Laden grosser Lieferungen“ zurückgestellt (Entscheid „Grosse Lieferungen zurückgestellt“); Architektur bleibt dafür offen. |
 | **3 Nach MVP** | 2 „Später“ | Übernommen und ergänzt um Webversion, Erklärungen/Korrekturvorschläge, Auswahl Guide-Stände. Karte, Kalenderaufbereitung, Export, Deep Links: weiterhin später, nicht eigens aufgeführt. |
 | **3 Nichtziele** | 2 Nichtziele | Übernommen. „Kein produktiver Import für INFO+“ ist durch „keine Veränderung von Dateien“ abgedeckt. |
@@ -30,7 +30,7 @@ Zeigt für jeden Abschnitt von [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](../NETEX_
 | **7 UI-Entwurf** (drei Spalten, Synchronisation, Breadcrumb, Begrenzung Graph) | 7 Oberfläche | Übernommen; Graph-Begrenzung hängt an offener Frage 1. Neu: Sprachumschaltung, Beispielauswahl. |
 | **8 ProfileDetector** | 8 Versionserkennung | Übernommen. |
 | **8 ProfileAdapter** | 5 `profiles` | Übernommen: Adapter „generisch“ und „CH 2.0“. |
-| **8 Validierung** (Syntax, XSD nur passend, Profil nur belegt, Referenzstatus) | 3 Diagnosen, 8 Validierung | Übernommen; „geprüft gegen Entwurf <Commit>“ statt „gültig“. Status `external_or_unloaded` entfällt vorerst (keine Teil-Lieferungen). |
+| **8 Validierung** (Syntax, XSD nur passend, Profil nur belegt, Referenzstatus) | 3 Diagnosen, 8 Validierung | Übernommen; „geprüft gegen Entwurf <Commit>“ statt „gültig“. Status `external_or_unloaded` bleibt: Haltestellen fehlen in `NETWORK_OFFER`-Dateien laut Guide (ATLAS), Ziele in nicht geöffneten Dateien. |
 | **9 Sicherheit** | 9 | Übernommen; ZIP-Grenzwerte vorerst klein (grosse Lieferungen zurückgestellt). |
 | **9 Performance** (iterparse, Importjob, grosse künstliche Dateien) | 2 „Später“, 13 offene Frage 2 | **Zurückgestellt** mit grossen Lieferungen. |
 | **10 Phasen 0–5** | 10 Phasen 0–5 | Struktur übernommen; Inhalte und Abnahmen an Guide 2.0 und die Entscheide angepasst; neue Phase 4 „Eigene Dateien und Validierung“. |
@@ -38,4 +38,12 @@ Zeigt für jeden Abschnitt von [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](../NETEX_
 | **12 Ordnerstruktur** `netex-explorer-ch/` | 5 Architektur | **Ersetzt** durch `netex-ch-explorer/` mit `app/`, Guide ausserhalb (Entscheid „Ordnerstruktur“). |
 | **12 Lockfiles, keine grossen Daten im Repo** | 5, CLAUDE.md | Übernommen. |
 | **13 Erfolgskriterien** | 10 Abnahmen | In die Abnahmen der Phasen überführt. |
-| **14 Handlungsanweisung** | 10 Phasen, CLAUDE.md | Übernommen; Arbeitsregeln (keine Lieferdaten ins LLM, einzelne Fragen, Aufwand offenlegen) stehen in CLAUDE.md. |
+| **14 Handlungsanweisung** | 10 Phasen, CLAUDE.md | Übernommen, inkl. „funktionierenden Teil mit genauer Lückenbeschreibung liefern statt vorgetäuschtem Erfolg“ (Abschnitt 10). Arbeitsregeln (keine Lieferdaten ins LLM, einzelne Fragen, Aufwand offenlegen) stehen in CLAUDE.md. |
+
+## Bewusst nicht übernommen
+
+- Realitätsprüfung mit der 2027-Lieferung (NeTEx 1.10, zurückgestellt).
+- Performanceprobe mit grossen Dateien (zurückgestellt).
+- Volltextsuche (FTS): bei kleinen Dateien nicht nötig.
+- Diagnose „Objekt steht in anderem Frame als vom Guide vorgesehen“: Ist-Frame wird angezeigt; Soll-Prüfung wäre Zusatzaufwand mit fraglichem Nutzen, evtl. später in der Validierung.
+- Suche nach Linie, Zugnummer oder Haltestelle (Benutzer: Fahrplandarstellung wichtiger als Suche).
