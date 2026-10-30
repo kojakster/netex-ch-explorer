@@ -6,7 +6,8 @@ Sprache der Anwendung und der Dokumentation: Deutsch (de-CH); NeTEx-Bezeichner b
 
 ## Wo was steht
 
-- [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](NETEX_EXPLORER_IMPLEMENTATION_PLAN.md): ursprünglicher Auftrag, **noch nicht überarbeitet**.
+- [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md): neuer Plan für die erste Ausbaustufe, **Entwurf, noch nicht freigegeben**. Abgleich mit dem Original: [docs/plan-abgleich.md](docs/plan-abgleich.md).
+- [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](NETEX_EXPLORER_IMPLEMENTATION_PLAN.md): ursprünglicher Auftrag; wird nach Freigabe des neuen Plans ersetzt.
 - [docs/decisions.md](docs/decisions.md): festgelegte Entscheidungen und unbestätigte Vorschläge. **Geht dem Plan vor.** Vor jeder Umsetzungs- oder Architekturarbeit lesen.
 - [docs/open-points.md](docs/open-points.md): offene Fragen und Findings zum Plan.
 - [docs/research/guide-2.0.md](docs/research/guide-2.0.md): CH-Profil 2.0 (Entwurf): Artefakte, Lieferstruktur, Datenmodell.
