@@ -177,7 +177,8 @@ Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung m
 - **Versionserkennung** mit Begründung: Namespace, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur. Ergebnis `detected`, `ambiguous` oder `unknown`; das Wurzelattribut allein entscheidet nie (die Guide-Beispiele tragen teils `1.09`).
 - **Passt die Datei nicht zum Guide-Stand** (z. B. 1.10-Lieferung): Ergebnis anzeigen, keine 2.0-Prüfung starten, generischer Explorer bleibt nutzbar.
 - **XSD-Prüfung** (lxml) gegen die XSD des Guide-Stands; Fehler mit Datei, Zeile, Spalte, Markierung im XML.
-- **Schematron:** `general_rules.sch` des Guides (siehe offene Frage 3).
+- **Schematron:** `general_rules.sch` des Guides (4 allgemeine Regeln). Das Tool zeigt klar an: „Schweizer Profilregeln aus den Vorlagen noch nicht eingebunden“.
+- **Entscheidungspunkt nach Phase 3:** Ob die ~350 Schweizer Profilregeln aus den Guide-Vorlagen (Pflicht-, Verbots-, Werte-Regeln; je Dateityp `NETWORK_OFFER`, `SITE_OFFER`, `INTERCHANGE`, `SINGLE_FILE`) eingebunden werden. Voraussetzung: vollständige Prüfung des Build-Werkzeugs `tools/schematron_builder` (≈1100 Zeilen, nur lxml, XSLT 1.0) und Freigabe durch den Benutzer; danach läuft es in `update-guide`, Änderungen am Werkzeug werden bei jedem Update vorgelegt.
 - **Link zum Guide-Kapitel** über `A5_annex_index.md`, auf GitHub im exakt verwendeten Commit.
 - Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“.
 - Bekannte erste Testfälle: Beispiel 05 Zeile 399, Beispiel 16 Zeile 64, `TypeOfName` `offical`.
@@ -199,7 +200,7 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 | **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
 | **2 Referenzen und Herkunft** | Referenzen inkl. `Extensions`, Auflösung über ID + Typ, Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | Navigation vor/zurück; `Quay` und `ScheduledStopPoint` mit gleicher ID werden korrekt unterschieden; nicht auflösbare Referenzen als Diagnose |
 | **3 Fahrtansicht CH 2.0** | Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
-| **4 Eigene Dateien und Validierung** | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + Schematron, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; Fehler in Beispiel 05/16 erscheinen mit Stelle und Link |
+| **4 Eigene Dateien und Validierung** (vorher Entscheidungspunkt Profilregeln) | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + Schematron, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; Fehler in Beispiel 05/16 erscheinen mit Stelle und Link |
 | **5 Übergabe** | README, Start/Stopp, E2E-Test, Testbericht, bekannte Grenzen, Sprachdatei-Prüfung | Neue Person startet die App, lädt Beispiel 01, klickt einen Halt an und landet an der richtigen XML-Stelle, ohne Code zu ändern |
 
 ## 11. Tests
@@ -219,5 +220,5 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 1. ~~Referenzgraph~~ → geklärt: keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (siehe Abschnitt 7).
 2. ~~Index und Import~~ → geklärt: Index nur im Arbeitsspeicher, Datei wird beim Öffnen direkt eingelesen; keine Datenbankdatei, kein Hintergrundprozess. Grosse Lieferungen bleiben zurückgestellt.
-3. **Schematron:** Im Guide-Repo liegt nur `general_rules.sch` (4 Regeln). Die übrigen Regeln erzeugt das Build-Werkzeug des Guides aus den Templates. Erste Ausbaustufe nur mit `general_rules.sch`, und die erzeugten Regeln später (nach Prüfung des Build-Werkzeugs)?
+3. ~~Schematron~~ → geklärt: Phase 4 mit XSD + `general_rules.sch` (4 allgemeine Regeln); **Entscheidungspunkt nach Phase 3** über die ~350 Schweizer Profilregeln aus den Vorlagen (siehe Abschnitt 8).
 4. **Widerspruch in `decisions.md`:** „Plattformen“ verlangt Tests auf macOS und Windows, „Windows“ sagt „derzeit nicht testbar“. Vorschlag: „Plattformen“ an „Windows“ anpassen.
