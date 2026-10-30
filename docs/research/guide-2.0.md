@@ -76,3 +76,23 @@ Vorkommen in den Beispielen:
   - `JourneyPart` 3: 06:44 mit `StartTimeDayOffset` `1`.
   - Die anschliessende `ServiceJourney` 2746 hat `DepartureTime` 06:44 mit `DepartureDayOffset` `0`. Das ist konsistent, wenn ihre Betriebstage um einen Tag gegenüber KW37 verschoben sind. Prüfbar ist das nur über die `ValidDayBits`; bei der Umsetzung kontrollieren.
 - Templates mit `DayOffset`-Elementen: `ServiceJourney`, `TemplateServiceJourney`, `JourneyPart`, `CheckConstraint`, `CompoundTrain`, `Destination`, `Train`, `TrainComponent`, `TrainElement`.
+
+## Codes in den Beispielen und Mappingtabelle
+
+Geprüft am Stand `b7ac158` (XSD `73b337e`).
+
+- **Häufigkeit:** In den 22 Beispielen stehen an 360 Stellen reine Codes, etwa 48 verschiedene in rund 30 Elementtypen. Nicht mitgezählt sind Platzhalter und Freitext wie `blabla`, `de`, `x`, `running`.
+- **Schweiz-spezifisch gepflegte Werte:** Sie kommen in Blättern der Mappingtabelle vor. Beispiele: `TransportMode`/Submodes (`VMArt->NeTEx`), Facilities wie `bistro`, `lowFloor`, `freeWifi`, `firstClass` (`Angebote`, `Facilities_gemappt`), `StopPlaceType`, `QuayType`, `StopUse`, `LineType`, `Weighting` (`Weightening`). Wortübereinstimmung bei 200 der 360 Stellen. Ob die Tabelle den Wert jeweils auch erklärt, ist erst beim gezielten Auslesen zu bestätigen.
+- **Allgemeine NeTEx-Werte ohne Stammdaten:** `ServiceAlteration` `planned` (39), `DirectionType` `outbound`/`inbound` (38), `NameType` `alias` (24), `ThroughAccess`, `TrainElementType`, Buchungswerte (`advanceOnly`, `mobileApp`), `AccessibilityToolList` u. a.
+- **NeTEx-XSD als Quelle für Bedeutungen ungeeignet:** Nur 836 von 8955 Aufzählungswerten haben eine `xsd:documentation`, oft ohne Aussage (`bistro` → „pti23_26“, `country` → „+v1.1“). `inbound`, `outbound`, `planned` und `alias` haben keine.
+- **Auffälligkeiten in den Beispielen:**
+  - `TypeOfName` `offical` (18-mal, vermutlich Tippfehler für „official“; `TypeOfName` ist keine Aufzählung, die XSD meldet das also nicht).
+  - `Name`/`Description` `blabla` als Platzhalter.
+
+### Lesbarkeit der Mappingtabelle
+
+Untersucht wurden die Blätter, die Codes erklären (`VMArt->NeTEx`, `Angebote`, `Facilities_gemappt`, `StopPlaceType`, `QuayType`, `StopUse`, `LineType`, `Weightening`).
+
+- **Aufbau:** Jedes Blatt ist eine Tabelle mit 1–5 Titelzeilen und danach einer **Kopfzeile mit Spaltennamen**. Die Kopfzeile liegt je nach Blatt in Zeile 2, 3 oder 6. Danach folgt pro Zeile ein Wert, über eine Code-Spalte identifizierbar (z. B. `Abk`, `Value`, `Facility Value`, `Value for LineType`). Zusammengeführte Zellen gibt es nur in Titelzeilen (`Angebote` B1:C1/E1:F1, `LineType` A4:F4 u. a.).
+- **Farben tragen Bedeutung:** Blatt `Legend`: grün = „new value“, orange = „no longer used“. Viele Zellen sind farbig, besonders in `Angebote` und `LineType`.
+- **Datenqualität:** Die Tabelle hat eigene Schreibweisen und Tippfehler, z. B. Facility Value `Bar` (gross) oder „Abfahrstszeiten“. Das Tool zeigt die Werte so an, wie sie dort stehen.
