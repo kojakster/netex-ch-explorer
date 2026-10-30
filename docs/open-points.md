@@ -15,7 +15,7 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 5g'. *(Vor öffentlicher Veröffentlichung)* Lizenz für die Weiterverteilung der Guide-Dateien (info.fachbus@sbb.ch) und der NeTEx-CEN-XSD klären.
 5h. ~~Speicher im Browser~~ → geklärt: nur Arbeitsspeicher, siehe decisions.md. *(5d ZIP-Entpacken und 5e Import-Reihenfolge: zurückgestellt mit grossen Lieferungen.)*
 6. ~~Ordnerstruktur~~ → geklärt, siehe decisions.md. Umzug von `CLAUDE.md`, `docs/` und Plan nach `netex-explorer/` erledigt (30.10.2026).
-7. Git-Repository für `netex-explorer/` anlegen (`git init`), inkl. `.gitignore`. Noch nicht gemacht; erst auf Wunsch des Benutzers.
+7. ~~Git-Repository~~ → erledigt 30.10.2026: `netex-explorer/` ist ein lokales Git-Repo (Branch `main`, kein Remote). Guide und Lieferdaten liegen ausserhalb und sind zusätzlich per `.gitignore` ausgeschlossen.
 
 ## Findings zum Implementierungsplan
 
