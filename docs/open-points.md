@@ -16,6 +16,7 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 5h. ~~Speicher im Browser~~ → geklärt: nur Arbeitsspeicher, siehe decisions.md. *(5d ZIP-Entpacken und 5e Import-Reihenfolge: zurückgestellt mit grossen Lieferungen.)*
 6. ~~Ordnerstruktur~~ → geklärt, siehe decisions.md. Umzug von `CLAUDE.md`, `docs/` und Plan nach `netex-ch-explorer/` erledigt (30.10.2026).
 7. ~~Git-Repository~~ → erledigt 30.10.2026: `netex-ch-explorer/` ist ein lokales Git-Repo (Branch `main`, kein Remote). Guide und Lieferdaten liegen ausserhalb und sind zusätzlich per `.gitignore` ausgeschlossen.
+8. **Glossar Englisch/Deutsch** (Benutzer reicht nach): Quelle und Ablage klären; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
 
 ## Findings zum Implementierungsplan
 
