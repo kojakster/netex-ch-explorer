@@ -90,7 +90,7 @@ netex-ch-explorer/
 │   │   └── validation/    XSD und Schematron (lxml)
 │   ├── server/     FastAPI, nur dünne Schicht über core; bindet an 127.0.0.1
 │   └── frontend/   React + TypeScript + Vite, CodeMirror 6, Sprachdateien
-├── scripts/        update-guide, start (.sh/.ps1)
+├── scripts/        update-guide und start als Python; start.sh/start.ps1 als Einzeiler
 ├── fixtures/       eigene synthetische Testdateien (keine Guide-Kopien)
 └── docs/
 ```
@@ -104,7 +104,7 @@ netex-ch-explorer/
 | Prüfung | lxml nur für XSD und Schematron. |
 | Oberfläche | React + TypeScript + Vite; CodeMirror 6 (nur lesen, exakte Bereichsmarkierung, Frame-Bereiche farbig am Rand); keine Graph-Bibliothek. |
 | Texte | Keine Texte im Code. Sprachdateien `de-CH.json`, `en.json`; Kern liefert Schlüssel + Parameter; kleine eigene Übersetzungsfunktion. Deutsche Fachbegriffe vorläufig bis zum Glossar. |
-| Plattformen | macOS; Windows plattformneutral programmiert, aber als „nicht getestet“ gekennzeichnet. |
+| Plattformen | macOS und Windows (Windows wichtiger als Webversion). Skripte in Python, `start.sh`/`start.ps1` nur Einzeiler; `pathlib`, UTF-8 explizit, Dateien sauber schliessen. Bis zum Windows-Test als „nicht getestet“ gekennzeichnet. |
 
 ### Schnittstelle (lokal, JSON)
 
@@ -221,4 +221,4 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 1. ~~Referenzgraph~~ → geklärt: keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (siehe Abschnitt 7).
 2. ~~Index und Import~~ → geklärt: Index nur im Arbeitsspeicher, Datei wird beim Öffnen direkt eingelesen; keine Datenbankdatei, kein Hintergrundprozess. Grosse Lieferungen bleiben zurückgestellt.
 3. ~~Schematron~~ → geklärt: Phase 4 mit XSD + `general_rules.sch` (4 allgemeine Regeln); **Entscheidungspunkt nach Phase 3** über die ~350 Schweizer Profilregeln aus den Vorlagen (siehe Abschnitt 8).
-4. **Widerspruch in `decisions.md`:** „Plattformen“ verlangt Tests auf macOS und Windows, „Windows“ sagt „derzeit nicht testbar“. Vorschlag: „Plattformen“ an „Windows“ anpassen.
+4. ~~Widerspruch Plattformen/Windows~~ → geklärt: Windows bald nötig und wichtiger als Webversion; „Plattformen“ angepasst. Offen: Windows-Testweg (docs/open-points.md).
