@@ -7,7 +7,17 @@
 
 ## 1. Ziel
 
-Ein lokales Werkzeug, mit dem man Schweizer NeTEx-Dateien **versteht**. Man wählt ein Beispiel aus dem CH-NeTEx-Guide oder öffnet eine eigene Datei. Dann sieht man eine einzelne Fahrt wie einen Fahrplan, kann jede Angabe bis zur exakten Stelle im XML zurückverfolgen, Referenzen vor- und rückwärts navigieren und Fehler mit Stelle und Guide-Verweis erkennen.
+Ein lokales Werkzeug, mit dem man Schweizer NeTEx-Dateien **visuell und selbsterklärend versteht**: woher jede angezeigte Angabe stammt und wie die Datei aufgebaut ist.
+
+Man wählt ein Beispiel aus dem CH-NeTEx-Guide oder öffnet eine eigene Datei. Dann
+
+- sieht man eine einzelne Fahrt **wie einen Fahrplan**,
+- erkennt an **klaren Farben**, aus welchem Frame jede Angabe stammt,
+- verfolgt jede Angabe über eine sichtbare Kette bis zur **exakten Stelle im XML**,
+- erkundet **alle Objekte der Datei** und ihre Verweise vor- und rückwärts,
+- erkennt **Fehler** mit Stelle und Verweis auf das Guide-Kapitel.
+
+Massstab: Der Fahrplan mit nachvollziehbarer Herkunft ist wichtiger als Such- oder Komfortfunktionen.
 
 Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Funktionen; Aufwand offenlegen; Unklarheiten dem Benutzer vorlegen.
 
