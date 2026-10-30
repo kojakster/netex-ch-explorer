@@ -32,6 +32,12 @@ NeTEx-Viewer/                          Sammelordner (nicht versioniert)
 - Pfade zu `netexRealisationGuideSwitzerland` und `netex-files` nur über die Konfiguration (Standard `../netexRealisationGuideSwitzerland`, `../netex-files`), nie fest im Code.
 - Der Adapter „CH 2.0“ ist eigener Code. Er belegt jede fachliche Regel in `docs/mapping.md` mit Guide-Datei und Commit.
 
+## Grundsätze
+
+- **Klein und wartbar vor ausgefeilten Funktionen.** Die einfachste Lösung, die die Anforderung erfüllt, hat Vorrang.
+- **Aufwand offenlegen:** Bedeutet eine Anforderung viel Code oder eine komplexe Lösung, sage ich das *vor* der Umsetzung, mit grober Einschätzung und einfacherer Alternative. Das gilt besonders, wenn der Nutzen fraglich ist. Der Benutzer entscheidet.
+- **Unklarheiten und Widersprüche** (im Plan, in Entscheidungen, im Guide oder in den Daten) nicht selbst auflösen, sondern dem Benutzer vorlegen und gemeinsam klären. Danach in `docs/decisions.md` festhalten.
+
 ## Arbeitsregeln
 
 - **Keine Lieferdaten in den LLM-Kontext.** Grosse Lieferungen (z. B. `../netex-files/`, 12 GB) nur lokal per Skript auswerten. In den Kontext kommen nur zusammengefasste Ausgaben (Zählungen, Strukturen, Messwerte). Nie ganze Dateien lesen. Ob einzelne kleine Ausschnitte erlaubt sind, ist noch offen; bis dahin nur gezielt und sparsam. Die kleinen Beispieldateien des Guide-Repos sind öffentliche Dokumentation und von dieser Regel nicht betroffen.
