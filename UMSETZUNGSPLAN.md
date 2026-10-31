@@ -165,7 +165,7 @@ Nicht eigens dargestellte Inhalte (Kurswagen, Formation, Flügelung, Durchbindun
 
 ## 7. Oberfläche
 
-Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie eine NeTEx-Datei aufgebaut ist. Visualisiert werden alle Daten der Datei; Ausstattung von Haltestellen (Toiletten, Ticketautomaten usw.) erhält keine eigene Darstellung, bleibt im Objekt-Explorer und XML aber sichtbar.
+Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie eine NeTEx-Datei aufgebaut ist. Visualisiert werden alle Daten der Datei; Ausstattung von Haltestellen (Toiletten, Ticketautomaten usw.) erhält keine eigene Darstellung, bleibt im Objekt-Explorer und XML aber sichtbar (grau). Barrierefreiheit gehört zum Fahrplan.
 
 **Frame-Farben als roter Faden** (klare Farben; Standardwerte in `config/frame-colors.json`, änderbar ohne Codeänderung, ungültige/fehlende Einträge → Standardwert; Legende immer sichtbar, immer mit Frame-Name als Text). Kleinster Farbabstand ΔE76 = 33, Schriftkontrast ≥ 4,5:1:
 
@@ -180,7 +180,7 @@ Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie 
 | unbekannter Frame | Braun | `#6D4C2F` | weiss |
 | für den Fahrplan nicht relevant | Grau | `#8A8A8A` | schwarz |
 
-**Grau** bedeutet „für den Fahrplan nicht relevant“ (z. B. Toiletten, Ticketautomaten, Ausstattung und Barrierefreiheit von Haltestellen), nicht einen Frame; der Frame-Name bleibt als Text sichtbar. `StopPlace` und `Quay` bleiben orange. Welche Elementtypen grau sind, steht in `config/not-relevant-elements.json`; die Startliste wird dem Benutzer nach Prüfung der Guide-Beispiele vorgelegt. Eine Einstellungsseite in der Oberfläche ist später möglich.
+**Grau** bedeutet „für den Fahrplan nicht relevant“, nicht einen Frame; der Frame-Name bleibt als Text sichtbar. Startliste in `config/not-relevant-elements.json` (Entscheid „Startliste Grau“): Haltestellen-Ausstattung (`SiteFacilitySet`, Equipment, Lifte), Wege und Zugänge, Points of Interest, Adressen, Hilfsdienste, Tarifzonen. **Nicht grau:** `StopPlace`, `Quay`, `TopographicPlace`, `FlexibleStopPlace` und Barrierefreiheit (`AccessibilityAssessment`). Neue Fälle bei der Umsetzung dem Benutzer vorlegen. Eine Einstellungsseite in der Oberfläche ist später möglich.
 
 Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung mit `ResourceFrame`).
 
@@ -222,7 +222,7 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 | **0 Grundgerüst** | Projektstruktur, Abhängigkeiten (uv, npm) mit Lockfiles, `config/`, Workspace-Datei, Guide-Erkennung (Pfad, Commit, XSD vorhanden, `guide-tested.json`), Mappingtabelle lesen, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | `scripts/test.py` läuft und schreibt `guide-tested.json`; mit dem geklonten Guide (`b7ac158`, XSD `73b337e`) startet die App lokal, zeigt den Guide-Commit an und liest die Mappingtabelle; fehlende XSD bzw. neuerer Stand werden gemeldet |
 | **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
 | **2 Referenzen und Herkunft** | Referenzen inkl. `Extensions`, Auflösung über ID + Typ, Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | Navigation vor/zurück; `Quay` und `ScheduledStopPoint` mit gleicher ID werden korrekt unterschieden; nicht auflösbare Referenzen als Diagnose |
-| **3 Fahrtansicht CH 2.0** | Startliste `not-relevant-elements.json` dem Benutzer vorlegen; Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
+| **3 Fahrtansicht CH 2.0** | Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
 | **4 Eigene Dateien und Validierung** (vorher **anhalten**: Entscheidungspunkt Profilregeln mit dem Benutzer) | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + Schematron, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; Fehler in Beispiel 05/16 erscheinen mit Stelle und Link |
 | **5 Übergabe** | README, Start/Stopp, E2E-Test, Testbericht, bekannte Grenzen, Sprachdatei-Prüfung | Neue Person startet die App, lädt Beispiel 01, klickt einen Halt an und landet an der richtigen XML-Stelle, ohne Code zu ändern |
 
@@ -246,7 +246,7 @@ Für eine neue Sitzung, die diesen Plan umsetzt:
 1. Zuerst lesen: [CLAUDE.md](CLAUDE.md), [docs/decisions.md](docs/decisions.md), diesen Plan, [docs/research/guide-2.0.md](docs/research/guide-2.0.md), [docs/open-points.md](docs/open-points.md).
 2. Prüfen, ob der Guide-Klon vorhanden ist (`../netexRealisationGuideSwitzerland`, Branch `next`, XSD-Submodul). Fehlt er: Benutzer auf die Befehle im README hinweisen, nicht selbst klonen.
 3. Phasen 0–5 der Reihe nach umsetzen. Nach jeder Phase: Tests, `docs/test-report.md`, Commit, kurze Rückmeldung an den Benutzer (was fertig ist, was offen ist).
-4. **Anhalten und den Benutzer fragen** bei: Startliste `not-relevant-elements.json` (Phase 3), Entscheidungspunkt Profilregeln (vor Phase 4), jeder Unklarheit oder jedem Widerspruch (Plan, Entscheidungen, Guide, Daten), jeder Anforderung mit unerwartet hohem Aufwand. Fragen einzeln stellen.
+4. **Anhalten und den Benutzer fragen** bei: Elementen, deren Einordnung in Grau unklar ist, Entscheidungspunkt Profilregeln (vor Phase 4), jeder Unklarheit oder jedem Widerspruch (Plan, Entscheidungen, Guide, Daten), jeder Anforderung mit unerwartet hohem Aufwand. Fragen einzeln stellen.
 5. Neue Entscheidungen in `docs/decisions.md`, fachliche Belege in `docs/mapping.md`, Annahmen und Widersprüche im Guide in `docs/assumptions.md`.
 6. Nichts auf GitHub oder andere Server hochladen; keine Lieferdaten aus `../netex-files/` in den Kontext laden.
 
