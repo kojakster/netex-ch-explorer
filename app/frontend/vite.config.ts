@@ -23,13 +23,17 @@ function serverPort(): number {
   return DEFAULT_PORT;
 }
 
+const serverOrigin = `http://127.0.0.1:${serverPort()}`;
+
 export default defineConfig({
   plugins: [react()],
   // Relative Pfade, damit der Build auch als statische Webversion unter jedem Unterpfad läuft.
   base: "./",
   server: {
     host: "127.0.0.1",
-    proxy: { "/api": `http://127.0.0.1:${serverPort()}` },
+    // Der Server nimmt Änderungen nur von der eigenen Adresse an (Origin-Prüfung); im
+    // Entwicklungsmodus trägt der Proxy deshalb die Adresse des Servers als Origin ein.
+    proxy: { "/api": { target: serverOrigin, headers: { Origin: serverOrigin } } },
   },
   build: { sourcemap: false },
   test: {

@@ -619,6 +619,24 @@ class DatasetIndex:
             ).fetchall()
         return [_row_to_element(row) for row in rows]
 
+    def children_of(self, element_ids: Sequence[int]) -> dict[int, list[ElementRow]]:
+        """Direkte Kindelemente mehrerer Elemente (in Dokumentreihenfolge) mit wenigen Abfragen."""
+        found: dict[int, list[ElementRow]] = {element_id: [] for element_id in element_ids}
+        ids = list(found)
+        for start in range(0, len(ids), _MAX_PLACEHOLDERS):
+            batch = ids[start : start + _MAX_PLACEHOLDERS]
+            placeholders = ", ".join("?" * len(batch))
+            with self._lock:
+                rows = self._db.execute(
+                    _ELEMENT_SELECT + f" WHERE e.parent_id IN ({placeholders}) ORDER BY e.id",
+                    batch,
+                ).fetchall()
+            for row in rows:
+                child = _row_to_element(row)
+                if child.parent_id is not None:
+                    found[child.parent_id].append(child)
+        return found
+
     def descendants(self, element_id: int, limit: int) -> list[ElementRow]:
         """Alle Nachfahren in Dokumentreihenfolge, höchstens `limit`.
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import stat
+import threading
 import zipfile
 from collections.abc import Iterator
 from dataclasses import replace
@@ -15,9 +16,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import ZipLimits, load_config
+from app.core.dataset import Dataset
 from app.core.guide.layout import ANNEX_INDEX_FILE
 from app.core.guide.status import inspect_guide
 from app.core.validation.engine import ValidationEngine
+from app.core.validation.result import ValidationSummary
 from app.server.app import create_app
 from app.server.datasets import MAX_OPEN_DATASETS
 from app.server.runtime import Runtime
@@ -432,3 +435,119 @@ def test_failed_upload_leaves_no_files(
     with pytest.raises(ValueError, match="kaputt"):
         upload(client, ("a.xml", fixture("ch20_three_stops.xml")))
     assert sessions(work_dir) == []
+
+
+def test_closing_during_a_validation_does_not_break_it(
+    client: TestClient,
+    work_dir: Path,
+    guide_engine: ValidationEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dataset_id = upload(client, ("a.xml", fixture("ch20_three_stops.xml"))).json()["id"]
+    started = threading.Event()
+    proceed = threading.Event()
+    original = ValidationEngine.validate
+
+    def slow(self: ValidationEngine, dataset: Dataset) -> ValidationSummary:
+        started.set()
+        assert proceed.wait(timeout=30)
+        return original(self, dataset)
+
+    monkeypatch.setattr(ValidationEngine, "validate", slow)
+    responses: list[httpx2.Response] = []
+    worker = threading.Thread(
+        target=lambda: responses.append(client.post(f"/api/datasets/{dataset_id}/validate"))
+    )
+    worker.start()
+    try:
+        assert started.wait(timeout=30)
+        assert client.delete(f"/api/datasets/{dataset_id}").status_code == 204
+        # Die Anfrage läuft noch: Dateien bleiben bis zu ihrem Ende, neue Anfragen sehen nichts.
+        assert len(sessions(work_dir)) == 1
+        assert client.get(f"/api/datasets/{dataset_id}").status_code == 404
+    finally:
+        proceed.set()
+        worker.join(timeout=60)
+    [response] = responses
+    assert response.status_code == 200
+    assert response.json()["validation"]["steps"][0]["performed"] is True
+    assert sessions(work_dir) == []
+
+
+def test_total_limit_applies_to_all_files_of_an_upload(make_client: ClientFactory) -> None:
+    client = make_client(ZipLimits(max_total_bytes=2000, max_file_bytes=2000))
+    xml = b"<a>" + b"x" * 1200 + b"</a>"
+    data = upload(client, ("a.xml", xml), ("b.xml", xml)).json()
+    [item] = diagnostics(client, data["id"], "file")
+    assert item["key"] == "file.total_too_large"
+    assert [f["name"] for f in data["files"] if f["readable"]] == ["a.xml"]
+
+
+def origin_headers(origin: str) -> dict[str, str]:
+    return {"Origin": origin}
+
+
+@pytest.fixture
+def port() -> int:
+    return load_config(PROJECT_ROOT).settings.port
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "localhost"])
+def test_own_origin_may_change_state(client: TestClient, port: int, host: str) -> None:
+    response = client.post(
+        "/api/datasets/upload",
+        files=[(FILES, ("a.xml", fixture("ch20_three_stops.xml")))],
+        headers=origin_headers(f"http://{host}:{port}"),
+    )
+    assert response.status_code == 200
+    dataset_id = response.json()["id"]
+    headers = origin_headers(f"http://{host}:{port}")
+    assert client.post(f"/api/datasets/{dataset_id}/validate", headers=headers).status_code == 200
+    assert client.delete(f"/api/datasets/{dataset_id}", headers=headers).status_code == 204
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "http://evil.example",
+        "http://127.0.0.1:1",
+        "http://127.0.0.1",
+        "https://127.0.0.1:{port}",
+        "http://127.0.0.1.evil.example:{port}",
+        "http://evil.example:{port}",
+        "null",
+        "",
+    ],
+)
+def test_foreign_origin_is_rejected_for_changes(
+    client: TestClient, work_dir: Path, port: int, origin: str
+) -> None:
+    headers = origin_headers(origin.format(port=port))
+    response = client.post(
+        "/api/datasets/upload",
+        files=[(FILES, ("a.xml", fixture("ch20_three_stops.xml")))],
+        headers=headers,
+    )
+    assert response.status_code == 403
+    assert response.json() == {"error": {"key": "error.forbidden_origin", "params": {}}}
+    assert response.headers["Cache-Control"] == "no-store"
+    assert response.headers["X-Content-Type-Options"] == "nosniff"
+    assert sessions(work_dir) == []
+
+
+def test_foreign_origin_cannot_close_or_validate(client: TestClient) -> None:
+    dataset_id = upload(client, ("a.xml", fixture("ch20_three_stops.xml"))).json()["id"]
+    headers = origin_headers("http://evil.example")
+    assert client.post(f"/api/datasets/{dataset_id}/validate", headers=headers).status_code == 403
+    assert client.delete(f"/api/datasets/{dataset_id}", headers=headers).status_code == 403
+    assert (
+        client.post("/api/datasets", json={"example": "x.xml"}, headers=headers).status_code == 403
+    )
+    # Der Datensatz ist unberührt; Lesen ist von jedem Origin aus möglich.
+    assert client.get(f"/api/datasets/{dataset_id}", headers=headers).status_code == 200
+
+
+def test_requests_without_origin_are_accepted(client: TestClient) -> None:
+    response = upload(client, ("a.xml", fixture("ch20_three_stops.xml")))
+    assert "origin" not in response.request.headers
+    assert response.status_code == 200

@@ -24,6 +24,7 @@ class ErrorKey(StrEnum):
     METHOD_NOT_ALLOWED = "error.method_not_allowed"
     INVALID_REQUEST = "error.invalid_request"
     PAYLOAD_TOO_LARGE = "error.payload_too_large"
+    FORBIDDEN_ORIGIN = "error.forbidden_origin"
     HTTP = "error.http"
     INTERNAL = "error.internal"
 

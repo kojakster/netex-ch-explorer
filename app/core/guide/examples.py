@@ -35,6 +35,8 @@ class ExampleResult(StrEnum):
     """Mit Fehlern."""
     UNREADABLE = "unreadable"
     """Nicht lesbar."""
+    CHECK_FAILED = "check_failed"
+    """Die Prüfung ist fehlgeschlagen (Fehler in der Prüfung, nicht im Beispiel)."""
 
 
 @dataclass(frozen=True)
@@ -80,14 +82,20 @@ def list_examples(guide_path: Path) -> list[Example]:
     ]
 
 
-def read_example(guide_path: Path, name: str, known: Iterable[Example]) -> bytes | None:
-    """Inhalt eines Beispiels; nur Namen aus der Beispielliste, nie freie Pfade."""
+def example_path(guide_path: Path, name: str, known: Iterable[Example]) -> Path | None:
+    """Pfad eines Beispiels; nur Namen aus der Beispielliste, nie freie Pfade."""
     if name not in {example.name for example in known}:
         return None
     path = examples_dir(guide_path) / name
     if not path.is_file() or path.stat().st_size > MAX_EXAMPLE_BYTES:
         return None
-    return path.read_bytes()
+    return path
+
+
+def read_example(guide_path: Path, name: str, known: Iterable[Example]) -> bytes | None:
+    """Inhalt eines Beispiels; nur Namen aus der Beispielliste, nie freie Pfade."""
+    path = example_path(guide_path, name, known)
+    return None if path is None else path.read_bytes()
 
 
 def example_result(dataset: Dataset) -> ExampleResult:

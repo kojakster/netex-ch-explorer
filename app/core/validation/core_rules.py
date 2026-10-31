@@ -249,8 +249,21 @@ class _Walker:
 
     def children(self, element: ElementRow) -> list[ElementRow]:
         if element.id not in self._children:
-            self._children[element.id] = self._index.children(element.id)
+            self.prefetch([element])
         return self._children[element.id]
+
+    def prefetch(self, elements: Iterable[ElementRow]) -> None:
+        """Lädt die Kinder aller noch unbekannten Elemente gesammelt."""
+        missing = [element.id for element in elements if element.id not in self._children]
+        self._children.update(self._index.children_of(missing))
+
+    def warm(self, contexts: list[ElementRow], paths: Iterable[Path]) -> None:
+        """Lädt vorab alle Kinder, die `find` für diese Kontexte und Pfade braucht."""
+        for path in paths:
+            current = contexts
+            for name in path:
+                self.prefetch(current)
+                current = [c for parent in current for c in self.children(parent) if c.name == name]
 
     def find(self, element: ElementRow, path: Path) -> list[ElementRow]:
         """Alle Elemente, die man über die Kindelemente dieses Pfads erreicht."""
@@ -324,6 +337,7 @@ def check_core_rules(
         if element.file_id in file_ids:
             contexts.setdefault(element.name, []).append(element)
     findings: list[RuleFinding] = []
+    walker.prefetch(contexts.get(JOURNEY, ()))
     stubs = {
         journey.id for journey in contexts.get(JOURNEY, ()) if _is_stub_journey(walker, journey)
     }
@@ -338,9 +352,10 @@ def check_core_rules(
             )
             findings.append(RuleFinding(journey.file_id, diagnostic))
     for rule in rule_list:
-        for context in contexts.get(rule.context, ()):
-            if context.id not in stubs:
-                findings.extend(_check_rule(rule, context, walker))
+        checked = [c for c in contexts.get(rule.context, ()) if c.id not in stubs]
+        walker.warm(checked, rule.targets)
+        for context in checked:
+            findings.extend(_check_rule(rule, context, walker))
     findings.sort(
         key=lambda f: (f.file_id, f.diagnostic.position.byte if f.diagnostic.position else 0)
     )

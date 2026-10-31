@@ -12,6 +12,7 @@ ersetzt sie.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
 
@@ -44,6 +45,16 @@ _PATTERN_KEYS: Final = {
     "no_order_attribute": MessageKey.SCHEMATRON_NO_ORDER_ATTRIBUTE,
 }
 _RESULT_CATEGORIES: Final = (DiagnosticCategory.XSD, DiagnosticCategory.PROFILE_RULE)
+
+
+@dataclass
+class _LxmlRun:
+    """Ergebnis der lxml-Schritte: welche Schritte eine Datei geprüft haben, welche fehlen."""
+
+    performed: dict[str, bool] = field(
+        default_factory=lambda: {XSD_STEP: False, GENERAL_STEP: False}
+    )
+    unavailable: dict[str, Issue] = field(default_factory=dict)
 
 
 class ValidationEngine:
@@ -94,52 +105,77 @@ class ValidationEngine:
             else:
                 files.append(FileOutcome(summary.id, True))
                 checkable.append(summary.id)
-        steps = self._run_lxml_steps(dataset, checkable)
-        findings = check_core_rules(index, frozenset(checkable))
-        for finding in findings:
-            index.add_diagnostics(finding.file_id, [finding.diagnostic])
-        steps.append(StepOutcome(CORE_STEP, performed=True))
+        # Alle Befunde einer Datei werden gesammelt und mit einem Aufruf (einem Commit) abgelegt.
+        pending: dict[int, list[Diagnostic]] = {}
+        checked = self._run_lxml_steps(dataset, checkable, pending)
+        for finding in check_core_rules(index, frozenset(checkable)):
+            pending.setdefault(finding.file_id, []).append(finding.diagnostic)
+        for file_id, diagnostics in pending.items():
+            if diagnostics:
+                index.add_diagnostics(file_id, diagnostics)
+        steps = [
+            self._step_outcome(step, checked.performed[step], checked.unavailable)
+            for step in (XSD_STEP, GENERAL_STEP)
+        ]
+        steps.append(self._step_outcome(CORE_STEP, bool(checkable), {}))
         return ValidationSummary(self.guide_commit, tuple(steps), tuple(files))
 
-    def _run_lxml_steps(self, dataset: Dataset, file_ids: list[int]) -> list[StepOutcome]:
-        unavailable: dict[str, Issue] = {}
+    @staticmethod
+    def _step_outcome(step: str, performed: bool, unavailable: dict[str, Issue]) -> StepOutcome:
+        """„Durchgeführt“ nur, wenn mindestens eine Datei tatsächlich geprüft wurde."""
+        if step in unavailable:
+            return StepOutcome(step, False, unavailable[step])
+        if not performed:
+            reason = Issue(Severity.INFO, MessageKey.VALIDATION_STEP_NO_FILE, {"step": step})
+            return StepOutcome(step, False, reason)
+        return StepOutcome(step, True)
+
+    def _run_lxml_steps(
+        self, dataset: Dataset, file_ids: list[int], pending: dict[int, list[Diagnostic]]
+    ) -> _LxmlRun:
+        run = _LxmlRun()
         for file_id in file_ids:
-            document = self._parse(dataset, file_id)
+            document = self._parse(dataset, file_id, pending)
             if document is None:
                 continue
             for step, checker in ((XSD_STEP, self._xsd), (GENERAL_STEP, self._schematron)):
-                if step in unavailable:
+                if step in run.unavailable:
                     continue
                 try:
                     outcome = checker.check(document)
                 except RulesUnavailableError:
-                    unavailable[step] = Issue(
+                    run.unavailable[step] = Issue(
                         Severity.WARNING, MessageKey.VALIDATION_STEP_UNAVAILABLE, {"step": step}
                     )
                     continue
-                self._store(dataset, file_id, step, outcome)
-        return [
-            StepOutcome(step, step not in unavailable, unavailable.get(step))
-            for step in (XSD_STEP, GENERAL_STEP)
-        ]
+                run.performed[step] = True
+                pending.setdefault(file_id, []).extend(
+                    self._outcome_diagnostics(dataset, file_id, step, outcome)
+                )
+        return run
 
-    def _parse(self, dataset: Dataset, file_id: int) -> ParsedDocument | None:
-        data = dataset.file_data.get(file_id)
+    def _parse(
+        self, dataset: Dataset, file_id: int, pending: dict[int, list[Diagnostic]]
+    ) -> ParsedDocument | None:
+        data = dataset.read_file(file_id)
         if data is None:
             return None
         try:
             return parse_safely(data)
         except NotCheckableError as error:
-            diagnostic = Diagnostic(
-                DiagnosticCategory.XSD,
-                Severity.ERROR,
-                MessageKey.XSD_UNCHECKABLE,
-                {"detail": str(error)},
+            pending.setdefault(file_id, []).append(
+                Diagnostic(
+                    DiagnosticCategory.XSD,
+                    Severity.ERROR,
+                    MessageKey.XSD_UNCHECKABLE,
+                    {"detail": str(error)},
+                )
             )
-            dataset.index.add_diagnostics(file_id, [diagnostic])
             return None
 
-    def _store(self, dataset: Dataset, file_id: int, step: str, outcome: CheckOutcome) -> None:
+    def _outcome_diagnostics(
+        self, dataset: Dataset, file_id: int, step: str, outcome: CheckOutcome
+    ) -> list[Diagnostic]:
         diagnostics = [self._diagnostic(dataset, file_id, step, f) for f in outcome.findings]
         if outcome.truncated:
             diagnostics.append(
@@ -150,7 +186,7 @@ class ValidationEngine:
                     {"step": step, "count": outcome.truncated},
                 )
             )
-        dataset.index.add_diagnostics(file_id, diagnostics)
+        return diagnostics
 
     @staticmethod
     def _diagnostic(dataset: Dataset, file_id: int, step: str, finding: RawFinding) -> Diagnostic:

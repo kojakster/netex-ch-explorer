@@ -23,9 +23,9 @@ _OBJECT_ID = re.compile(r"^([A-Za-z0-9_-]{16,64})\.([1-9][0-9]{0,9})$")
 class DatasetRegistry:
     """Hält die zuletzt geöffneten Datensätze; der älteste fällt bei Überlauf heraus.
 
-    Ein herausgefallener Datensatz wird nicht ausdrücklich geschlossen: Eine laufende Anfrage kann
-    ihn noch benutzen. Seine Dateien in `work/` werden gelöscht, sein Speicher wird frei, sobald
-    niemand mehr auf ihn verweist.
+    Herausfallen und Schliessen nehmen den Datensatz aus der Liste und rufen `Dataset.close` auf.
+    Läuft noch eine Anfrage mit dem Datensatz, wirkt das Schliessen erst nach deren Ende; die
+    Anfrage wird nicht abgebrochen.
     """
 
     def __init__(self, max_open: int = MAX_OPEN_DATASETS) -> None:
@@ -42,12 +42,11 @@ class DatasetRegistry:
             while len(self._datasets) > self._max_open:
                 evicted.append(self._datasets.popitem(last=False)[1])
         for old in evicted:
-            # Der Index bleibt für laufende Anfragen benutzbar; nur die Dateien in work/ gehen weg.
-            old.release_files()
+            old.close()
         return dataset_id
 
     def remove(self, dataset_id: str) -> bool:
-        """Schliesst einen Datensatz (löscht seine Dateien in `work/`); `False`, wenn unbekannt."""
+        """Schliesst einen Datensatz (nach laufenden Anfragen); `False`, wenn unbekannt."""
         if not _DATASET_ID.match(dataset_id):
             return False
         with self._lock:
@@ -66,6 +65,16 @@ class DatasetRegistry:
             if dataset is not None:
                 self._datasets.move_to_end(dataset_id)
             return dataset
+
+    def acquire(self, dataset_id: str) -> Dataset | None:
+        """Datensatz zur ID, für die Dauer einer Anfrage festgehalten (`Dataset.release` folgt).
+
+        `None` bei unbekannter ID oder wenn der Datensatz gerade geschlossen wird.
+        """
+        dataset = self.get(dataset_id)
+        if dataset is None or not dataset.acquire():
+            return None
+        return dataset
 
     def close_all(self) -> None:
         """Schliesst alle Datensätze."""

@@ -4,7 +4,8 @@ Sicherheit (docs/engineering-guidelines.md): Dateinamen werden bereinigt, ZIP-Ei
 Arbeitsordner nie verlassen (Zip-Slip), Symlinks werden abgewiesen, und die Grenzwerte aus
 `config/settings.json` (`zipLimits`) gelten für Gesamtgrösse, Einzeldatei, Anzahl und
 Kompressionsrate. Verarbeitet werden nur `.xml`-Einträge; der Rest wird als Hinweis gemeldet.
-Fehler sind nie Abstürze, sondern Meldungen (`IntakeNote`) zu einer Datei.
+Fehler sind nie Abstürze, sondern Meldungen (`FileNote`) zu einer Datei. Die Gesamtgrenze gilt für
+alle Dateien und alle ZIP-Archive eines Uploads zusammen.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ from pathlib import Path, PurePosixPath
 from typing import Final
 
 from app.core.config import ZipLimits
-from app.core.dataset import SourceFile
+from app.core.dataset import FileNote, SourceFile
 from app.core.messages import MessageKey, ParamValue, Severity
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,8 @@ _WINDOWS_DEVICES: Final = frozenset(
     | {f"COM{number}" for number in range(1, 10)}
     | {f"LPT{number}" for number in range(1, 10)}
 )
+# Windows behandelt auch hochgestellte Ziffern (COM¹) als Gerätenummer.
+_SUPERSCRIPT_DIGITS: Final = str.maketrans("¹²³", "123")
 _SKIPPED_EXAMPLES: Final = 5
 _ZIP_ERRORS: Final = (zipfile.BadZipFile, RuntimeError, NotImplementedError, zlib.error, EOFError)
 
@@ -53,22 +56,12 @@ class Upload:
     data: bytes
 
 
-@dataclass(frozen=True)
-class IntakeNote:
-    """Meldung zu einer Datei oder einem Archiv; wird zur Diagnose der Art `file`."""
-
-    file_name: str
-    severity: Severity
-    key: MessageKey
-    params: dict[str, ParamValue] = field(default_factory=dict)
-
-
 @dataclass
 class IntakeResult:
     """Die einlesbaren XML-Dateien und die Meldungen zu allem, was abgewiesen wurde."""
 
     sources: list[SourceFile] = field(default_factory=list)
-    notes: list[IntakeNote] = field(default_factory=list)
+    notes: list[FileNote] = field(default_factory=list)
 
 
 class _ArchiveRejectedError(Exception):
@@ -81,9 +74,28 @@ def clean_name(raw: str) -> str:
     name = _UNSAFE_CHARACTERS.sub("_", name).strip(" .")[:MAX_NAME_LENGTH].strip(" .")
     if not name:
         return "datei"
-    if name.split(".", 1)[0].upper() in _WINDOWS_DEVICES:
+    if _is_device_name(name):
         return f"_{name}"
     return name
+
+
+def _is_device_name(name: str) -> bool:
+    """Windows-Gerätename, auch mit Erweiterung, Leerzeichen vor dem Punkt oder `COM¹`."""
+    base = name.split(".", 1)[0].rstrip(" .")
+    return base.upper().translate(_SUPERSCRIPT_DIGITS) in _WINDOWS_DEVICES
+
+
+class _Budget:
+    """Gesamtgrenze in Bytes für alle entpackten und gespeicherten Dateien eines Uploads."""
+
+    def __init__(self, limits: ZipLimits) -> None:
+        self.limits = limits
+        self.limit = limits.max_total_bytes
+        self.used = 0
+
+    @property
+    def remaining(self) -> int:
+        return max(self.limit - self.used, 0)
 
 
 def _unique(name: str, used: set[str]) -> str:
@@ -162,65 +174,81 @@ def receive(uploads: list[Upload], session: Path, limits: ZipLimits) -> IntakeRe
     """Nimmt die Dateien an: XML direkt, ZIP entpackt; alles landet nur im Ordner `session`."""
     result = IntakeResult()
     used_names: set[str] = set()
+    budget = _Budget(limits)
     for number, upload in enumerate(uploads, start=1):
         name = clean_name(upload.name)
-        if name != upload.name:
-            result.notes.append(
-                IntakeNote(
-                    name,
-                    Severity.INFO,
-                    MessageKey.FILE_NAME_CHANGED,
-                    {"original": upload.name[:200]},
-                )
-            )
         lowered = name.lower()
         if lowered.endswith(".zip"):
+            _note_name_change(result.notes, name, upload.name)
             zip_root = session / f"zip{number}"
-            extractor = _ZipExtractor(name, zip_root / "entries", limits, used_names)
+            extractor = _ZipExtractor(name, zip_root / "entries", limits, used_names, budget)
             _receive_zip(upload, extractor, zip_root / "archive.zip")
             result.sources.extend(extractor.sources)
             result.notes.extend(extractor.notes)
         elif lowered.endswith(".xml"):
-            _receive_xml(upload, _unique(name, used_names), session, limits, result)
+            unique = _unique(name, used_names)
+            _note_name_change(result.notes, unique, upload.name)
+            _receive_xml(upload, unique, session, budget, result)
         else:
-            result.notes.append(IntakeNote(name, Severity.ERROR, MessageKey.FILE_TYPE_UNSUPPORTED))
+            _note_name_change(result.notes, name, upload.name)
+            result.notes.append(FileNote(name, Severity.ERROR, MessageKey.FILE_TYPE_UNSUPPORTED))
     return result
 
 
+def _note_name_change(notes: list[FileNote], final_name: str, original: str) -> None:
+    """Hinweis, wenn der Name vom hochgeladenen abweicht (bereinigt oder eindeutig gemacht)."""
+    if final_name != original:
+        notes.append(
+            FileNote(
+                final_name,
+                Severity.INFO,
+                MessageKey.FILE_NAME_CHANGED,
+                {"original": original[:200]},
+            )
+        )
+
+
 def _receive_xml(
-    upload: Upload, name: str, session: Path, limits: ZipLimits, result: IntakeResult
+    upload: Upload, name: str, session: Path, budget: _Budget, result: IntakeResult
 ) -> None:
+    limits = budget.limits
     if not upload.data:
-        result.notes.append(IntakeNote(name, Severity.ERROR, MessageKey.FILE_EMPTY))
+        result.notes.append(FileNote(name, Severity.ERROR, MessageKey.FILE_EMPTY))
         return
     if len(upload.data) > limits.max_file_bytes:
         result.notes.append(
-            IntakeNote(
+            FileNote(
                 name, Severity.ERROR, MessageKey.FILE_TOO_LARGE, {"limit": limits.max_file_bytes}
             )
         )
         return
-    target = session / "files" / name
-    data = _store(target, upload.data)
-    if data is None:
-        result.notes.append(IntakeNote(name, Severity.ERROR, MessageKey.FILE_WRITE_FAILED))
+    if len(upload.data) > budget.remaining:
+        result.notes.append(
+            FileNote(name, Severity.ERROR, MessageKey.FILE_TOTAL_TOO_LARGE, {"limit": budget.limit})
+        )
         return
-    result.sources.append(SourceFile(name, data))
+    target = session / "files" / name
+    if not _store(target, upload.data):
+        result.notes.append(FileNote(name, Severity.ERROR, MessageKey.FILE_WRITE_FAILED))
+        return
+    budget.used += len(upload.data)
+    # Die Rohdaten liegen jetzt in work/; der Datensatz liest sie von dort.
+    result.sources.append(SourceFile(name, upload.data, target))
 
 
-def _store(target: Path, data: bytes) -> bytes | None:
-    """Schreibt die Datei in `work/` und liest sie von dort; `None` bei Schreibfehler."""
+def _store(target: Path, data: bytes) -> bool:
+    """Schreibt die Datei in `work/`; `False` bei Schreibfehler."""
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
-        return target.read_bytes()
     except OSError:
         logger.exception("Datei konnte nicht in work/ gespeichert werden")
-        return None
+        return False
+    return True
 
 
 def _receive_zip(upload: Upload, extractor: _ZipExtractor, archive_path: Path) -> None:
-    if _store(archive_path, upload.data) is None:
+    if not _store(archive_path, upload.data):
         extractor.error(MessageKey.FILE_WRITE_FAILED)
     else:
         try:
@@ -240,31 +268,36 @@ def _receive_zip(upload: Upload, extractor: _ZipExtractor, archive_path: Path) -
             },
         )
     if not extractor.sources and not any(n.severity is Severity.ERROR for n in extractor.notes):
-        extractor.notes.append(IntakeNote(extractor.name, Severity.WARNING, MessageKey.ZIP_NO_XML))
+        extractor.notes.append(FileNote(extractor.name, Severity.WARNING, MessageKey.ZIP_NO_XML))
 
 
 class _ZipExtractor:
     """Entpackt ein Archiv Eintrag für Eintrag in `work/` und sammelt Quellen und Meldungen."""
 
     def __init__(
-        self, name: str, entries_root: Path, limits: ZipLimits, used_names: set[str]
+        self,
+        name: str,
+        entries_root: Path,
+        limits: ZipLimits,
+        used_names: set[str],
+        budget: _Budget,
     ) -> None:
         self.name = name
         self.entries_root = entries_root
         self.limits = limits
         self.used_names = used_names
+        self.budget = budget
         self.sources: list[SourceFile] = []
-        self.notes: list[IntakeNote] = []
+        self.notes: list[FileNote] = []
         self.skipped: list[str] = []
-        self.total_bytes = 0
 
     def error(self, key: MessageKey, params: dict[str, ParamValue] | None = None) -> None:
         """Trägt eine Fehlermeldung zum Archiv ein."""
-        self.notes.append(IntakeNote(self.name, Severity.ERROR, key, params or {}))
+        self.notes.append(FileNote(self.name, Severity.ERROR, key, params or {}))
 
     def info(self, key: MessageKey, params: dict[str, ParamValue] | None = None) -> None:
         """Trägt einen Hinweis zum Archiv ein."""
-        self.notes.append(IntakeNote(self.name, Severity.INFO, key, params or {}))
+        self.notes.append(FileNote(self.name, Severity.INFO, key, params or {}))
 
     def run(self, archive: zipfile.ZipFile) -> None:
         """Prüft die Grenzwerte des ganzen Archivs und entpackt dann die XML-Einträge."""
@@ -275,7 +308,7 @@ class _ZipExtractor:
                 {"count": len(infos), "limit": self.limits.max_files},
             )
             raise _ArchiveRejectedError
-        if sum(info.file_size for info in infos) > self.limits.max_total_bytes:
+        if sum(info.file_size for info in infos) > self.budget.remaining:
             self.error(MessageKey.ZIP_TOTAL_TOO_LARGE, {"limit": self.limits.max_total_bytes})
             raise _ArchiveRejectedError
         for info in infos:
@@ -338,16 +371,17 @@ class _ZipExtractor:
             self.error(MessageKey.ZIP_ENTRY_UNREADABLE, {"entry": shown})
             target.unlink(missing_ok=True)
             return
-        self.total_bytes += written
+        self.budget.used += written
+        _note_name_change(self.notes, display, info.filename)
         if not data:
-            self.notes.append(IntakeNote(display, Severity.ERROR, MessageKey.FILE_EMPTY))
+            self.notes.append(FileNote(display, Severity.ERROR, MessageKey.FILE_EMPTY))
             return
-        self.sources.append(SourceFile(display, data))
+        self.sources.append(SourceFile(display, data, target))
 
     def _write_limited(self, archive: zipfile.ZipFile, info: zipfile.ZipInfo, target: Path) -> int:
         """Schreibt den Eintrag; bricht ab, wenn mehr Bytes entstehen als erlaubt (Zip-Bombe)."""
         target.parent.mkdir(parents=True, exist_ok=True)
-        remaining = self.limits.max_total_bytes - self.total_bytes
+        remaining = self.budget.remaining
         allowed = min(self.limits.max_file_bytes, remaining)
         written = 0
         with archive.open(info) as source, target.open("xb") as destination:

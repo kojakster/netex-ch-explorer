@@ -42,6 +42,8 @@ type View = "main" | "help";
 
 // Abstand der Nachfragen, solange die Beispiele noch geprüft werden (die XSD wird geladen).
 const GUIDE_POLL_MS = 2000;
+// So viele Nachfragen in Folge dürfen fehlschlagen, bevor die Oberfläche den Fehler anzeigt.
+const GUIDE_POLL_MAX_FAILURES = 5;
 
 interface AppProps {
   dataSource: DataSource;
@@ -62,8 +64,11 @@ export function App({ dataSource }: AppProps) {
   const [opening, setOpening] = useState(false);
   const [dataset, setDataset] = useState<DatasetInfo | null>(null);
   const [datasetErrorKey, setDatasetErrorKey] = useState<string | null>(null);
-  const [validating, setValidating] = useState(false);
-  const [validationErrorKey, setValidationErrorKey] = useState<string | null>(null);
+  // Eine Validierung gehört zu dem Datensatz, für den sie gestartet wurde (ID), nie zu einem späteren.
+  const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<{ id: string; key: string } | null>(null);
+  // Zählt die abgeschlossenen Validierungen des offenen Datensatzes (Schlüssel für die Diagnosen).
+  const [validationRuns, setValidationRuns] = useState(0);
   const [history, setHistory] = useState(EMPTY_HISTORY);
   // Stelle einer Diagnose; ersetzt die Markierung der Auswahl, bis wieder etwas gewählt wird.
   const [positionTarget, setPositionTarget] = useState<XmlTarget | null>(null);
@@ -103,26 +108,38 @@ export function App({ dataSource }: AppProps) {
     };
   }, [dataSource]);
 
-  // Solange die Beispiele geprüft werden, fragt die Oberfläche den Stand regelmässig nach.
+  // Solange die Beispiele geprüft werden, fragt die Oberfläche den Stand regelmässig nach. Ein
+  // einzelner Fehler beendet das Nachfragen nicht; erst mehrere in Folge zeigen den Fehler.
   useEffect(() => {
     if (guide === null || guide.examplesReady) {
       return;
     }
     let active = true;
-    const timer = window.setTimeout(() => {
-      dataSource
-        .getGuide()
-        .then((next) => {
-          if (active) {
-            setGuide(next);
-          }
-        })
-        .catch((error: unknown) => {
-          if (active) {
-            setErrorKey(errorKeyOf(error));
-          }
-        });
-    }, GUIDE_POLL_MS);
+    let failures = 0;
+    let timer = 0;
+    const poll = () => {
+      timer = window.setTimeout(() => {
+        dataSource
+          .getGuide()
+          .then((next) => {
+            if (active) {
+              setGuide(next);
+            }
+          })
+          .catch((error: unknown) => {
+            if (!active) {
+              return;
+            }
+            failures += 1;
+            if (failures >= GUIDE_POLL_MAX_FAILURES) {
+              setErrorKey(errorKeyOf(error));
+            } else {
+              poll();
+            }
+          });
+      }, GUIDE_POLL_MS);
+    };
+    poll();
     return () => {
       active = false;
       window.clearTimeout(timer);
@@ -156,7 +173,8 @@ export function App({ dataSource }: AppProps) {
     setOpening(true);
     setDataset(null);
     setDatasetErrorKey(null);
-    setValidationErrorKey(null);
+    setValidationError(null);
+    setValidationRuns(0);
     setHistory(EMPTY_HISTORY);
     setPositionTarget(null);
     openRequest.current += 1;
@@ -187,16 +205,26 @@ export function App({ dataSource }: AppProps) {
       return;
     }
     const id = dataset.id;
-    setValidating(true);
-    setValidationErrorKey(null);
+    const request = openRequest.current;
+    // Ergebnis und Fehler gelten nur, solange derselbe Datensatz offen ist.
+    const stillOpen = () => request === openRequest.current;
+    setValidatingId(id);
+    setValidationError(null);
     dataSource
       .validate(id)
       .then((validated) => {
-        // Nur anwenden, wenn derselbe Datensatz noch offen ist.
-        setDataset((current) => (current?.id === id ? validated : current));
+        if (stillOpen()) {
+          setDataset(validated);
+          setValidationRuns((runs) => runs + 1);
+        }
       })
-      .catch((error: unknown) => setValidationErrorKey(errorKeyOf(error)))
-      .finally(() => setValidating(false));
+      .catch((error: unknown) => {
+        if (stillOpen()) {
+          setValidationError({ id, key: errorKeyOf(error) });
+          setValidationRuns((runs) => runs + 1);
+        }
+      })
+      .finally(() => setValidatingId((current) => (current === id ? null : current)));
   };
 
   /** Zeigt ein Objekt oder eine Fahrt und markiert darin eine Angabe (Standard: das Objekt selbst). */
@@ -325,8 +353,10 @@ export function App({ dataSource }: AppProps) {
                   <>
                     <DatasetPanel
                       dataset={dataset}
-                      validating={validating}
-                      validationErrorKey={validationErrorKey}
+                      validating={validatingId === dataset.id}
+                      validationErrorKey={
+                        validationError?.id === dataset.id ? validationError.key : null
+                      }
                       onValidate={validate}
                     />
                     <JourneyList
@@ -338,7 +368,7 @@ export function App({ dataSource }: AppProps) {
                     <ObjectSearch dataset={dataset} onSelect={selectObject} />
                     <DiagnosticList
                       datasetId={dataset.id}
-                      refreshKey={dataset.validation === null ? "open" : "validated"}
+                      refreshKey={`run${validationRuns}`}
                       onShow={showDiagnostic}
                     />
                   </>

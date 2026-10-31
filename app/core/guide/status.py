@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
+import logging
+import sqlite3
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Final
+
+from lxml.etree import LxmlError
 
 from app.core.dataset import SourceFile, open_dataset
 from app.core.guide.examples import (
@@ -34,6 +39,8 @@ from app.core.messages import Issue, MessageKey, Severity
 from app.core.validation.engine import ValidationEngine
 
 SHORT_COMMIT_LENGTH: Final = 7
+
+logger = logging.getLogger(__name__)
 
 
 class GuideTestState(StrEnum):
@@ -286,28 +293,59 @@ def analyze_examples(
                 )
             )
             continue
-        dataset = open_dataset([SourceFile(example.name, data)], (), ref_targets)
         try:
-            if engine is not None:
-                engine.validate(dataset)
-            sha256 = dataset.index.files()[0].sha256
-            counts: dict[Severity, int] = {}
-            for item in dataset.index.diagnostics():
-                counts[item.diagnostic.severity] = counts.get(item.diagnostic.severity, 0) + 1
-            result = example_result(dataset)
-        finally:
-            dataset.close()
-        statuses.append(
-            ExampleStatus(
-                example.name,
-                example.title,
-                sha256,
-                result,
-                counts,
-                _change(record, example.name, sha256),
+            statuses.append(_analyze_example(example, data, record, ref_targets, engine))
+        except (LxmlError, sqlite3.Error, OSError):
+            # Ein Fehler beim Prüfen eines Beispiels (z. B. in der Schemaprüfung) soll die
+            # übrigen nicht verhindern; das Beispiel zeigt „Prüfung fehlgeschlagen“.
+            logger.exception("Prüfung des Beispiels %s fehlgeschlagen", example.name)
+            sha256 = hashlib.sha256(data).hexdigest()
+            statuses.append(
+                ExampleStatus(
+                    example.name,
+                    example.title,
+                    sha256,
+                    ExampleResult.CHECK_FAILED,
+                    {},
+                    _change(record, example.name, sha256),
+                )
             )
-        )
     return statuses
+
+
+def _analyze_example(
+    example: Example,
+    data: bytes,
+    record: GuideTestRecord | None,
+    ref_targets: Mapping[str, tuple[str, ...]],
+    engine: ValidationEngine | None,
+) -> ExampleStatus:
+    dataset = open_dataset([SourceFile(example.name, data)], (), ref_targets)
+    try:
+        if engine is not None:
+            engine.validate(dataset)
+        sha256 = dataset.index.files()[0].sha256
+        counts: dict[Severity, int] = {}
+        for item in dataset.index.diagnostics():
+            counts[item.diagnostic.severity] = counts.get(item.diagnostic.severity, 0) + 1
+        result = example_result(dataset)
+    finally:
+        dataset.close()
+    return ExampleStatus(
+        example.name, example.title, sha256, result, counts, _change(record, example.name, sha256)
+    )
+
+
+def fail_pending_examples(status: GuideStatus) -> GuideStatus:
+    """Schliesst eine abgebrochene Prüfung ab: offene Beispiele zeigen „Prüfung fehlgeschlagen“.
+
+    Damit fragt die Oberfläche nicht endlos nach (`examples_ready` ist danach immer wahr).
+    """
+    examples = tuple(
+        replace(example, result=ExampleResult.CHECK_FAILED) if example.result is None else example
+        for example in status.examples
+    )
+    return replace(status, examples=examples, examples_ready=True)
 
 
 def _change(record: GuideTestRecord | None, name: str, sha256: str | None) -> ExampleChange:

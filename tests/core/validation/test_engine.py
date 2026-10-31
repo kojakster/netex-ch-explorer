@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 
 from app.core.dataset import Dataset, SourceFile, open_dataset
-from app.core.diagnostics import DiagnosticCategory
+from app.core.diagnostics import Diagnostic, DiagnosticCategory
 from app.core.guide.examples import examples_dir
 from app.core.guide.layout import GENERAL_RULES_FILE, XSD_MAIN_FILE
 from app.core.messages import MessageKey, Severity
@@ -83,6 +84,57 @@ def test_validates_a_ch20_file(engine: ValidationEngine) -> None:
     assert engine.xsd_loaded
 
 
+def test_steps_are_not_performed_when_no_file_was_checkable(engine: ValidationEngine) -> None:
+    data = (FIXTURES_DIR / "netex110_like.xml").read_bytes()
+    summary = engine.validate(dataset_of(("netex110_like.xml", data)))
+    assert [(s.step_id, s.performed) for s in summary.steps] == [
+        ("xsd", False),
+        ("general_rules", False),
+        ("ch_core_rules", False),
+    ]
+    for step in summary.steps:
+        assert step.reason is not None
+        assert step.reason.key is MessageKey.VALIDATION_STEP_NO_FILE
+        assert step.reason.params == {"step": step.step_id}
+
+
+def test_empty_dataset_performs_no_step(engine: ValidationEngine) -> None:
+    summary = engine.validate(dataset_of())
+    assert not any(step.performed for step in summary.steps)
+
+
+def test_lxml_steps_are_not_performed_when_the_only_file_is_uncheckable(
+    engine: ValidationEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def reject(_data: bytes) -> ParsedDocument:
+        raise NotCheckableError("Grund")
+
+    monkeypatch.setattr(engine_module, "parse_safely", reject)
+    summary = engine.validate(dataset_of(("a.xml", ch20())))
+    assert {s.step_id: s.performed for s in summary.steps} == {
+        "xsd": False,
+        "general_rules": False,
+        "ch_core_rules": True,
+    }
+
+
+def test_findings_of_a_file_are_added_with_one_call(
+    engine: ValidationEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dataset = dataset_of(("a.xml", ch20("<A order='1'/><B order='2'/>")), ("b.xml", ch20()))
+    calls: list[int] = []
+    original = dataset.index.add_diagnostics
+
+    def spy(file_id: int, diagnostics: Sequence[Diagnostic]) -> None:
+        calls.append(file_id)
+        original(file_id, diagnostics)
+
+    monkeypatch.setattr(dataset.index, "add_diagnostics", spy)
+    engine.validate(dataset)
+    assert sorted(calls) == [1, 2]  # je Datei genau ein Aufruf (ein Commit)
+    assert len(dataset.index.diagnostics(DiagnosticCategory.PROFILE_RULE)) >= 2
+
+
 def test_xsd_violation_has_position_and_element(engine: ValidationEngine) -> None:
     dataset = dataset_of(("a.xml", ch20(root="Andere")))
     engine.validate(dataset)
@@ -150,7 +202,7 @@ def test_file_with_doctype_is_never_given_to_lxml(engine: ValidationEngine) -> N
     dataset = dataset_of(("security_xxe.xml", (FIXTURES_DIR / "security_xxe.xml").read_bytes()))
     [outcome] = engine.validate(dataset).files
     assert not outcome.checked
-    assert dataset.file_data  # Inhalt liegt vor, wird aber nicht geprüft
+    assert dataset.read_file(1)  # Inhalt liegt vor, wird aber nicht geprüft
     keys = {d.diagnostic.key for d in dataset.index.diagnostics()}
     assert keys == {MessageKey.XML_DOCTYPE_FORBIDDEN}
 

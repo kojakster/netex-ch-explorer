@@ -6,6 +6,7 @@ Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts
 
 - Server nur auf `127.0.0.1`. Anfragen mit anderem `Host` als `127.0.0.1` oder `localhost` werden mit 400 abgewiesen (Schutz gegen DNS-Rebinding).
 - Die Oberfläche wird vom selben Server ausgeliefert (gleicher Ursprung); deshalb ist **kein CORS** eingerichtet. Im Entwicklungsmodus leitet Vite `/api` an den Server weiter.
+- **Origin-Prüfung:** Zustandsändernde Anfragen (alle ausser `GET`, `HEAD`, `OPTIONS`; also `POST` und `DELETE`) werden nur angenommen, wenn der Header `Origin` fehlt (Skripte, Tests) oder genau `http://127.0.0.1:<Port>` bzw. `http://localhost:<Port>` ist; `<Port>` ist der Port aus `config/settings.json`. Sonst 403 `error.forbidden_origin`, bevor etwas geschieht. Browser senden `Origin` bei solchen Anfragen immer; so kann keine fremde Webseite Datensätze öffnen, prüfen oder schliessen. Im Entwicklungsmodus trägt der Vite-Proxy (`app/frontend/vite.config.ts`) die Adresse des Servers als `Origin` ein, damit die Anfragen vom Vite-Port nicht abgewiesen werden.
 - Feldnamen in camelCase. Texte nie im Klartext, sondern als **Übersetzungsschlüssel mit Parametern** (`key`, `params`); die Oberfläche setzt den Text aus `de-CH.json` bzw. `en.json` ein.
 - Antworten der Schnittstelle tragen `Cache-Control: no-store`. Alle Antworten tragen Sicherheitsheader (Content-Security-Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`).
 - Keine Swagger-/OpenAPI-Seite (sie würde Ressourcen aus dem Internet laden).
@@ -23,6 +24,7 @@ Jeder Fehler hat dieselbe Form, ohne interne Details (keine Stacktraces):
 | `error.not_found` | 404 | Pfad unbekannt |
 | `error.method_not_allowed` | 405 | Methode nicht erlaubt |
 | `error.invalid_request` | 422 | Ungültige Parameter |
+| `error.forbidden_origin` | 403 | Zustandsändernde Anfrage mit fremdem `Origin` |
 | `error.payload_too_large` | 413 | Upload grösser als erlaubt, mit zu vielen Dateien oder ohne `Content-Length` |
 | `error.http` | andere 4xx/5xx | Allgemeiner HTTP-Fehler |
 | `error.internal` | 500 | Programmfehler (Details nur im Serverprotokoll) |
@@ -58,7 +60,7 @@ Guide-Status für die Guide-Status-Box. Wird beim Start ermittelt; nach einem Gu
     {
       "name": "01_NeTEx_Spiez_Interlaken_Ost.xml",
       "title": "Basic train with TimeDemandType",
-      "result": "clean | notes | errors | unreadable | null",
+      "result": "clean | notes | errors | unreadable | check_failed | null",
       "counts": { "error": 0 },
       "change": "unchanged | changed | new | untested"
     }
@@ -67,7 +69,7 @@ Guide-Status für die Guide-Status-Box. Wird beim Start ermittelt; nach einem Gu
 }
 ```
 
-- `result` zählt die Prüfungen der **Datei** (Entscheid „Kernregeln Phase 4“ (6)): XML-Syntax, XSD, `general_rules.sch` (inkl. `order`), Kernregeln und Referenzen. Befunde der Fahrtansicht zählen nicht.
+- `result` zählt die Prüfungen der **Datei** (Entscheid „Kernregeln Phase 4“ (6)): XML-Syntax, XSD, `general_rules.sch` (inkl. `order`), Kernregeln und Referenzen. Befunde der Fahrtansicht zählen nicht. `check_failed` heisst: Die Prüfung dieses Beispiels ist an einem Fehler der Prüfung selbst (lxml, SQLite, Datei) gescheitert; die übrigen Beispiele sind nicht betroffen. Bricht die Prüfung der Beispiele unerwartet ab (Programmfehler, im Serverprotokoll), gelten die offenen Beispiele als `check_failed`, und `examplesReady` wird `true`. Die Oberfläche fragt nach einem einzelnen fehlgeschlagenen Nachfragen weiter und zeigt den Fehler erst nach 5 Fehlschlägen in Folge.
 - `branch` ist `null` bei losgelöstem HEAD; `commit`/`xsdCommit` sind `null`, wenn nicht bestimmbar.
 - Kein Commit-Datum (Entscheid „Guide-Stand ohne Datum“). `testState` `differs` heisst „weicht vom zuletzt getesteten Stand ab“ (Guide- oder XSD-Commit).
 - Mögliche Meldungen: `guide.not_found`, `guide.not_git`, `guide.git_unreadable`, `guide.xsd_missing`, `guide.never_tested`, `guide.tested_differs`, `guide.test_record_invalid`, `mapping.*`.
@@ -154,21 +156,21 @@ Das Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“. `r
 Öffnet eigene Dateien aus dem Dialog „Datei öffnen“ der Oberfläche: eine XML-Datei, mehrere XML-Dateien oder ZIP-Dateien. **Eigener Endpunkt** (technische Festlegung): `POST /api/datasets` bleibt für Beispiele des Guides. Es gibt keine Pfadeingabe; die Schnittstelle nimmt nie Dateipfade entgegen.
 
 - Anfrage: `multipart/form-data`, ein oder mehrere Teile mit dem Namen `files`. Pflicht ist `Content-Length` (sonst 413).
-- Grenzen aus `config/settings.json` (`zipLimits`): Der Upload darf `maxTotalBytes` (plus 1 MB Multipart-Rahmen) nicht überschreiten, höchstens `maxFiles` Dateien (sonst 413 `error.payload_too_large`, ohne den Rumpf zu lesen). Je Datei gilt `maxFileBytes`; ZIP: Gesamtgrösse entpackt, Anzahl Einträge, Kompressionsrate (ab 1 MiB je Eintrag), Einzelgrösse.
-- Dateinamen werden bereinigt (kein Ordnerteil, nur Buchstaben, Ziffern und `. - _ ( ) + , @ = Leerzeichen`; Geräte­namen unter Windows erhalten ein `_`); eine Änderung meldet `file.name_changed` (ℹ Hinweis).
+- Grenzen aus `config/settings.json` (`zipLimits`): Der Upload darf `maxTotalBytes` (plus 1 MB Multipart-Rahmen) nicht überschreiten, höchstens `maxFiles` Dateien (sonst 413 `error.payload_too_large`, ohne den Rumpf zu lesen). Je Datei gilt `maxFileBytes`; ZIP: Anzahl Einträge, Kompressionsrate (ab 1 MiB je Eintrag), Einzelgrösse. Die **Gesamtgrösse** (`maxTotalBytes`) gilt über alle XML-Dateien und alle ZIP-Archive eines Uploads zusammen (entpackt): Was die Grenze überschreitet, wird nicht geöffnet (`file.total_too_large` bei einer XML-Datei, `zip.total_too_large` bei einem Archiv).
+- Dateinamen werden bereinigt (kein Ordnerteil, nur Buchstaben, Ziffern und `. - _ ( ) + , @ = Leerzeichen`; Geräte­namen unter Windows erhalten ein `_`); eine Änderung meldet `file.name_changed` (ℹ Hinweis) unter dem **endgültigen** Namen mit dem ursprünglichen als `original`; das gilt auch, wenn nur der Zusatz `_2` bei doppelten Namen entsteht (und für ZIP-Einträge).
 - Nur `.xml` (direkt oder im ZIP) wird gelesen. Andere Dateien: `file.type_unsupported` (⚠). Im ZIP: Einträge mit `..`, absolutem Pfad oder Laufwerk (`zip.unsafe_path`), Symlinks (`zip.symlink`), zu grosse oder zu stark komprimierte Einträge werden übersprungen (⚠); andere Einträge (und `__MACOSX`, `._…`) erscheinen als ein Hinweis `zip.entries_skipped`. Ein nicht lesbares, zu grosses oder mit zu vielen Einträgen versehenes Archiv wird nicht entpackt (`zip.unreadable`, `zip.total_too_large`, `zip.too_many_files`).
 - Alle Meldungen erscheinen als **Diagnosen der Art `file`** zur Datei bzw. zum Archiv (Eintrag ohne Inhalt, `readable: false`); der Aufruf stürzt nie ab und liefert 200 mit der Datensatzübersicht (wie `POST /api/datasets`, jede Datei mit `detection`).
-- Die Dateien liegen nur in `work/` (per `.gitignore` ausgeschlossen) und werden beim Schliessen des Datensatzes (`DELETE`), beim Herausfallen aus der Liste der 10 offenen Datensätze und beim Start gelöscht.
+- Die Dateien liegen nur in `work/` (per `.gitignore` ausgeschlossen) und werden beim Schliessen des Datensatzes (`DELETE`), beim Herausfallen aus der Liste der 10 offenen Datensätze und beim Start gelöscht. Die Rohdaten für die Validierung werden bei Bedarf aus `work/` gelesen (bei Beispielen aus dem Guide-Klon), nicht im Speicher gehalten.
 
 ### `DELETE /api/datasets/{id}`
 
-Schliesst den Datensatz und löscht seine Dateien in `work/`. 204 ohne Inhalt; unbekannte oder ungültige ID: 404. Die Oberfläche ruft das beim Öffnen eines anderen Datensatzes auf.
+Schliesst den Datensatz und löscht seine Dateien in `work/`. 204 ohne Inhalt; unbekannte oder ungültige ID: 404. Läuft noch eine Anfrage mit diesem Datensatz (z. B. eine Validierung), wirkt das Schliessen erst nach deren Ende: Der Datensatz ist sofort nicht mehr erreichbar (404), die laufende Anfrage wird aber nicht abgebrochen. Dasselbe gilt für das Herausfallen aus der Liste der offenen Datensätze. Die Oberfläche ruft das beim Öffnen eines anderen Datensatzes auf.
 
 ### `POST /api/datasets/{id}/validate`
 
 Startet die Validierung (Plan Abschnitt 8) für alle Dateien, die als **CH 2.0 erkannt** sind; Dateien anderer Version (z. B. 1.10), mehrdeutige, unbekannte und nicht lesbare Dateien werden nicht geprüft (Grund in `validation.files[].reason`), bleiben aber im Explorer nutzbar. Ohne Rumpf. Antwort: die Datensatzübersicht wie `GET /api/datasets/{id}` mit gefülltem `validation` und aktualisierten `diagnosticCounts`.
 
-Schritte (immer in dieser Reihenfolge): `xsd` (lxml gegen `xsd/xsd/NeTEx_publication.xsd`; Art `xsd`, ⚠), `general_rules` (`src/schematron_rules/general_rules.sch` mit `lxml.isoschematron`; Art `profile_rule`, ⚠), `ch_core_rules` (Schweizer Kernregeln, [core-rules.md](core-rules.md); Art `profile_rule`, Schweregrad je Regel). Ist die XSD noch nicht geladen, blockiert der Aufruf bis zum Ende des Ladens (rund 17 s). Fehlt die XSD oder lässt sie sich nicht laden, ist der Schritt `performed: false` mit `validation.step_unavailable`. Eine wiederholte Validierung ersetzt die Befunde der Arten `xsd` und `profile_rule`. Je Schritt und Datei werden höchstens 500 Befunde aufgenommen (`validation.truncated`).
+Schritte (immer in dieser Reihenfolge): `xsd` (lxml gegen `xsd/xsd/NeTEx_publication.xsd`; Art `xsd`, ⚠), `general_rules` (`src/schematron_rules/general_rules.sch` mit `lxml.isoschematron`; Art `profile_rule`, ⚠), `ch_core_rules` (Schweizer Kernregeln, [core-rules.md](core-rules.md); Art `profile_rule`, Schweregrad je Regel). Ist die XSD noch nicht geladen, blockiert der Aufruf bis zum Ende des Ladens (rund 17 s). Fehlt die XSD oder lässt sie sich nicht laden, ist der Schritt `performed: false` mit `validation.step_unavailable`. Ein Schritt ist nur `performed: true`, wenn mindestens eine Datei tatsächlich geprüft wurde; war keine Datei prüfbar (andere Version, nicht lesbar, für lxml nicht prüfbar), ist er `performed: false` mit `validation.step_no_file`. Eine wiederholte Validierung ersetzt die Befunde der Arten `xsd` und `profile_rule`. Je Schritt und Datei werden höchstens 500 Befunde aufgenommen (`validation.truncated`).
 
 ### `GET /api/datasets/{id}/journeys`
 

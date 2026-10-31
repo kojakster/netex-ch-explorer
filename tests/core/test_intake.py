@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 
 from app.core.config import ZipLimits
+from app.core.dataset import FileNote
 from app.core.intake import (
     MAX_NAME_LENGTH,
-    IntakeNote,
     Upload,
     Workspace,
     clean_name,
@@ -38,7 +38,7 @@ def make_zip(entries: dict[str, bytes], *, symlinks: tuple[str, ...] = ()) -> by
     return buffer.getvalue()
 
 
-def keys(result_notes: list[IntakeNote]) -> list[MessageKey]:
+def keys(result_notes: list[FileNote]) -> list[MessageKey]:
     return [note.key for note in result_notes]
 
 
@@ -60,6 +60,13 @@ def session(tmp_path: Path) -> Path:
         ("...", "datei"),
         ("CON.xml", "_CON.xml"),
         ("nul", "_nul"),
+        ("CON .xml", "_CON .xml"),
+        ("con ..xml", "_con ..xml"),
+        ("COM¹", "_COM¹"),
+        ("LPT².xml", "_LPT².xml"),
+        ("com³.txt", "_com³.txt"),
+        ("COM0.xml", "COM0.xml"),
+        ("CONSOLE.xml", "CONSOLE.xml"),
         ("Zürich.xml", "Zürich.xml"),
         ("a\x00b.xml", "a_b.xml"),
     ],
@@ -92,6 +99,28 @@ def test_cleaned_name_is_reported(session: Path) -> None:
 def test_duplicate_names_are_made_unique(session: Path) -> None:
     result = receive([Upload("a.xml", XML), Upload("A.XML", XML)], session, LIMITS)
     assert [source.name for source in result.sources] == ["a.xml", "A_2.XML"]
+
+
+def test_unique_rename_is_reported_at_the_final_name(session: Path) -> None:
+    result = receive([Upload("a.xml", XML), Upload("A.XML", XML)], session, LIMITS)
+    [note] = result.notes
+    assert note.file_name == "A_2.XML"
+    assert note.key is MessageKey.FILE_NAME_CHANGED
+    assert note.params == {"original": "A.XML"}
+    assert (session / "files" / "A_2.XML").read_bytes() == XML
+
+
+def test_cleaned_name_taken_by_an_earlier_file_does_not_overwrite_it(session: Path) -> None:
+    other = b"<other/>"
+    result = receive([Upload("a_b.xml", XML), Upload("a?b.xml", other)], session, LIMITS)
+    assert [source.name for source in result.sources] == ["a_b.xml", "a_b_2.xml"]
+    assert [note.file_name for note in result.notes] == ["a_b_2.xml"]
+    assert (session / "files" / "a_b.xml").read_bytes() == XML
+    assert (session / "files" / "a_b_2.xml").read_bytes() == other
+    assert [source.path for source in result.sources] == [
+        session / "files" / "a_b.xml",
+        session / "files" / "a_b_2.xml",
+    ]
 
 
 @pytest.mark.parametrize("name", ["a.txt", "a", "a.exe", "xml"])
@@ -227,6 +256,36 @@ def test_zip_total_larger_than_its_headers_is_stopped(
     assert keys(result.notes) == [MessageKey.ZIP_TOTAL_TOO_LARGE]
 
 
+def test_total_limit_counts_all_files_of_an_upload(session: Path) -> None:
+    limits = ZipLimits(max_total_bytes=100, max_file_bytes=100)
+    uploads = [Upload("a.xml", b"x" * 60), Upload("b.xml", b"y" * 60), Upload("c.xml", b"z" * 40)]
+    result = receive(uploads, session, limits)
+    assert [source.name for source in result.sources] == ["a.xml", "c.xml"]
+    [note] = result.notes
+    assert (note.file_name, note.key) == ("b.xml", MessageKey.FILE_TOTAL_TOO_LARGE)
+    assert note.params == {"limit": 100}
+    assert not (session / "files" / "b.xml").exists()
+
+
+def test_total_limit_counts_xml_and_zip_together(session: Path) -> None:
+    limits = ZipLimits(max_total_bytes=100, max_file_bytes=100)
+    archive = make_zip({"in.xml": b"x" * 60})
+    result = receive([Upload("a.xml", b"y" * 60), Upload("z.zip", archive)], session, limits)
+    assert [source.name for source in result.sources] == ["a.xml"]
+    assert keys(result.notes) == [MessageKey.ZIP_TOTAL_TOO_LARGE]
+
+
+def test_total_limit_counts_all_zips_of_an_upload(session: Path) -> None:
+    limits = ZipLimits(max_total_bytes=100, max_file_bytes=100)
+    first = make_zip({"a.xml": b"x" * 60})
+    second = make_zip({"b.xml": b"y" * 60})
+    result = receive([Upload("1.zip", first), Upload("2.zip", second)], session, limits)
+    assert [source.name for source in result.sources] == ["a.xml"]
+    assert [(n.file_name, n.key) for n in result.notes] == [
+        ("2.zip", MessageKey.ZIP_TOTAL_TOO_LARGE)
+    ]
+
+
 def test_zip_that_is_not_a_zip(session: Path) -> None:
     result = receive([Upload("z.zip", b"das ist kein zip")], session, LIMITS)
     assert result.sources == []
@@ -258,6 +317,10 @@ def test_zip_entry_names_are_cleaned_and_unique(session: Path) -> None:
     archive = make_zip({"a?b.xml": XML, "a_b.xml": XML})
     result = receive([Upload("z.zip", archive)], session, LIMITS)
     assert [source.name for source in result.sources] == ["a_b.xml", "a_b_2.xml"]
+    assert [(n.file_name, n.params["original"]) for n in result.notes] == [
+        ("a_b.xml", "a?b.xml"),
+        ("a_b_2.xml", "a_b.xml"),
+    ]
 
 
 def test_two_zips_do_not_collide(session: Path) -> None:

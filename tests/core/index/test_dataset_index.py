@@ -256,3 +256,17 @@ def test_elements_named_includes_elements_without_id() -> None:
     assert {row.name for row in names} == {"ServiceJourney", "DepartureTime"}
     assert [row.id for row in names] == sorted(row.id for row in names)
     dataset.close()
+
+
+def test_children_of_many_elements_matches_single_queries() -> None:
+    dataset = load("ch20_three_stops.xml")
+    index = dataset.index
+    elements = index.elements_named(["ServiceJourney", "Quay", "ScheduledStopPoint"])
+    ids = [element.id for element in elements]
+    batch = index.children_of(ids + ids[:1])
+    assert set(batch) == set(ids)
+    assert any(batch[element_id] for element_id in ids)
+    for element_id in ids:
+        assert batch[element_id] == index.children(element_id)
+    assert index.children_of([]) == {}
+    dataset.close()

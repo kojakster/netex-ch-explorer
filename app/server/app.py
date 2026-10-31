@@ -9,7 +9,7 @@ from typing import Final
 from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.status import HTTP_413_CONTENT_TOO_LARGE
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_413_CONTENT_TOO_LARGE
 
 from app.core.config import SUPPORTED_LANGUAGES
 from app.server.dataset_routes import (
@@ -22,7 +22,7 @@ from app.server.datasets import DatasetRegistry
 from app.server.errors import ErrorKey, error_response, register_error_handlers
 from app.server.runtime import Runtime
 from app.server.schemas import AppInfoOut, GuideOut
-from app.server.security import ALLOWED_HOSTS, NO_STORE, SECURITY_HEADERS
+from app.server.security import ALLOWED_HOSTS, NO_STORE, SECURITY_HEADERS, is_allowed_request
 
 FRONTEND_DIST: Final = Path("app") / "frontend" / "dist"
 UPLOAD_PATH: Final = "/api/datasets/upload"
@@ -46,16 +46,18 @@ def create_app(runtime: Runtime, frontend_dist: Path | None) -> FastAPI:
     )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(ALLOWED_HOSTS))
     app.middleware("http")(_add_security_headers)
+    app.middleware("http")(_origin_check(runtime.config.settings.port))
     app.middleware("http")(_upload_limit(runtime.config.settings.zip_limits.max_total_bytes))
     register_error_handlers(app)
     # Reste früherer Läufe in work/ löschen.
     runtime.workspace.clear()
     app.include_router(_api_router(runtime))
     registry = DatasetRegistry()
+    app.state.registry = registry
     app.include_router(lifecycle_router(runtime, registry))
     app.include_router(dataset_router(runtime, registry))
-    app.include_router(object_router(registry))
-    app.include_router(journey_router(runtime, registry))
+    app.include_router(object_router())
+    app.include_router(journey_router(runtime))
     if frontend_dist is not None and frontend_dist.is_dir():
         app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
     return app
@@ -100,6 +102,21 @@ def _upload_limit(
             length = request.headers.get("content-length", "")
             if not length.isdigit() or int(length) > max_bytes + MULTIPART_OVERHEAD_BYTES:
                 return error_response(HTTP_413_CONTENT_TOO_LARGE, ErrorKey.PAYLOAD_TOO_LARGE)
+        return await call_next(request)
+
+    return middleware
+
+
+def _origin_check(
+    port: int,
+) -> Callable[[Request, Callable[[Request], Awaitable[Response]]], Awaitable[Response]]:
+    """Weist zustandsändernde Anfragen mit fremdem `Origin` ab (403), bevor etwas geschieht."""
+
+    async def middleware(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
+        if not is_allowed_request(request.method, request.headers.get("origin"), port):
+            return error_response(HTTP_403_FORBIDDEN, ErrorKey.FORBIDDEN_ORIGIN)
         return await call_next(request)
 
     return middleware

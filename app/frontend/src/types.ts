@@ -69,7 +69,7 @@ export interface AppInfo {
   issues: Issue[];
 }
 
-export type ExampleResult = "clean" | "notes" | "errors" | "unreadable";
+export type ExampleResult = "clean" | "notes" | "errors" | "unreadable" | "check_failed";
 export type ExampleChange = "unchanged" | "changed" | "new" | "untested";
 
 export interface ExampleInfo {

@@ -311,8 +311,33 @@ Sicherheit (Upload, ZIP, lxml, Pfade, IDs, XSS) geprüft, keine offenen Funde: D
 
 - Offen und dem Benutzer vorgelegt: [open-points.md](open-points.md) 18–21 (9 statt 11 Beispiele, Dateien mit mehrdeutiger Version nicht prüfbar, Wahl des Guide-Kapitels, Fixtures ohne Produktkategorie).
 - Nicht umgesetzt (Entscheide vom 31.10.2026): CH-SJP-08, CH-SJ-16. Nicht eingebunden: übrige ~330 Profilregeln, Erklärungen und Korrekturvorschläge der XSD-Meldungen (Originalwortlaut).
-- Wird ein Datensatz geschlossen, während eine Anfrage ihn noch benutzt, kann diese Anfrage mit 500 enden (der Index ist geschlossen); die Oberfläche schliesst nur ersetzte Datensätze.
-- Ein Upload liegt bis zu 200 MB im Arbeitsspeicher (zusätzlich der Index); für die erste Ausbaustufe unkritisch, grosse Lieferungen sind zurückgestellt.
+- Ein Upload liegt beim Annehmen bis zu 200 MB im Arbeitsspeicher (Rohdaten, danach nur noch Index und Text); nach der Korrektur zum Review wird nichts mehr zurückgelesen oder im Datensatz behalten. Streaming in `work/` bleibt für grosse Lieferungen zurückgestellt.
 - Eine Validierung vor Ende des XSD-Ladens wartet bis zu 17 s.
 - Die Prüfung der Beispiele im Hintergrund schlägt ohne XSD (Submodul nicht geholt) nicht fehl: der Schritt `xsd` ist dann „nicht durchgeführt“.
 - Die Tests lassen einige SQLite-Datensätze ungeschlossen (`ResourceWarning`, harmlos). Windows: nicht getestet.
+
+### Review durch Opus und Korrekturen (Stand der Korrekturen: 31.10.2026)
+
+Code-Review (Opus) über `c1a34ae..6051926`, Funde 1 bis 10; dazu die Härtung 11 aus dem Sicherheits-Review. Alle behoben; technische Festlegungen: [decisions.md](decisions.md) „Korrekturen nach Review Phase 4“, Schnittstelle: [api.md](api.md).
+
+| Nr. | Fund | Behebung | Test |
+|---|---|---|---|
+| 1 | `remove` schloss den Index sofort; eine laufende Anfrage (z. B. Validierung) endete mit 500 | `Dataset.acquire`/`release`/`close` mit Zähler: Schliessen und Verdrängen wirken nach der letzten Anfrage; die Schnittstelle hält den Datensatz je Anfrage fest (Abhängigkeiten mit `yield`). Oberfläche: Ergebnis, Fehler und „läuft“ einer Prüfung nur für den Datensatz, für den sie gestartet wurde | `test_closing_during_a_validation_does_not_break_it`, `test_close_waits_for_running_requests`, `test_registry_evicts_oldest`; Vitest (zwei Tests zu später geöffnetem Datensatz) |
+| 2 | `maxTotalBytes` galt je ZIP statt je Upload | gemeinsames Budget für alle XML-Dateien und ZIP-Archive eines Uploads, neue Meldung `file.total_too_large` | drei Tests in `test_intake.py`, ein API-Test |
+| 3 | `FILE_NAME_CHANGED` am bereinigten Namen, ehe `_unique` ihn änderte (falsche Datei); keine Meldung bei reiner `_unique`-Umbenennung | Meldung am endgültigen Namen, auch bei `_unique` und bei ZIP-Einträgen | `test_unique_rename_is_reported_at_the_final_name`, `test_cleaned_name_taken_by_an_earlier_file_does_not_overwrite_it`, ZIP-Namenstest |
+| 4 | Eine Ausnahme bei einem Beispiel brach `complete_examples` ab, `examples_ready` blieb falsch, die Oberfläche fragte endlos | Fehler von lxml, SQLite und Dateizugriff je Beispiel: Ergebnis `check_failed` („Prüfung fehlgeschlagen“), protokolliert; Programmfehler brechen weiter ab, doch `Runtime.complete_examples` setzt am Ende immer `examples_ready` (offene Beispiele = `check_failed`); Oberfläche: Nachfragen endet erst nach 5 Fehlschlägen in Folge | vier Tests in `test_status.py`, `test_runtime.py`; zwei Vitest-Tests, ein Vitest-Test zur Anzeige |
+| 5 | `DiagnosticList` lud bei erneutem „Prüfen“ nicht neu | Schlüssel zählt die abgeschlossenen Validierungen | Vitest `lädt die Diagnosen bei jeder erneuten Prüfung neu` |
+| 6 | Gerätenamen `COM¹`/`LPT²` und `CON .xml` wurden nicht erkannt | Vergleich nach Entfernen von Leerzeichen und Punkten am Ende des Basisnamens, `¹²³` wie `123` | sieben neue Fälle in `test_clean_name` |
+| 7 | XSD und `general_rules` galten als „durchgeführt“, auch ohne prüfbare Datei | „durchgeführt“ nur, wenn mindestens eine Datei geprüft wurde; sonst `validation.step_no_file` (de/en). Gleiches für `ch_core_rules` | vier Tests in `test_engine.py` |
+| 8 | Leistung: je Befund ein Commit, je Element eine Abfrage der Kinder | Befunde je Datei gebündelt (ein `add_diagnostics`), `DatasetIndex.children_of` lädt Kinder gesammelt; Verhalten unverändert | `test_findings_of_a_file_are_added_with_one_call`, `test_children_of_many_elements_matches_single_queries`; bestehende Kernregel-Tests |
+| 9 | Doppelte Datenklasse `IntakeNote`/`FileNote` | eine Klasse `FileNote` in `app/core/dataset.py`, das Umkopieren in `dataset_routes.py` entfällt | bestehende Tests angepasst |
+| 10 | Speicher: `Dataset.file_data` hielt alle Rohdaten; beim Upload mehrfach im Speicher | `SourceFile.path`; `Dataset.read_file` liest aus `work/` bzw. dem Guide-Klon; kein Zurücklesen nach dem Speichern | `test_raw_data_is_read_from_the_file_not_kept_in_memory` |
+| 11 | Härtung (Sicherheits-Review, kein Fund): Schutz vor Anfragen fremder Webseiten | Origin-Prüfung für POST/DELETE (Fehlt oder `http://127.0.0.1:<Port>`/`http://localhost:<Port>`), sonst 403 `error.forbidden_origin`; Vite-Proxy setzt den Origin im Entwicklungsmodus | `test_own_origin_may_change_state`, `test_foreign_origin_is_rejected_for_changes` (8 Origins), `test_foreign_origin_cannot_close_or_validate`, `test_requests_without_origin_are_accepted` |
+
+Ergebnis des Sicherheits-Reviews (Opus): **keine Funde**; die Origin-Prüfung ist eine zusätzliche Härtung.
+
+Offen: nichts aus diesem Review. Hinweise: Die Rohdaten eines Beispiels werden bei der Validierung neu aus dem Guide-Klon gelesen; ändert ein `git pull` die Datei bei geöffnetem Datensatz, stimmen Stellen der Befunde nicht mehr mit dem Index überein (Server neu starten, siehe [api.md](api.md) „Guide-Status“). Windows: weiterhin nicht getestet.
+
+Prüfbefehl: `uv run python scripts/check.py` grün (alle Schritte wie oben); `uv run python scripts/test.py` bestanden, `guide-tested.json` unverändert (Guide `b7ac158`, XSD `73b337e`, 22 Beispiele).
+
+Testzahlen nach den Korrekturen: pytest **805 Tests bestanden** (vorher 763), Abdeckung `app/core` **98 %** (Mindestwert 90 %; `intake.py` 96 %, `validation/engine.py` 97 %, `guide/status.py` 98 %); Vitest **152 Tests bestanden** (vorher 147).

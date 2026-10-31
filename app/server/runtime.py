@@ -9,7 +9,12 @@ from pathlib import Path
 from app.core.config import AppConfig, load_config
 from app.core.guide.guide_tested import TEST_RECORD_FILE
 from app.core.guide.links import GuideLinks, read_guide_links
-from app.core.guide.status import GuideStatus, complete_examples, inspect_guide
+from app.core.guide.status import (
+    GuideStatus,
+    complete_examples,
+    fail_pending_examples,
+    inspect_guide,
+)
 from app.core.intake import WORK_DIR_NAME, Workspace
 from app.core.validation.engine import ValidationEngine
 
@@ -41,11 +46,17 @@ class Runtime:
 
     def complete_examples(self) -> None:
         """Lädt die XSD und prüft die Beispiele (blockiert; für den Hintergrundfaden)."""
-        self.engine.preload()
-        if self._test_record_path is not None:
+        if self._test_record_path is None:
+            self.engine.preload()
+            return
+        try:
+            self.engine.preload()
             self.guide = complete_examples(
                 self.guide, self._test_record_path, self.config.ref_targets, self.engine
             )
+        finally:
+            # Auch bei einem Programmfehler endet das Nachfragen der Oberfläche.
+            self.guide = fail_pending_examples(self.guide)
 
     def start_background(self) -> threading.Thread:
         """Startet `complete_examples` in einem Hintergrundfaden."""
@@ -57,7 +68,8 @@ class Runtime:
         try:
             self.complete_examples()
         except Exception:
-            # Ein Fehler hier darf den Server nicht beenden; die Beispiele bleiben ohne Ergebnis.
+            # Ein Fehler hier darf den Server nicht beenden; offene Beispiele gelten als
+            # fehlgeschlagen (siehe `complete_examples`).
             logger.exception("Prüfung der Beispiele fehlgeschlagen")
 
 

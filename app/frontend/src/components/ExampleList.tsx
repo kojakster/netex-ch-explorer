@@ -21,6 +21,7 @@ function statusSymbol(example: ExampleInfo): string {
     case "notes":
       return SEVERITY_SYMBOLS.info;
     case "errors":
+    case "check_failed":
       return SEVERITY_SYMBOLS.error;
     case "unreadable":
       return UNREADABLE_SYMBOL;

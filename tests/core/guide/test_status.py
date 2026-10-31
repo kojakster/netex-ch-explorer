@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
+from lxml.etree import LxmlError
 
+from app.core.dataset import Dataset
 from app.core.guide.examples import ExampleResult
 from app.core.guide.guide_tested import ExampleRecord, GuideTestRecord, write_test_record
 from app.core.guide.layout import MAPPING_TABLE_FILE, XSD_MAIN_FILE
@@ -13,11 +16,13 @@ from app.core.guide.status import (
     GuideStatus,
     GuideTestState,
     complete_examples,
+    fail_pending_examples,
     inspect_guide,
     read_guide_revision,
 )
 from app.core.messages import MessageKey, Severity
 from app.core.validation.engine import ValidationEngine
+from app.core.validation.result import ValidationSummary
 from tests.support import REF_TARGETS, SHA_A, SHA_B
 
 
@@ -234,3 +239,63 @@ def test_completing_a_missing_guide_changes_nothing(tmp_path: Path) -> None:
     engine = ValidationEngine(tmp_path / "fehlt", None)
     missing = inspect_guide(tmp_path / "fehlt", tmp_path / "t.json", REF_TARGETS, engine)
     assert complete_examples(missing, tmp_path / "t.json", REF_TARGETS, engine) is missing
+
+
+def test_failing_example_does_not_stop_the_others(
+    guide: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    record = tmp_path / "guide-tested.json"
+    engine = ValidationEngine(guide, SHA_A)
+    original = engine.validate
+
+    def validate(dataset: Dataset) -> ValidationSummary:
+        if dataset.index.files()[0].name == "ch20_midnight.xml":
+            raise LxmlError("kaputt")
+        return original(dataset)
+
+    monkeypatch.setattr(engine, "validate", validate)
+    status = inspect_guide(guide, record, REF_TARGETS, engine)
+    assert results(status) == {
+        "broken_xml.xml": ExampleResult.UNREADABLE,
+        "ch20_midnight.xml": ExampleResult.CHECK_FAILED,
+        "ch20_three_stops.xml": ExampleResult.CLEAN,
+    }
+    failed = {example.name: example for example in status.examples}["ch20_midnight.xml"]
+    assert failed.sha256 is not None
+    assert failed.counts == {}
+    assert "ch20_midnight.xml" in caplog.text
+
+
+@pytest.mark.parametrize("error", [LxmlError("x"), sqlite3.OperationalError("x"), OSError("x")])
+def test_targeted_errors_become_check_failed(
+    guide: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: Exception
+) -> None:
+    engine = ValidationEngine(guide, SHA_A)
+
+    def explode(_dataset: Dataset) -> ValidationSummary:
+        raise error
+
+    monkeypatch.setattr(engine, "validate", explode)
+    status = inspect_guide(guide, tmp_path / "t.json", REF_TARGETS, engine)
+    assert results(status)["ch20_three_stops.xml"] is ExampleResult.CHECK_FAILED
+
+
+def test_program_errors_are_not_swallowed(
+    guide: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    engine = ValidationEngine(guide, SHA_A)
+
+    def explode(_dataset: Dataset) -> ValidationSummary:
+        raise ValueError("Programmfehler")
+
+    monkeypatch.setattr(engine, "validate", explode)
+    with pytest.raises(ValueError, match="Programmfehler"):
+        inspect_guide(guide, tmp_path / "t.json", REF_TARGETS, engine)
+
+
+def test_fail_pending_examples_finishes_the_check(guide: Path, tmp_path: Path) -> None:
+    record = tmp_path / "guide-tested.json"
+    pending = inspect_guide(guide, record, REF_TARGETS, defer_examples=True)
+    finished = fail_pending_examples(pending)
+    assert finished.examples_ready
+    assert set(results(finished).values()) == {ExampleResult.CHECK_FAILED}

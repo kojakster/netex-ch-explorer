@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sqlite3
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -182,10 +183,15 @@ def test_registry_evicts_oldest() -> None:
     registry = DatasetRegistry(max_open=2)
     data = (FIXTURES_DIR / "ch20_site_offer.xml").read_bytes()
     datasets = [open_dataset([SourceFile("s.xml", data)], (), REF_TARGETS) for _ in range(3)]
+    assert datasets[0].acquire()  # eine laufende Anfrage hält den ältesten fest
     ids = [registry.add(dataset) for dataset in datasets]
     assert registry.get(ids[0]) is None
-    # Wer den verdrängten Datensatz noch hält, kann ihn weiter benutzen.
+    assert registry.acquire(ids[0]) is None
+    # Die laufende Anfrage kann den verdrängten Datensatz weiter benutzen.
     assert datasets[0].index.files()[0].name == "s.xml"
+    datasets[0].release()
+    with pytest.raises(sqlite3.ProgrammingError):
+        datasets[0].index.files()
     assert registry.get(ids[1]) is not None
     assert registry.get("../etc") is None
     registry.close_all()

@@ -32,3 +32,23 @@ SECURITY_HEADERS: Final = {
 }
 # Antworten der Schnittstelle werden nie zwischengespeichert.
 NO_STORE: Final = {"Cache-Control": "no-store"}
+
+# Methoden, die nichts ändern; alle anderen verlangen einen passenden Origin (siehe unten).
+SAFE_METHODS: Final = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
+def allowed_origins(port: int) -> frozenset[str]:
+    """Die Ursprünge, von denen die Oberfläche Änderungen auslösen darf: die eigene Adresse."""
+    return frozenset(f"http://{host}:{port}" for host in ALLOWED_HOSTS)
+
+
+def is_allowed_request(method: str, origin: str | None, port: int) -> bool:
+    """Prüft, ob eine Anfrage zulässig ist (Schutz vor Anfragen fremder Webseiten).
+
+    Zustandsändernde Anfragen (POST, DELETE, …) sind nur ohne `Origin`-Header (kein Browser, z. B.
+    Skript oder Test) oder mit der eigenen Adresse als `Origin` zulässig. Browser senden `Origin`
+    bei solchen Anfragen immer; eine fremde Webseite kann den Header nicht fälschen.
+    """
+    if method.upper() in SAFE_METHODS or origin is None:
+        return True
+    return origin in allowed_origins(port)

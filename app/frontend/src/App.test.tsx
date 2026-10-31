@@ -119,6 +119,17 @@ describe("App mit Datensatz", () => {
     expect(screen.getByText("ohne Meldungen")).toBeTruthy();
   });
 
+  it("zeigt ein Beispiel, dessen Prüfung fehlgeschlagen ist", async () => {
+    const failed = {
+      ...GUIDE,
+      examples: GUIDE.examples.map((example, index) =>
+        index === 0 ? { ...example, result: "check_failed" as const } : example,
+      ),
+    };
+    render(<App dataSource={source({ getGuide: () => Promise.resolve(failed) })} />);
+    expect(await screen.findByText(/Prüfung fehlgeschlagen/)).toBeTruthy();
+  });
+
   it("meldet einen Fehler beim Öffnen", async () => {
     render(
       <App
@@ -366,6 +377,69 @@ describe("App mit eigenen Dateien und Prüfung", () => {
     expect(screen.getByRole("heading", { name: "Profilregel" })).toBeTruthy();
   });
 
+  it("wendet das Ergebnis einer Prüfung nicht auf einen später geöffneten Datensatz an", async () => {
+    let resolveValidation: (value: DatasetInfo) => void = () => undefined;
+    const validate = vi.fn(
+      () =>
+        new Promise<DatasetInfo>((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+    const second = { ...DATASET, id: "SYNTHETICDATASET02" };
+    const openFiles = vi
+      .fn<(files: File[]) => Promise<DatasetInfo>>()
+      .mockResolvedValueOnce(DATASET)
+      .mockResolvedValue(second);
+    await chooseFiles(source({ validate, openFiles }));
+    fireEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
+    expect(await screen.findByText("Prüfung läuft …")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Dateien auswählen"), { target: { files } });
+    await vi.waitFor(() => expect(openFiles).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("Noch nicht geprüft.")).toBeTruthy();
+    await act(async () => {
+      resolveValidation(VALIDATED_DATASET);
+    });
+    expect(screen.getByText("Noch nicht geprüft.")).toBeTruthy();
+    expect(screen.queryByText("Geprüft gegen Entwurf b7ac158")).toBeNull();
+    expect(screen.queryByText("Prüfung läuft …")).toBeNull();
+  });
+
+  it("zeigt den Fehler einer Prüfung nicht bei einem später geöffneten Datensatz", async () => {
+    let rejectValidation: (reason: unknown) => void = () => undefined;
+    const validate = vi.fn(
+      () =>
+        new Promise<DatasetInfo>((_resolve, reject) => {
+          rejectValidation = reject;
+        }),
+    );
+    const openFiles = vi
+      .fn<(files: File[]) => Promise<DatasetInfo>>()
+      .mockResolvedValueOnce(DATASET)
+      .mockResolvedValue({ ...DATASET, id: "SYNTHETICDATASET02" });
+    await chooseFiles(source({ validate, openFiles }));
+    fireEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
+    fireEvent.change(screen.getByLabelText("Dateien auswählen"), { target: { files } });
+    await vi.waitFor(() => expect(openFiles).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      rejectValidation(new ApiError("error.internal"));
+    });
+    expect(screen.queryByText(/Interner Fehler/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Prüfen" })).toBeTruthy();
+  });
+
+  it("lädt die Diagnosen bei jeder erneuten Prüfung neu", async () => {
+    const getDiagnostics = vi.fn<ReturnType<typeof source>["getDiagnostics"]>(() =>
+      Promise.resolve([]),
+    );
+    await chooseFiles(source({ getDiagnostics }));
+    const button = await screen.findByRole("button", { name: "Prüfen" });
+    await vi.waitFor(() => expect(getDiagnostics).toHaveBeenCalledTimes(1));
+    fireEvent.click(button);
+    await vi.waitFor(() => expect(getDiagnostics).toHaveBeenCalledTimes(2));
+    fireEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
+    await vi.waitFor(() => expect(getDiagnostics).toHaveBeenCalledTimes(3));
+  });
+
   it("meldet einen Fehler der Prüfung", async () => {
     const validate = () => Promise.reject(new ApiError("error.internal"));
     await chooseFiles(source({ validate }));
@@ -436,7 +510,7 @@ describe("App während die XSD geladen wird", () => {
     expect(getGuide).toHaveBeenCalledTimes(2);
   });
 
-  it("zeigt einen Fehler der Nachfrage", async () => {
+  it("zeigt einen Fehler der Nachfrage erst nach mehreren Fehlschlägen in Folge", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const pending = { ...GUIDE, examplesReady: false, xsdLoaded: false };
     const getGuide = vi
@@ -445,9 +519,37 @@ describe("App während die XSD geladen wird", () => {
       .mockRejectedValue(new ApiError("error.internal"));
     render(<App dataSource={source({ getGuide })} />);
     await screen.findByText("XSD wird geladen …");
+    for (let attempt = 1; attempt < 5; attempt += 1) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+      expect(screen.queryByRole("alert")).toBeNull();
+    }
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2100);
     });
     expect((await screen.findByRole("alert")).textContent).toContain("Interner Fehler");
+    expect(getGuide).toHaveBeenCalledTimes(6);
+  });
+
+  it("fragt nach einem einzelnen Fehler weiter nach", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const pending = { ...GUIDE, examplesReady: false, xsdLoaded: false };
+    const getGuide = vi
+      .fn()
+      .mockResolvedValueOnce(pending)
+      .mockRejectedValueOnce(new ApiError("error.internal"))
+      .mockResolvedValue(GUIDE);
+    render(<App dataSource={source({ getGuide })} />);
+    await screen.findByText("XSD wird geladen …");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+    expect(await screen.findByText("bereit")).toBeTruthy();
+    expect(getGuide).toHaveBeenCalledTimes(3);
   });
 });

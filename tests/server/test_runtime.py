@@ -10,7 +10,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import load_config
+from app.core.dataset import Dataset
+from app.core.guide.examples import ExampleResult
 from app.core.guide.status import inspect_guide
+from app.core.validation.result import ValidationSummary
 from app.server.app import create_app
 from app.server.runtime import Runtime
 from tests.support import PROJECT_ROOT, REF_TARGETS
@@ -72,3 +75,18 @@ def test_without_test_record_path_nothing_is_completed(
     runtime = pending_runtime(synthetic_guide, tmp_path, with_record=False)
     runtime.complete_examples()
     assert not runtime.guide.examples_ready
+
+
+def test_program_error_in_the_check_still_finishes_the_examples(
+    synthetic_guide: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime = pending_runtime(synthetic_guide, tmp_path)
+
+    def explode(_dataset: Dataset) -> ValidationSummary:
+        raise ValueError("Programmfehler")
+
+    monkeypatch.setattr(runtime.engine, "validate", explode)
+    with pytest.raises(ValueError, match="Programmfehler"):
+        runtime.complete_examples()
+    assert runtime.guide.examples_ready
+    assert {e.result for e in runtime.guide.examples} == {ExampleResult.CHECK_FAILED}
