@@ -4,7 +4,7 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 
 ## Offen während der Umsetzung (Benutzer fragen)
 
-1. **Unklare Kernregeln** und **unklare Grau-Einordnungen**, falls bei der Umsetzung welche auftauchen.
+1. **Unklare Kernregeln** und **unklare Grau-Einordnungen**, falls bei der Umsetzung welche auftauchen. Phase 4 (Schritt a): Liste der Kernregeln und 6 Fragen in [core-rules.md](core-rules.md), Abschnitt „Unklare Regeln“; Klärung einzeln.
 2. **Glossar Englisch/Deutsch:** Benutzer reicht nach; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
 3. *(Erledigt: Entscheid (3) in [decisions.md](decisions.md) „Entscheide nach Review Phase 2“, Regel Z4 in [mapping.md](mapping.md).)*
 4. **Phase 4: Dateien mit `DOCTYPE` vor lxml abweisen.** lxml stürzt bei der Schema-Prüfung von `fixtures/security_xxe.xml` mit „Internal error“ ab (geprüft 31.10.2026). Die Regel steht bereits in den Qualitätsregeln; der Testfall ist vorhanden.
