@@ -97,6 +97,12 @@ def reference_view(index: DatasetIndex, row: ReferenceRow) -> ReferenceView | No
     return ReferenceView(row, element, owner, target)
 
 
+def _node_reference(index: DatasetIndex, element: ElementRow, row: ReferenceRow) -> ReferenceView:
+    """Referenz eines Knotens im Eigenschaftsbaum: nur das Ziel wird nachgeladen."""
+    target = None if row.target_id is None else index.element(row.target_id)
+    return ReferenceView(row, element, None, target)
+
+
 def _views(index: DatasetIndex, rows: list[ReferenceRow]) -> list[ReferenceView]:
     views = (reference_view(index, row) for row in rows)
     return [view for view in views if view is not None]
@@ -119,7 +125,9 @@ def object_detail(index: DatasetIndex, element_id: int) -> ObjectDetail | None:
     roots: list[PropertyNode] = []
     for row in shown:
         reference = references.get(row.id)
-        node = PropertyNode(row, None if reference is None else reference_view(index, reference))
+        node = PropertyNode(
+            row, None if reference is None else _node_reference(index, row, reference)
+        )
         nodes[row.id] = node
         parent = nodes.get(row.parent_id) if row.parent_id is not None else None
         if parent is not None:

@@ -236,7 +236,7 @@ export function App({ dataSource }: AppProps) {
               </main>
               <aside className="xml-column">
                 <ProvenanceChain
-                  elementId={selectedElement}
+                  elementId={positionTarget === null ? selectedElement : null}
                   colors={appInfo.frameColors}
                   onSelect={selectLink}
                 />

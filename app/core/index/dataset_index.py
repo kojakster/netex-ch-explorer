@@ -124,6 +124,7 @@ _REFERENCE_KEY: Final = {
     ResolveStatus.AMBIGUOUS: MessageKey.REFERENCE_AMBIGUOUS,
     ResolveStatus.EXTERNAL_OR_UNLOADED: MessageKey.REFERENCE_EXTERNAL_OR_UNLOADED,
 }
+_MAX_PLACEHOLDERS: Final = 500
 _REFERENCE_COLUMNS: Final = (
     "element_id, owner_id, target_ref, ref_version, expected, status, target_id"
 )
@@ -579,15 +580,18 @@ class DatasetIndex:
 
     def references_among(self, element_ids: Sequence[int]) -> dict[int, ReferenceRow]:
         """Die Referenzen unter den angegebenen Elementen, nach Element-Nummer."""
-        if not element_ids:
-            return {}
-        placeholders = ", ".join("?" * len(element_ids))
-        with self._lock:
-            rows = self._db.execute(
-                f"SELECT {_REFERENCE_COLUMNS} FROM refs WHERE element_id IN ({placeholders})",
-                list(element_ids),
-            ).fetchall()
-        return {row[0]: _row_to_reference(row) for row in rows}
+        found: dict[int, ReferenceRow] = {}
+        # In Stapeln: ältere SQLite-Versionen erlauben höchstens 999 Platzhalter je Abfrage.
+        for start in range(0, len(element_ids), _MAX_PLACEHOLDERS):
+            batch = list(element_ids[start : start + _MAX_PLACEHOLDERS])
+            placeholders = ", ".join("?" * len(batch))
+            with self._lock:
+                rows = self._db.execute(
+                    f"SELECT {_REFERENCE_COLUMNS} FROM refs WHERE element_id IN ({placeholders})",
+                    batch,
+                ).fetchall()
+            found.update({row[0]: _row_to_reference(row) for row in rows})
+        return found
 
     def objects_by_id(self, xml_id: str, object_type: str) -> list[ElementRow]:
         """Objekte mit dieser `id` und diesem Typ (Elementname)."""
@@ -648,7 +652,7 @@ class DatasetIndex:
                 "SELECT d.file_id, f.name, d.category, d.severity, d.key, d.params, d.byte,"
                 " d.char, d.line, d.column FROM diagnostics d JOIN files f ON f.id = d.file_id"
                 + where
-                + " ORDER BY d.id",
+                + " ORDER BY d.file_id, d.id",
                 params,
             ).fetchall()
         result = []

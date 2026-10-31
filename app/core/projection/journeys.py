@@ -88,7 +88,11 @@ def _follow(index: DatasetIndex, ref: ElementRow | None) -> tuple[ElementRow | N
         return None, _ABSENT
     result = resolve(index, ref)
     if result.target is None:
-        return None, Lookup(_RESOLVE_TO_LOOKUP[result.status], ref.attributes.get("ref"), ref)
+        return None, Lookup(
+            _RESOLVE_TO_LOOKUP.get(result.status, LookupStatus.NOT_RESOLVED),
+            ref.attributes.get("ref"),
+            ref,
+        )
     return result.target, None
 
 

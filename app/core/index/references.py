@@ -110,6 +110,12 @@ def classify(
 ) -> tuple[ResolveStatus, int | None]:
     """Status und Ziel aus den passenden Objekten.
 
+    Ohne passendes Objekt entscheidet der Typ: Gibt es im Datensatz Objekte des erwarteten Typs,
+    ist die Referenz nicht auflösbar, sonst steht das Ziel vermutlich in einer anderen Datei. Dass
+    dieselbe `id` unter einem anderen Typ vorkommt, ändert daran nichts: `Quay` und
+    `ScheduledStopPoint` teilen sich in `NETWORK_OFFER`-Dateien die ID, und die `Quay` fehlt dort
+    erwartungsgemäss.
+
     Passen mehrere Objekte, entscheidet die Version der Referenz (ausser `any`); bleibt es bei
     mehreren, ist die Referenz mehrdeutig. Eine abweichende Version bei genau einem Objekt ändert
     nichts: Die ID und der Typ sind eindeutig, nichts wird verworfen oder ergänzt.

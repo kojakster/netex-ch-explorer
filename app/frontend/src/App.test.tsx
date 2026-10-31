@@ -170,4 +170,21 @@ describe("App mit Referenzen und Herkunft", () => {
     fireEvent.click(frame);
     expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.90");
   });
+
+  it("blendet die Herkunftskette aus, solange die Stelle einer Diagnose gezeigt wird", async () => {
+    const diagnostic = {
+      category: "reference",
+      severity: "info" as const,
+      key: "reference.external_or_unloaded",
+      params: { element: "FromPointRef", ref: "x", expected: "ScheduledStopPoint" },
+      fileId: 1,
+      fileName: "ch20_three_stops.xml",
+      line: 53,
+      column: 8,
+    };
+    await openJourney({ getDiagnostics: () => Promise.resolve([diagnostic]) });
+    expect(screen.getAllByRole("button", { name: /^TimetableFrame/ }).length).toBeGreaterThan(0);
+    fireEvent.click(await screen.findByRole("button", { name: /Zeile 53/ }));
+    expect(await screen.findByText("Eine Angabe wählen, um ihre Herkunft zu sehen.")).toBeTruthy();
+  });
 });

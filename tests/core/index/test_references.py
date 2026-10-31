@@ -5,6 +5,7 @@ import pytest
 from app.core.config import load_config
 from app.core.dataset import SourceFile, open_dataset
 from app.core.diagnostics import DiagnosticCategory
+from app.core.index import dataset_index
 from app.core.index.dataset_index import DatasetIndex, ElementRow
 from app.core.index.references import (
     Candidate,
@@ -217,3 +218,24 @@ def test_outgoing_and_incoming_references() -> None:
 def test_listed_targets_differ_from_name_default(name: str) -> None:
     """Die Liste enthält nur Abweichungen vom Namen ohne `Ref`."""
     assert TARGETS[name] != (name.removesuffix("Ref"),)
+
+
+def test_id_under_another_type_stays_external_without_objects_of_the_type() -> None:
+    """`Quay` fehlt in einer NETWORK_OFFER, die ID steht dort nur als `ScheduledStopPoint`."""
+    index = index_of("ch20_network_offer.xml")
+    [quay_ref] = ref_elements(index, "QuayRef", "ch:1:sloid:SYN1:0:1")
+    assert resolve(index, quay_ref).status is ResolveStatus.EXTERNAL_OR_UNLOADED
+
+
+def test_references_among_works_in_batches(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(dataset_index, "_MAX_PLACEHOLDERS", 2)
+    index = index_of("ch20_three_stops.xml")
+    ids = [r.id for r in index.descendants(1, 10_000) if index.reference(r.id)]
+    assert len(ids) > 4
+    assert set(index.references_among(ids)) == set(ids)
+
+
+def test_diagnostics_are_grouped_by_file() -> None:
+    index = index_of("ch20_network_offer.xml", "broken_xml.xml")
+    files = [item.file_id for item in index.diagnostics()]
+    assert files == sorted(files)

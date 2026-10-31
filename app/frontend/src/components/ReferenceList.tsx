@@ -54,8 +54,10 @@ export function ReferenceList({
       ) : (
         <ul>
           {references.map((reference) => {
-            // Ausgehend ist das Ziel die Gegenseite, eingehend das Objekt mit dem Verweis.
-            const other = direction === "outgoing" ? reference.target : reference.owner;
+            // Ausgehend ist das Ziel die Gegenseite, eingehend das Objekt mit dem Verweis
+            // (ohne umschliessendes Objekt das Ref-Element selbst).
+            const other =
+              direction === "outgoing" ? reference.target : (reference.owner ?? reference.element);
             return (
               <li key={reference.element.id} className={`reference reference-${reference.status}`}>
                 <button
