@@ -11,16 +11,16 @@ from app.core.explorer import (
     position_xml_window,
     xml_window,
 )
-from tests.support import FIXTURES_DIR
+from tests.support import FIXTURES_DIR, REF_TARGETS, objects_by_id
 
 
 def load(name: str) -> Dataset:
-    return open_dataset([SourceFile(name, (FIXTURES_DIR / name).read_bytes())], ())
+    return open_dataset([SourceFile(name, (FIXTURES_DIR / name).read_bytes())], (), REF_TARGETS)
 
 
 def test_path_with_positions_only_for_repeated_names() -> None:
     index = load("ch20_three_stops.xml").index
-    [quay] = index.objects_by_id("ch:1:sloid:SYN2:0:1", "Quay")
+    [quay] = objects_by_id(index, "ch:1:sloid:SYN2:0:1", "Quay")
     assert element_path(index, quay) == (
         "/PublicationDelivery/dataObjects/CompositeFrame/frames/SiteFrame/stopPlaces"
         "/StopPlace[2]/quays/Quay"
@@ -29,7 +29,7 @@ def test_path_with_positions_only_for_repeated_names() -> None:
 
 def test_object_detail_tree() -> None:
     index = load("ch20_three_stops.xml").index
-    [stop] = index.objects_by_id("ch:1:sloid:SYN1", "StopPlace")
+    [stop] = objects_by_id(index, "ch:1:sloid:SYN1", "StopPlace")
     detail = object_detail(index, stop.id)
     assert detail is not None
     assert detail.frame is not None
@@ -58,7 +58,7 @@ def test_object_detail_is_truncated(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_element_window_marks_exact_range() -> None:
     index = load("ch20_three_stops.xml").index
-    [quay] = index.objects_by_id("ch:1:sloid:SYN2:0:1", "Quay")
+    [quay] = objects_by_id(index, "ch:1:sloid:SYN2:0:1", "Quay")
     window = element_xml_window(index, quay.id)
     assert window is not None
     marked = window.text[window.focus_from : window.focus_to]
@@ -114,7 +114,7 @@ def test_position_window() -> None:
 
 def test_object_detail_references() -> None:
     index = load("ch20_three_stops.xml").index
-    [quay] = index.objects_by_id("ch:1:sloid:SYN1:0:1", "Quay")
+    [quay] = objects_by_id(index, "ch:1:sloid:SYN1:0:1", "Quay")
     detail = object_detail(index, quay.id)
     assert detail is not None
     assert detail.reference is None
@@ -143,7 +143,11 @@ def test_object_detail_of_a_reference_element() -> None:
     assert own is not None
     assert own.reference is not None
     assert own.reference.target is None
-    assert own.reference.row.expected == ("ScheduledStopPoint",)
+    assert own.reference.row.expected == (
+        "FareScheduledStopPoint",
+        "Point",
+        "ScheduledStopPoint",
+    )
     assert own.incoming == []
 
 
@@ -174,7 +178,7 @@ def test_property_nodes_carry_their_reference() -> None:
 def test_reference_lists_are_limited(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(explorer, "MAX_REFERENCES", 1)
     index = load("ch20_three_stops.xml").index
-    [stop_point] = index.objects_by_id("ch:1:sloid:SYN1:0:1", "ScheduledStopPoint")
+    [stop_point] = objects_by_id(index, "ch:1:sloid:SYN1:0:1", "ScheduledStopPoint")
     detail = object_detail(index, stop_point.id)
     assert detail is not None
     assert len(detail.incoming) == 1

@@ -7,7 +7,8 @@ Der erwartete Zieltyp wird in dieser Reihenfolge bestimmt: `nameOfRefClass`, dan
 `config/ref-targets.json`, dann der Name ohne `Ref`. `Quay` und `ScheduledStopPoint` mit gleicher ID
 werden so unterschieden (docs/mapping.md, H6).
 
-Dieses Modul kennt den Index nicht; der Index ruft es auf und speichert das Ergebnis.
+Dieses Modul enthält nur die Regeln und kennt weder den Index noch dessen Zeilentypen; der Index
+ruft es auf und speichert das Ergebnis (`DatasetIndex.resolve`).
 """
 
 from __future__ import annotations
@@ -15,10 +16,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Final
-
-if TYPE_CHECKING:
-    from app.core.index.dataset_index import DatasetIndex, ElementRow
+from typing import Final
 
 REF_SUFFIX: Final = "Ref"
 ANY_VERSION: Final = "any"
@@ -66,14 +64,6 @@ class ReferenceRow:
     expected: tuple[str, ...]
     status: ResolveStatus
     target_id: int | None
-
-
-@dataclass(frozen=True)
-class ResolveResult:
-    """Ergebnis: Status und, falls eindeutig, das Ziel."""
-
-    status: ResolveStatus
-    target: ElementRow | None = None
 
 
 def is_reference(name: str, attributes: Mapping[str, str]) -> bool:
@@ -132,10 +122,16 @@ def classify(
     return ResolveStatus.RESOLVED, remaining[0].element_id
 
 
-def resolve(index: DatasetIndex, ref_element: ElementRow) -> ResolveResult:
-    """Ergebnis der Auflösung einer Referenz im Datensatz (beim Öffnen berechnet)."""
-    row = index.reference(ref_element.id)
-    if row is None:
-        return ResolveResult(ResolveStatus.UNRESOLVED)
-    target = None if row.target_id is None else index.element(row.target_id)
-    return ResolveResult(row.status, target)
+def differing_version(
+    candidates: Sequence[Candidate], target_id: int, ref_version: str | None
+) -> str | None:
+    """Version des Ziels, wenn die Referenz eine andere nennt; sonst `None`.
+
+    Ohne Version an der Referenz (oder `any`) oder am Ziel gibt es nichts zu vergleichen.
+    """
+    if ref_version in (None, ANY_VERSION):
+        return None
+    target = next(c for c in candidates if c.element_id == target_id)
+    if target.version is None or target.version == ref_version:
+        return None
+    return target.version

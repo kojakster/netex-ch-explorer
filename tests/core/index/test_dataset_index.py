@@ -3,12 +3,14 @@ from __future__ import annotations
 from app.core.dataset import Dataset, SourceFile, open_dataset
 from app.core.diagnostics import DiagnosticCategory
 from app.core.messages import Severity
-from tests.support import FIXTURES_DIR
+from tests.support import FIXTURES_DIR, REF_TARGETS, objects_by_id
 
 
 def load(*names: str, gray: tuple[str, ...] = ()) -> Dataset:
     return open_dataset(
-        [SourceFile(name, (FIXTURES_DIR / name).read_bytes()) for name in names], gray
+        [SourceFile(name, (FIXTURES_DIR / name).read_bytes()) for name in names],
+        gray,
+        REF_TARGETS,
     )
 
 
@@ -40,7 +42,7 @@ def test_frames_are_assigned_to_innermost_frame() -> None:
         "ServiceCalendarFrame",
         "TimetableFrame",
     ]
-    [quay] = index.objects_by_id("ch:1:sloid:SYN1:0:1", "Quay")
+    [quay] = objects_by_id(index, "ch:1:sloid:SYN1:0:1", "Quay")
     frame = index.element(quay.frame_id or 0)
     assert frame is not None
     assert frame.name == "SiteFrame"
@@ -54,8 +56,8 @@ def test_frames_are_assigned_to_innermost_frame() -> None:
 
 def test_not_relevant_is_inherited() -> None:
     dataset = load("ch20_three_stops.xml", gray=("quays",))
-    [quay] = dataset.index.objects_by_id("ch:1:sloid:SYN1:0:1", "Quay")
-    [point] = dataset.index.objects_by_id("ch:1:sloid:SYN1:0:1", "ScheduledStopPoint")
+    [quay] = objects_by_id(dataset.index, "ch:1:sloid:SYN1:0:1", "Quay")
+    [point] = objects_by_id(dataset.index, "ch:1:sloid:SYN1:0:1", "ScheduledStopPoint")
     assert quay.not_relevant
     assert not point.not_relevant
 
@@ -82,14 +84,14 @@ def test_label_from_nested_text() -> None:
         b'<PublicationDelivery><dataObjects><X id="a"><Name> <Text lang="de">Bern</Text></Name></X>'
         b'<X id="b"><Name/></X><X id="c"/></dataObjects></PublicationDelivery>'
     )
-    index = open_dataset([SourceFile("t.xml", data)], ()).index
+    index = open_dataset([SourceFile("t.xml", data)], (), REF_TARGETS).index
     labels = {row.xml_id: row.label for row in index.search_objects("X", None, 10, 0)[1]}
     assert labels == {"a": "Bern", "b": None, "c": None}
 
 
 def test_children_descendants_and_siblings() -> None:
     index = load("ch20_three_stops.xml").index
-    [stop] = index.objects_by_id("ch:1:sloid:SYN2", "StopPlace")
+    [stop] = objects_by_id(index, "ch:1:sloid:SYN2", "StopPlace")
     assert [child.name for child in index.children(stop.id)] == ["Name", "quays"]
     assert [d.name for d in index.descendants(stop.id, 10)] == [
         "Name",
@@ -108,7 +110,7 @@ def test_children_descendants_and_siblings() -> None:
 
 
 def test_elements_without_end_keep_their_descendants() -> None:
-    index = open_dataset([SourceFile("t.xml", b"<r><a><b>x</b>")], ()).index
+    index = open_dataset([SourceFile("t.xml", b"<r><a><b>x</b>")], (), REF_TARGETS).index
     root, a, b = (index.element(n) for n in (1, 2, 3))
     assert root is not None and a is not None and b is not None
     assert root.end is None and a.end is None
@@ -119,14 +121,14 @@ def test_elements_without_end_keep_their_descendants() -> None:
 
 def test_search_ignores_case_beyond_ascii() -> None:
     data = "<r><X id='a'><Name>ZÜRICH HB</Name></X><X id='b'><Name>Genève</Name></X></r>"
-    index = open_dataset([SourceFile("t.xml", data.encode())], ()).index
+    index = open_dataset([SourceFile("t.xml", data.encode())], (), REF_TARGETS).index
     assert [row.xml_id for row in index.search_objects(None, "zürich", 10, 0)[1]] == ["a"]
     assert [row.xml_id for row in index.search_objects(None, "GENÈVE", 10, 0)[1]] == ["b"]
     assert index.search_objects(None, "a\nZ", 10, 0)[0] == 0
 
 
 def test_line_starts_and_file_name() -> None:
-    index = open_dataset([SourceFile("t.xml", b"<a>\n<b/>\n</a>")], ()).index
+    index = open_dataset([SourceFile("t.xml", b"<a>\n<b/>\n</a>")], (), REF_TARGETS).index
     assert index.line_starts(1) == [0, 4, 9]
     assert index.line_starts(1) is index.line_starts(1)
     assert index.line_starts(2) is None
@@ -160,7 +162,7 @@ def test_diagnostics_filter() -> None:
 
 def test_diagnostic_without_position() -> None:
     index = open_dataset(
-        [SourceFile("t.xml", b'<?xml version="1.0" encoding="latin1"?><a/>')], ()
+        [SourceFile("t.xml", b'<?xml version="1.0" encoding="latin1"?><a/>')], (), REF_TARGETS
     ).index
     [item] = index.diagnostics()
     assert item.diagnostic.position is None

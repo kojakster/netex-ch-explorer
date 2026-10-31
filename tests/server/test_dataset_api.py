@@ -13,7 +13,7 @@ from app.core.guide.status import inspect_guide
 from app.server.app import create_app
 from app.server.datasets import DatasetRegistry, object_id, parse_object_id
 from app.server.runtime import Runtime
-from tests.support import FIXTURES_DIR, PROJECT_ROOT
+from tests.support import FIXTURES_DIR, PROJECT_ROOT, REF_TARGETS
 
 BASE_URL = "http://127.0.0.1"
 
@@ -22,7 +22,9 @@ BASE_URL = "http://127.0.0.1"
 def client(synthetic_guide: Path, tmp_path: Path) -> TestClient:
     config = load_config(PROJECT_ROOT)
     config = replace(config, settings=replace(config.settings, guide_path=synthetic_guide))
-    runtime = Runtime(config=config, guide=inspect_guide(synthetic_guide, tmp_path / "t.json"))
+    runtime = Runtime(
+        config=config, guide=inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS)
+    )
     return TestClient(create_app(runtime, None), base_url=BASE_URL)
 
 
@@ -173,7 +175,7 @@ def test_unknown_element_in_known_dataset(client: TestClient) -> None:
 def test_registry_evicts_oldest() -> None:
     registry = DatasetRegistry(max_open=2)
     data = (FIXTURES_DIR / "ch20_site_offer.xml").read_bytes()
-    datasets = [open_dataset([SourceFile("s.xml", data)], ()) for _ in range(3)]
+    datasets = [open_dataset([SourceFile("s.xml", data)], (), REF_TARGETS) for _ in range(3)]
     ids = [registry.add(dataset) for dataset in datasets]
     assert registry.get(ids[0]) is None
     # Wer den verdrängten Datensatz noch hält, kann ihn weiter benutzen.
@@ -196,7 +198,9 @@ def test_xml_offsets_for_browser_with_crlf(tmp_path: Path, synthetic_guide: Path
     (synthetic_guide / "src" / "examples" / "ch20_three_stops.xml").write_bytes(crlf.encode())
     config = load_config(PROJECT_ROOT)
     config = replace(config, settings=replace(config.settings, guide_path=synthetic_guide))
-    runtime = Runtime(config=config, guide=inspect_guide(synthetic_guide, tmp_path / "t.json"))
+    runtime = Runtime(
+        config=config, guide=inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS)
+    )
     client = TestClient(create_app(runtime, None), base_url=BASE_URL)
     dataset_id = open_example(client)["id"]
     [quay] = client.get(
@@ -224,7 +228,7 @@ def test_object_references_and_provenance(client: TestClient) -> None:
     assert first["status"] == "resolved"
     assert first["target"]["id"] == quay["id"]
     assert first["owner"]["name"] == "PassengerStopAssignment"
-    assert first["expected"] == ["Quay"]
+    assert first["expected"] == ["Quay", "TaxiStand"]
 
     chain = client.get(f"/api/objects/{quay['id']}/provenance").json()
     assert [(link["kind"], link["object"]["name"]) for link in chain] == [

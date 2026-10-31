@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.config import load_config
 from app.core.dataset import SourceFile, open_dataset
 from app.core.diagnostics import DiagnosticCategory
 from app.core.index import dataset_index
@@ -11,15 +10,15 @@ from app.core.index.references import (
     Candidate,
     ResolveStatus,
     classify,
+    differing_version,
     expected_types,
     is_reference,
     reference_version,
-    resolve,
 )
 from app.core.messages import MessageKey, Severity
-from tests.support import FIXTURES_DIR, PROJECT_ROOT
+from tests.support import FIXTURES_DIR, REF_TARGETS, objects_by_id
 
-TARGETS = load_config(PROJECT_ROOT).ref_targets
+TARGETS = REF_TARGETS
 
 
 def index_of(*names: str) -> DatasetIndex:
@@ -51,12 +50,12 @@ def ref_elements(index: DatasetIndex, name: str, ref: str) -> list[ElementRow]:
 def test_quay_and_scheduled_stop_point_with_same_id() -> None:
     index = index_of("ch20_three_stops.xml")
     [quay_ref] = ref_elements(index, "QuayRef", "ch:1:sloid:SYN1:0:1")
-    result = resolve(index, quay_ref)
+    result = index.resolve(quay_ref)
     assert result.status is ResolveStatus.RESOLVED
     assert result.target is not None
     assert result.target.name == "Quay"
     [point_ref] = ref_elements(index, "ScheduledStopPointRef", "ch:1:sloid:SYN1:0:1")[:1]
-    point = resolve(index, point_ref).target
+    point = index.resolve(point_ref).target
     assert point is not None
     assert point.name == "ScheduledStopPoint"
     assert point.id != result.target.id
@@ -66,7 +65,7 @@ def test_name_of_ref_class() -> None:
     index = index_of("ch20_three_stops.xml")
     from_ref = ref_elements(index, "FromPointRef", "ch:1:sloid:SYN1:0:1")[0]
     assert expected_types(from_ref.name, from_ref.attributes, {}) == ("ScheduledStopPoint",)
-    result = resolve(index, from_ref)
+    result = index.resolve(from_ref)
     assert result.target is not None
     assert result.target.name == "ScheduledStopPoint"
 
@@ -99,8 +98,8 @@ def test_ref_targets_resolve_role_names() -> None:
     )
     [organisation] = ref_elements(index, "ResponsibleOrganisationRef", "o1")
     [link] = ref_elements(index, "OnwardTimingLinkRef", "t1")
-    assert resolve(index, organisation).status is ResolveStatus.RESOLVED
-    assert resolve(index, link).status is ResolveStatus.RESOLVED
+    assert index.resolve(organisation).status is ResolveStatus.RESOLVED
+    assert index.resolve(link).status is ResolveStatus.RESOLVED
     assert index.diagnostics() == []
 
 
@@ -108,7 +107,7 @@ def test_ambiguous_target() -> None:
     index = index_of("ch20_duplicate_id.xml")
     refs = ref_elements(index, "ScheduledStopPointRef", "ch:1:sloid:SYN2:0:1")
     assert refs
-    result = resolve(index, refs[0])
+    result = index.resolve(refs[0])
     assert result.status is ResolveStatus.AMBIGUOUS
     assert result.target is None
     diagnostics = [
@@ -121,14 +120,14 @@ def test_ambiguous_target() -> None:
 def test_unresolved_when_type_exists_is_an_error() -> None:
     index = index_of("ch20_unresolved_ref.xml")
     [missing] = ref_elements(index, "ScheduledStopPointRef", "ch:1:sloid:SYN9:0:1")
-    assert resolve(index, missing).status is ResolveStatus.UNRESOLVED
+    assert index.resolve(missing).status is ResolveStatus.UNRESOLVED
     [item] = index.diagnostics(DiagnosticCategory.REFERENCE)
     assert item.diagnostic.severity is Severity.ERROR
     assert item.diagnostic.key is MessageKey.REFERENCE_UNRESOLVED
     assert item.diagnostic.params == {
         "element": "ScheduledStopPointRef",
         "ref": "ch:1:sloid:SYN9:0:1",
-        "expected": "ScheduledStopPoint",
+        "expected": "FareScheduledStopPoint, Point, ScheduledStopPoint",
     }
     assert item.diagnostic.position is not None
     assert item.diagnostic.position.line == missing.start.line
@@ -137,7 +136,7 @@ def test_unresolved_when_type_exists_is_an_error() -> None:
 def test_external_or_unloaded_across_files() -> None:
     alone = index_of("ch20_network_offer.xml")
     [stop_place] = ref_elements(alone, "StopPlaceRef", "ch:1:sloid:SYN1")
-    assert resolve(alone, stop_place).status is ResolveStatus.EXTERNAL_OR_UNLOADED
+    assert alone.resolve(stop_place).status is ResolveStatus.EXTERNAL_OR_UNLOADED
     notes = alone.diagnostics(DiagnosticCategory.REFERENCE)
     assert notes
     assert {n.diagnostic.severity for n in notes} == {Severity.INFO}
@@ -145,7 +144,7 @@ def test_external_or_unloaded_across_files() -> None:
 
     together = index_of("ch20_network_offer.xml", "ch20_site_offer.xml")
     [stop_place] = ref_elements(together, "StopPlaceRef", "ch:1:sloid:SYN1")
-    result = resolve(together, stop_place)
+    result = together.resolve(stop_place)
     assert result.status is ResolveStatus.RESOLVED
     assert result.target is not None
     assert result.target.file_name == "ch20_site_offer.xml"
@@ -159,9 +158,9 @@ def test_references_in_extensions_are_found() -> None:
         "</R>"
     )
     [found] = ref_elements(index, "LineRef", "l1")
-    assert resolve(index, found).status is ResolveStatus.RESOLVED
+    assert index.resolve(found).status is ResolveStatus.RESOLVED
     [missing] = ref_elements(index, "LineRef", "gone")
-    assert resolve(index, missing).status is ResolveStatus.UNRESOLVED
+    assert index.resolve(missing).status is ResolveStatus.UNRESOLVED
 
 
 def test_version_decides_between_candidates() -> None:
@@ -172,7 +171,7 @@ def test_version_decides_between_candidates() -> None:
     )
     index = index_of_text(document)
     refs = [row for row in index.descendants(1, 100) if row.name == "LineRef"]
-    results = [resolve(index, ref) for ref in refs]
+    results = [index.resolve(ref) for ref in refs]
     assert [r.status for r in results] == [
         ResolveStatus.RESOLVED,
         ResolveStatus.RESOLVED,
@@ -191,17 +190,51 @@ def test_classify() -> None:
     assert classify(two, "2", True) == (ResolveStatus.RESOLVED, 6)
 
 
+def test_differing_version_is_resolved_with_a_note() -> None:
+    index = index_of_text(
+        "<R><Line id='l' version='1'/><LineRef ref='l' version='2'/>"
+        "<LineRef ref='l' versionRef='3'/><LineRef ref='l' version='1'/>"
+        "<LineRef ref='l' version='any'/><LineRef ref='l'/></R>"
+    )
+    refs = [row for row in index.descendants(1, 100) if row.name == "LineRef"]
+    assert [index.resolve(ref).status for ref in refs] == [ResolveStatus.RESOLVED] * 5
+    hints = index.diagnostics(DiagnosticCategory.REFERENCE)
+    assert [item.diagnostic.key for item in hints] == [MessageKey.REFERENCE_VERSION_DIFFERS] * 2
+    assert all(item.diagnostic.severity is Severity.INFO for item in hints)
+    assert [item.diagnostic.params for item in hints] == [
+        {"element": "LineRef", "ref": "l", "version": "2", "found": "1"},
+        {"element": "LineRef", "ref": "l", "version": "3", "found": "1"},
+    ]
+
+
+def test_version_decision_between_candidates_gives_no_note() -> None:
+    index = index_of_text(
+        "<R><Line id='l' version='1'/><Line id='l' version='2'/><LineRef ref='l' version='2'/></R>"
+    )
+    assert index.diagnostics(DiagnosticCategory.REFERENCE) == []
+
+
+def test_differing_version() -> None:
+    candidates = [Candidate(5, "1"), Candidate(6, None)]
+    assert differing_version(candidates, 5, "2") == "1"
+    assert differing_version(candidates, 5, "1") is None
+    assert differing_version(candidates, 5, "any") is None
+    assert differing_version(candidates, 5, None) is None
+    # Ohne Version am Ziel gibt es nichts zu vergleichen.
+    assert differing_version(candidates, 6, "2") is None
+
+
 def test_non_reference_elements_are_not_resolved() -> None:
     index = index_of("ch20_three_stops.xml")
     root = index.element(1)
     assert root is not None
-    assert resolve(index, root).status is ResolveStatus.UNRESOLVED
+    assert index.resolve(root).status is ResolveStatus.UNRESOLVED
     assert index.reference(root.id) is None
 
 
 def test_outgoing_and_incoming_references() -> None:
     index = index_of("ch20_three_stops.xml")
-    [quay] = index.objects_by_id("ch:1:sloid:SYN1:0:1", "Quay")
+    [quay] = objects_by_id(index, "ch:1:sloid:SYN1:0:1", "Quay")
     incoming = index.references_to(quay.id, 100)
     assert incoming
     assert {element_name(index, row.element_id) for row in incoming} == {"QuayRef"}
@@ -224,7 +257,7 @@ def test_id_under_another_type_stays_external_without_objects_of_the_type() -> N
     """`Quay` fehlt in einer NETWORK_OFFER, die ID steht dort nur als `ScheduledStopPoint`."""
     index = index_of("ch20_network_offer.xml")
     [quay_ref] = ref_elements(index, "QuayRef", "ch:1:sloid:SYN1:0:1")
-    assert resolve(index, quay_ref).status is ResolveStatus.EXTERNAL_OR_UNLOADED
+    assert index.resolve(quay_ref).status is ResolveStatus.EXTERNAL_OR_UNLOADED
 
 
 def test_references_among_works_in_batches(monkeypatch: pytest.MonkeyPatch) -> None:

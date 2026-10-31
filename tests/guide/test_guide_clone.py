@@ -11,12 +11,13 @@ from pathlib import Path
 from app.core.guide.layout import MAPPING_TABLE_FILE
 from app.core.guide.mapping import SHEET_SPECS, read_mapping_table
 from app.core.guide.status import inspect_guide
+from tests.support import REF_TARGETS
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 def test_guide_revision_is_read(guide_path: Path, tmp_path: Path) -> None:
-    status = inspect_guide(guide_path, tmp_path / "guide-tested.json")
+    status = inspect_guide(guide_path, tmp_path / "guide-tested.json", REF_TARGETS)
     assert status.found
     assert status.revision.branch == "next"
     assert status.revision.commit is not None

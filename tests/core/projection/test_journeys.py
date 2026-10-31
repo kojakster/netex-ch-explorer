@@ -1,14 +1,38 @@
 from __future__ import annotations
 
+import pytest
+
 from app.core.dataset import SourceFile, open_dataset
-from app.core.index.dataset_index import DatasetIndex
+from app.core.index.dataset_index import DatasetIndex, ResolveResult
+from app.core.index.references import ResolveStatus
 from app.core.projection.journeys import LookupStatus, list_journeys
-from tests.support import FIXTURES_DIR
+from tests.support import FIXTURES_DIR, REF_TARGETS
 
 
 def index_of(*names: str) -> DatasetIndex:
     sources = [SourceFile(name, (FIXTURES_DIR / name).read_bytes()) for name in names]
-    return open_dataset(sources, ()).index
+    return open_dataset(sources, (), REF_TARGETS).index
+
+
+def test_resolved_reference_without_target_is_a_program_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    index = open_dataset(
+        [
+            SourceFile(
+                "t",
+                b"<R><ServiceJourney id='j'>"
+                b"<ServiceJourneyPatternRef ref='p'/></ServiceJourney></R>",
+            )
+        ],
+        (),
+        REF_TARGETS,
+    ).index
+    monkeypatch.setattr(
+        DatasetIndex, "resolve", lambda _self, _ref: ResolveResult(ResolveStatus.RESOLVED)
+    )
+    with pytest.raises(RuntimeError, match="Ziel fehlt"):
+        list_journeys(index)
 
 
 def test_three_stops() -> None:
@@ -63,7 +87,8 @@ def test_missing_parts_are_marked() -> None:
       <Line id="l4"><Name>Linie vier</Name></Line>
     </dataObjects></PublicationDelivery>"""
     journeys = {
-        j.element.xml_id: j for j in list_journeys(open_dataset([SourceFile("t", data)], ()).index)
+        j.element.xml_id: j
+        for j in list_journeys(open_dataset([SourceFile("t", data)], (), REF_TARGETS).index)
     }
     assert journeys["j1"].line.status is LookupStatus.NOT_RESOLVED
     assert journeys["j1"].train_numbers[0].status is LookupStatus.NOT_RESOLVED

@@ -48,6 +48,7 @@ class MessageKey(StrEnum):
     REFERENCE_UNRESOLVED = "reference.unresolved"
     REFERENCE_AMBIGUOUS = "reference.ambiguous"
     REFERENCE_EXTERNAL_OR_UNLOADED = "reference.external_or_unloaded"
+    REFERENCE_VERSION_DIFFERS = "reference.version_differs"
 
 
 @dataclass(frozen=True)

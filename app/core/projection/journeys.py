@@ -19,7 +19,7 @@ from enum import StrEnum
 from typing import Final
 
 from app.core.index.dataset_index import DatasetIndex, ElementRow
-from app.core.index.references import ResolveStatus, resolve
+from app.core.index.references import ResolveStatus
 
 JOURNEY_TYPES: Final = ("ServiceJourney", "TemplateServiceJourney")
 
@@ -86,14 +86,14 @@ def _follow(index: DatasetIndex, ref: ElementRow | None) -> tuple[ElementRow | N
     """Löst eine Referenz auf; liefert das Ziel oder eine Lookup-Angabe zum Grund."""
     if ref is None:
         return None, _ABSENT
-    result = resolve(index, ref)
-    if result.target is None:
-        return None, Lookup(
-            _RESOLVE_TO_LOOKUP.get(result.status, LookupStatus.NOT_RESOLVED),
-            ref.attributes.get("ref"),
-            ref,
-        )
-    return result.target, None
+    result = index.resolve(ref)
+    if result.target is not None:
+        return result.target, None
+    if result.status is ResolveStatus.RESOLVED:
+        # Der Index liefert bei `RESOLVED` immer das Ziel; alles andere ist ein Programmfehler.
+        message = f"Referenz {ref.id} ist aufgelöst, aber das Ziel fehlt"
+        raise RuntimeError(message)
+    return None, Lookup(_RESOLVE_TO_LOOKUP[result.status], ref.attributes.get("ref"), ref)
 
 
 def _train_numbers(index: DatasetIndex, journey: ElementRow) -> list[Lookup]:

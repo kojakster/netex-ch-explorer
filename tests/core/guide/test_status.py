@@ -10,7 +10,7 @@ from app.core.guide.layout import MAPPING_TABLE_FILE, XSD_MAIN_FILE
 from app.core.guide.mapping import SHEET_SPECS
 from app.core.guide.status import ExampleChange, GuideTestState, inspect_guide, read_guide_revision
 from app.core.messages import MessageKey, Severity
-from tests.support import SHA_A, SHA_B
+from tests.support import REF_TARGETS, SHA_A, SHA_B
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def keys(status_issues: tuple[object, ...]) -> list[object]:
 def test_tested_guide(guide: Path, tmp_path: Path) -> None:
     record = tmp_path / "guide-tested.json"
     write_test_record(record, GuideTestRecord(guide_commit=SHA_A, xsd_commit=SHA_B))
-    status = inspect_guide(guide, record)
+    status = inspect_guide(guide, record, REF_TARGETS)
     assert status.found
     assert status.revision.branch == "next"
     assert status.revision.commit == SHA_A
@@ -40,7 +40,7 @@ def test_tested_guide(guide: Path, tmp_path: Path) -> None:
 def test_differing_guide(guide: Path, tmp_path: Path) -> None:
     record = tmp_path / "guide-tested.json"
     write_test_record(record, GuideTestRecord(guide_commit=SHA_B, xsd_commit=SHA_B))
-    status = inspect_guide(guide, record)
+    status = inspect_guide(guide, record, REF_TARGETS)
     assert status.test_state is GuideTestState.DIFFERS
     issue = status.issues[0]
     assert issue.key is MessageKey.GUIDE_TESTED_DIFFERS
@@ -51,13 +51,13 @@ def test_differing_guide(guide: Path, tmp_path: Path) -> None:
 def test_differing_xsd_counts_as_differing(guide: Path, tmp_path: Path) -> None:
     record = tmp_path / "guide-tested.json"
     write_test_record(record, GuideTestRecord(guide_commit=SHA_A, xsd_commit=None))
-    status = inspect_guide(guide, record)
+    status = inspect_guide(guide, record, REF_TARGETS)
     assert status.test_state is GuideTestState.DIFFERS
     assert status.issues[0].params["testedXsdCommit"] == "-"
 
 
 def test_never_tested(guide: Path, tmp_path: Path) -> None:
-    status = inspect_guide(guide, tmp_path / "fehlt.json")
+    status = inspect_guide(guide, tmp_path / "fehlt.json", REF_TARGETS)
     assert status.test_state is GuideTestState.NEVER_TESTED
     assert keys(status.issues) == [MessageKey.GUIDE_NEVER_TESTED]
 
@@ -65,14 +65,14 @@ def test_never_tested(guide: Path, tmp_path: Path) -> None:
 def test_invalid_test_record(guide: Path, tmp_path: Path) -> None:
     record = tmp_path / "guide-tested.json"
     record.write_text("{", encoding="utf-8")
-    status = inspect_guide(guide, record)
+    status = inspect_guide(guide, record, REF_TARGETS)
     assert status.test_state is GuideTestState.UNKNOWN
     assert keys(status.issues) == [MessageKey.GUIDE_TEST_RECORD_INVALID]
 
 
 def test_missing_xsd(guide: Path, tmp_path: Path) -> None:
     guide.joinpath(*XSD_MAIN_FILE.parts).unlink()
-    status = inspect_guide(guide, tmp_path / "fehlt.json")
+    status = inspect_guide(guide, tmp_path / "fehlt.json", REF_TARGETS)
     assert not status.xsd_present
     xsd_issue = next(i for i in status.issues if i.key is MessageKey.GUIDE_XSD_MISSING)
     assert xsd_issue.params["command"] == "git submodule update --init --depth 1"
@@ -80,12 +80,12 @@ def test_missing_xsd(guide: Path, tmp_path: Path) -> None:
 
 def test_missing_mapping_table(guide: Path, tmp_path: Path) -> None:
     guide.joinpath(*MAPPING_TABLE_FILE.parts).unlink()
-    status = inspect_guide(guide, tmp_path / "fehlt.json")
+    status = inspect_guide(guide, tmp_path / "fehlt.json", REF_TARGETS)
     assert MessageKey.MAPPING_FILE_MISSING in keys(status.issues)
 
 
 def test_guide_not_found(tmp_path: Path) -> None:
-    status = inspect_guide(tmp_path / "fehlt", tmp_path / "guide-tested.json")
+    status = inspect_guide(tmp_path / "fehlt", tmp_path / "guide-tested.json", REF_TARGETS)
     assert not status.found
     assert status.test_state is GuideTestState.UNKNOWN
     assert keys(status.issues) == [MessageKey.GUIDE_NOT_FOUND]
@@ -95,7 +95,7 @@ def test_guide_without_git(tmp_path: Path) -> None:
     (tmp_path / "guide").mkdir()
     record = tmp_path / "guide-tested.json"
     write_test_record(record, GuideTestRecord(guide_commit=SHA_A, xsd_commit=None))
-    status = inspect_guide(tmp_path / "guide", record)
+    status = inspect_guide(tmp_path / "guide", record, REF_TARGETS)
     assert status.revision.commit is None
     assert status.test_state is GuideTestState.UNKNOWN
     assert MessageKey.GUIDE_NOT_GIT in keys(status.issues)
@@ -117,7 +117,7 @@ def test_missing_xsd_submodule_is_no_git_issue(guide: Path) -> None:
 
 def test_examples_are_analyzed(guide: Path, tmp_path: Path) -> None:
     record = tmp_path / "guide-tested.json"
-    status = inspect_guide(guide, record)
+    status = inspect_guide(guide, record, REF_TARGETS)
     by_name = {example.name: example for example in status.examples}
     assert list(by_name) == ["broken_xml.xml", "ch20_midnight.xml", "ch20_three_stops.xml"]
     assert by_name["ch20_three_stops.xml"].title == "Synthetische Fahrt"
@@ -131,7 +131,9 @@ def test_examples_are_analyzed(guide: Path, tmp_path: Path) -> None:
 
 def test_example_changes_against_record(guide: Path, tmp_path: Path) -> None:
     record = tmp_path / "guide-tested.json"
-    first = {example.name: example for example in inspect_guide(guide, record).examples}
+    first = {
+        example.name: example for example in inspect_guide(guide, record, REF_TARGETS).examples
+    }
     three = first["ch20_three_stops.xml"]
     assert three.sha256 is not None
     write_test_record(
@@ -145,7 +147,10 @@ def test_example_changes_against_record(guide: Path, tmp_path: Path) -> None:
             },
         ),
     )
-    changes = {example.name: example.change for example in inspect_guide(guide, record).examples}
+    changes = {
+        example.name: example.change
+        for example in inspect_guide(guide, record, REF_TARGETS).examples
+    }
     assert changes == {
         "ch20_three_stops.xml": ExampleChange.UNCHANGED,
         "ch20_midnight.xml": ExampleChange.CHANGED,
@@ -161,9 +166,11 @@ def test_example_status_uses_the_reference_target_list(guide: Path, tmp_path: Pa
     )
     record = tmp_path / "guide-tested.json"
 
-    def result(targets: dict[str, tuple[str, ...]] | None) -> ExampleResult:
+    def result(targets: dict[str, tuple[str, ...]]) -> ExampleResult:
         examples = inspect_guide(guide, record, targets).examples
         return {example.name: example.result for example in examples}["zz_role.xml"]
 
-    assert result(None) is ExampleResult.NOTES
+    # Bewusst ohne Liste: Der Name ohne `Ref` (`ResponsibleOrganisation`) trifft kein Objekt.
+    assert result({}) is ExampleResult.NOTES
     assert result({"ResponsibleOrganisationRef": ("Operator",)}) is ExampleResult.CLEAN
+    assert result(REF_TARGETS) is ExampleResult.CLEAN

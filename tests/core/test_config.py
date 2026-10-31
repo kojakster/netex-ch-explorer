@@ -158,6 +158,37 @@ def test_not_relevant_elements_are_validated(tmp_path: Path) -> None:
     assert (MessageKey.CONFIG_FIELD_UNKNOWN, "x") in fields
 
 
+def test_xml_names_must_match_completely(tmp_path: Path) -> None:
+    """Ein Zeilenumbruch am Ende ist kein gültiger Elementname (kein `$`-Fehler)."""
+    write_config(tmp_path, "not-relevant-elements.json", {"elements": ["Line\n", "Line"]})
+    write_config(tmp_path, "ref-targets.json", {"refs": {"LineRef\n": {"targets": ["Line"]}}})
+    config = load_config(tmp_path)
+    assert config.not_relevant_elements == ("Line",)
+    assert config.ref_targets == {}
+    fields = issue_fields(tmp_path)
+    assert (MessageKey.CONFIG_VALUE_INVALID, "elements[0]") in fields
+    assert (MessageKey.CONFIG_VALUE_INVALID, "refs.LineRef\n") in fields
+
+
+def test_ref_target_entries_are_validated(tmp_path: Path) -> None:
+    write_config(
+        tmp_path,
+        "ref-targets.json",
+        {
+            "refs": {
+                "ARef": {"targets": ["A", "A", "B"], "xsdTypes": ["ARefStructure"]},
+                "BRef": {"targets": ["Line\n"]},
+                "CRef": {"targets": []},
+            }
+        },
+    )
+    config = load_config(tmp_path)
+    assert config.ref_targets == {"ARef": ("A", "B")}
+    fields = issue_fields(tmp_path)
+    assert (MessageKey.CONFIG_VALUE_INVALID, "refs.BRef.targets") in fields
+    assert (MessageKey.CONFIG_VALUE_INVALID, "refs.CRef.targets") in fields
+
+
 def test_not_relevant_elements_must_be_list(tmp_path: Path) -> None:
     write_config(tmp_path, "not-relevant-elements.json", {"elements": "TariffZone"})
     config = load_config(tmp_path)

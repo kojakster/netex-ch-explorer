@@ -31,7 +31,7 @@ class Dataset:
 def open_dataset(
     sources: Iterable[SourceFile],
     not_relevant: Iterable[str],
-    ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+    ref_targets: Mapping[str, tuple[str, ...]],
 ) -> Dataset:
     """Liest alle Dateien ein und baut den Index. Fehler werden zu Diagnosen."""
     parsed = [read_xml(source.name, source.data) for source in sources]

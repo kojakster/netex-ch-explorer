@@ -102,7 +102,7 @@ def read_guide_revision(guide_path: Path) -> GuideRevision:
 def inspect_guide(
     guide_path: Path,
     test_record_path: Path,
-    ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+    ref_targets: Mapping[str, tuple[str, ...]],
 ) -> GuideStatus:
     """Untersucht den Guide-Klon und vergleicht ihn mit dem Testnachweis.
 
@@ -215,7 +215,7 @@ def _compare_with_test_record(
 def analyze_examples(
     guide_path: Path,
     record: GuideTestRecord | None,
-    ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+    ref_targets: Mapping[str, tuple[str, ...]],
 ) -> list[ExampleStatus]:
     """Lädt jedes Beispiel einzeln und vergleicht es mit dem Testnachweis.
 

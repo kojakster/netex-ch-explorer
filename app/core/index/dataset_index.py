@@ -28,6 +28,7 @@ from app.core.index.references import (
     ReferenceRow,
     ResolveStatus,
     classify,
+    differing_version,
     expected_types,
     is_reference,
     reference_version,
@@ -171,6 +172,14 @@ class ElementRow:
 
 
 @dataclass(frozen=True)
+class ResolveResult:
+    """Ergebnis der Auflösung einer Referenz: Status und, falls eindeutig, das Ziel."""
+
+    status: ResolveStatus
+    target: ElementRow | None = None
+
+
+@dataclass(frozen=True)
 class _PendingReference:
     """Eine Referenz, die nach dem Einlesen aller Dateien aufgelöst wird."""
 
@@ -250,14 +259,14 @@ class DatasetIndex:
         self,
         files: Iterable[ParsedFile],
         not_relevant: Iterable[str],
-        ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+        ref_targets: Mapping[str, tuple[str, ...]],
     ) -> None:
         self._lock = threading.Lock()
         # Ein Index gehört zu einem Datensatz; Zugriffe aus mehreren Threads schützt das Lock.
         self._db = sqlite3.connect(":memory:", check_same_thread=False)
         self._db.executescript(_SCHEMA)
         self._not_relevant = frozenset(not_relevant)
-        self._ref_targets: Mapping[str, tuple[str, ...]] = ref_targets or {}
+        self._ref_targets = ref_targets
         self._pending_references: list[_PendingReference] = []
         self._next_element_id = 1
         self._line_starts: dict[int, list[int]] = {}
@@ -389,6 +398,10 @@ class DatasetIndex:
                     is not None
                 )
             status, target_id = classify(candidates, ref_version, type_present[types])
+            if target_id is not None:
+                found_version = differing_version(candidates, target_id, ref_version)
+                if found_version is not None:
+                    self._insert_version_hint(pending, ref_version, found_version)
             self._db.execute(
                 "INSERT INTO refs VALUES (?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -417,6 +430,25 @@ class DatasetIndex:
                     ),
                 )
         self._pending_references = []
+
+    def _insert_version_hint(
+        self, pending: _PendingReference, ref_version: str | None, found_version: str
+    ) -> None:
+        self._insert_diagnostic(
+            pending.file_id,
+            Diagnostic(
+                DiagnosticCategory.REFERENCE,
+                Severity.INFO,
+                MessageKey.REFERENCE_VERSION_DIFFERS,
+                {
+                    "element": pending.name,
+                    "ref": pending.attributes["ref"],
+                    "version": ref_version or "",
+                    "found": found_version,
+                },
+                pending.position,
+            ),
+        )
 
     def _insert_diagnostic(self, file_id: int, diagnostic: Diagnostic) -> None:
         position = diagnostic.position
@@ -550,6 +582,14 @@ class DatasetIndex:
             ).fetchall()
         return [_row_to_element(row) for row in rows]
 
+    def resolve(self, ref_element: ElementRow) -> ResolveResult:
+        """Ergebnis der Auflösung einer Referenz (beim Öffnen berechnet): Status und Ziel."""
+        row = self.reference(ref_element.id)
+        if row is None:
+            return ResolveResult(ResolveStatus.UNRESOLVED)
+        target = None if row.target_id is None else self.element(row.target_id)
+        return ResolveResult(row.status, target)
+
     def reference(self, element_id: int) -> ReferenceRow | None:
         """Die Referenz eines Ref-Elements; `None`, wenn das Element keine Referenz ist."""
         with self._lock:
@@ -592,15 +632,6 @@ class DatasetIndex:
                 ).fetchall()
             found.update({row[0]: _row_to_reference(row) for row in rows})
         return found
-
-    def objects_by_id(self, xml_id: str, object_type: str) -> list[ElementRow]:
-        """Objekte mit dieser `id` und diesem Typ (Elementname)."""
-        with self._lock:
-            rows = self._db.execute(
-                _ELEMENT_SELECT + " WHERE e.xml_id = ? AND e.name = ? ORDER BY e.id",
-                (xml_id, object_type),
-            ).fetchall()
-        return [_row_to_element(row) for row in rows]
 
     def elements_by_name(self, names: Sequence[str]) -> list[ElementRow]:
         """Alle Elemente mit einem dieser Namen und einer `id`, in Dokumentreihenfolge."""

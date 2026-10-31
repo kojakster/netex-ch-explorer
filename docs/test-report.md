@@ -155,10 +155,26 @@ Nicht behoben, dem Benutzer vorgelegt ([open-points.md](open-points.md) Punkte 5
 
 **Keine Funde.** Geprüft: SQL (nur Platzhalter und feste Spaltennamen, alle Werte als Parameter), neuer Aufruf `GET /api/objects/{id}/provenance` (nur zufällige Datensatz-ID plus Elementnummer, kein Pfad), `config/ref-targets.json` (Grösse, JSON-Form und Namensmuster geprüft), keine neue XML-Verarbeitung (`DOCTYPE`-Abweisung gilt weiter), Frontend (Werte nur als Text, Farben nur aus validiertem `#RRGGBB`), keine Datenpreisgabe über den bereits geöffneten Datensatz hinaus. Die eingebaute Prüfung vergleicht mit `origin/HEAD`; das Repository hat kein Remote, deshalb wurde vorübergehend eine lokale Referenz auf `7e69a47` angelegt und danach gelöscht.
 
+### Review durch Opus und Korrekturen (über `7e69a47..fdd2408`)
+
+Funde und Entscheide des Benutzers (31.10.2026) sind in [decisions.md](decisions.md) „Entscheide nach Review Phase 2“ festgehalten. Korrekturen in den Commits `8750672` (Entscheide) und `f2842e6` (Frontend) sowie im Commit „Korrekturen aus dem Review Phase 2“ (Backend).
+
+**Behoben:**
+
+1. `config/ref-targets.json` war unvollständig (z. B. `JourneyPatternRef` ohne `DeadRunJourneyPattern`, `FromPointRef` nur `ScheduledStopPoint`). Jetzt nennt sie je Ref-Namen alle laut XSD erlaubten Zieltypen (47 Einträge, Feld `xsdTypes`). Der Test prüft jeden Eintrag gegen die XSD (alle erlaubten Typen vorhanden, nichts Zusätzliches) und deckt auch die Vorlagen `src/templates/*.xml` ab (Ref-Name in der Liste oder Zieltyp folgt eindeutig aus dem Namen).
+2. Frontend: `useLoad` verwirft beim Schlüsselwechsel die alten Daten (kein Klick mehr auf die alte Herkunftskette); Vitest-Tests für `useLoad` und `ProvenanceChain`.
+3. `ref_targets` ist Pflichtparameter (`open_dataset`, `DatasetIndex`, `inspect_guide`, `analyze_examples`); die Tests verwenden die echte Liste (`tests/support.py: REF_TARGETS`); der eine bewusste Test ohne Liste übergibt `{}` und sagt es im Kommentar.
+4. Aufräumen: `resolve`/`ResolveResult` liegen jetzt am Index (`DatasetIndex.resolve`), `references.py` kennt den Index nicht mehr, kein `TYPE_CHECKING`-Zyklus; `objects_by_id` aus dem Index entfernt (Hilfsfunktion nur in den Tests); Sprachschlüssel `refs.owner` entfernt; `journeys.py` behandelt `RESOLVED` ohne Ziel als Programmfehler (`RuntimeError`, mit Test) und ersetzt unerwartete Status nicht mehr still; `_XML_NAME` mit `fullmatch` (Test mit `"Line\n"`).
+5. Entscheid: abweichende Version einer Referenz ergibt ℹ Hinweis `reference.version_differs` (Referenz bleibt aufgelöst; Text de/en, Hilfeseite und `docs/api.md` nachgeführt).
+
+**Offen** ([open-points.md](open-points.md)): Punkt 7 (viele Einzelabfragen pro Referenz in `object_detail`/`reference_view` und beim Auflösen; um `object_detail` ergänzt, nicht behoben), 8 (Punkt-in-Muster-Refs erlauben laut XSD jede Klasse), 9 (`ParentJourneyRef` → `ServiceJourney` in Beispiel 21, nicht in der XSD), 10 (zwei Vorlagen-Namen ohne XSD-Deklaration), 11 (Liste nur für Ref-Namen der Guide-Dateien, nicht für alle 403 der XSD).
+
+**Nachweis:** `uv run python scripts/check.py` grün (alle Schritte). pytest: **351 Tests bestanden**; Abdeckung `app/core` **98 %**. Vitest: **69 Tests bestanden**. `scripts/test.py`: bestanden, 22 Beispiele laden (21 „ohne Meldungen“, Beispiel 17 „mit Hinweisen“); Referenzen der Beispiele unverändert: **1516 aufgelöst, 4 `external_or_unloaded`, 0 nicht auflösbar** (insgesamt 1520), keine neuen Versionshinweise.
+
 ### Lücken und Hinweise
 
 - Herkunftskette zeigt in Phase 2 nur Frame, Objekte, Angabe und Ziel; Rechenketten berechneter Zeiten folgen mit Phase 3.
 - Verweise ausserhalb des Datensatzes lösen sich erst, wenn die Gegendatei mit geöffnet wird; „Datei öffnen“ mit mehreren Dateien folgt in Phase 4. Im Beispiel 17 bleiben deshalb 4 Hinweise.
 - Der Build meldet weiter ein Skriptpaket über 500 kB (CodeMirror).
 - Windows: nicht getestet.
-- Offen vor Phase 3: Welcher `TimingLink` gilt (`OnwardTimingLinkRef`, open-points.md Punkt 3).
+- Regel Z4 (welcher `TimingLink` gilt) ist entschieden und folgt mit Phase 3 ([mapping.md](mapping.md)).

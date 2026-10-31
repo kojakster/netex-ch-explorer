@@ -191,7 +191,7 @@ XML-Ausschnitt um ein Element bzw. um eine Stelle (z. B. einer Diagnose), 30 Zei
    "fileId": 1, "fileName": "broken_xml.xml", "line": 48, "column": 34 }]
 ```
 
-Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. Bisher entstehen `file` (Zeichenkodierung), `xml_syntax` (Syntaxfehler, `DOCTYPE`) und `reference` (Phase 2: `reference.unresolved` ⚠ Fehler, `reference.ambiguous` △ Warnung, `reference.external_or_unloaded` ℹ Hinweis; Parameter `element`, `ref`, `expected`; Stelle = das Ref-Element).
+Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. Bisher entstehen `file` (Zeichenkodierung), `xml_syntax` (Syntaxfehler, `DOCTYPE`) und `reference` (Phase 2: `reference.unresolved` ⚠ Fehler, `reference.ambiguous` △ Warnung, `reference.external_or_unloaded` ℹ Hinweis, `reference.version_differs` ℹ Hinweis für eine aufgelöste Referenz mit abweichender Version; Parameter `element`, `ref`, `expected` bzw. bei `version_differs` `version` (Referenz) und `found` (Ziel); Stelle = das Ref-Element).
 
 ## Geplant
 

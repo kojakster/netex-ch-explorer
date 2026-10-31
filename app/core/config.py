@@ -24,7 +24,7 @@ MAX_CONFIG_BYTES: Final = 1_000_000
 SUPPORTED_LANGUAGES: Final = ("de-CH", "en")
 
 _HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
-_XML_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]*$")
+_XML_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*")
 MIN_PORT: Final = 1024
 MAX_PORT: Final = 65535
 
@@ -310,7 +310,7 @@ def _load_not_relevant(config_dir: Path) -> tuple[tuple[str, ...], list[Issue]]:
         return DEFAULT_NOT_RELEVANT_ELEMENTS, collector.issues
     elements: list[str] = []
     for index, value in enumerate(raw):
-        if isinstance(value, str) and _XML_NAME.match(value):
+        if isinstance(value, str) and _XML_NAME.fullmatch(value):
             if value not in elements:
                 elements.append(value)
         else:
@@ -339,15 +339,15 @@ def _load_ref_targets(config_dir: Path) -> tuple[dict[str, tuple[str, ...]], lis
 
 def _ref_entry_targets(name: str, entry: object, collector: _IssueCollector) -> tuple[str, ...]:
     label = f"refs.{name}"
-    if not _XML_NAME.match(name) or not isinstance(entry, dict):
+    if not _XML_NAME.fullmatch(name) or not isinstance(entry, dict):
         collector.add(MessageKey.CONFIG_VALUE_INVALID, label)
         return ()
-    _report_unknown_fields(entry, ("targets", "xsdType"), collector, prefix=f"{label}.")
+    _report_unknown_fields(entry, ("targets", "xsdTypes"), collector, prefix=f"{label}.")
     targets = entry.get("targets")
     if (
         not isinstance(targets, list)
         or not targets
-        or not all(isinstance(t, str) and _XML_NAME.match(t) for t in targets)
+        or not all(isinstance(t, str) and _XML_NAME.fullmatch(t) for t in targets)
     ):
         collector.add(MessageKey.CONFIG_VALUE_INVALID, f"{label}.targets")
         return ()

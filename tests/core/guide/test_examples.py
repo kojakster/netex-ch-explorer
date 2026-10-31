@@ -10,7 +10,7 @@ from app.core.guide.examples import (
     list_examples,
     read_example,
 )
-from tests.support import FIXTURES_DIR
+from tests.support import FIXTURES_DIR, REF_TARGETS
 
 
 def test_list_examples_with_titles(synthetic_guide: Path) -> None:
@@ -40,7 +40,7 @@ def test_read_example_rejects_deleted_file(synthetic_guide: Path) -> None:
 
 
 def result_of(*sources: SourceFile) -> ExampleResult:
-    return example_result(open_dataset(sources, ()))
+    return example_result(open_dataset(sources, (), REF_TARGETS))
 
 
 def test_example_results() -> None:
