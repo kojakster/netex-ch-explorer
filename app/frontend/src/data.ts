@@ -23,7 +23,8 @@ export interface Loaded<T> {
 
 /**
  * Lädt Daten neu, sobald sich `requestKey` ändert (`null` = nichts laden).
- * Ältere Antworten werden verworfen.
+ * Mit dem Schlüsselwechsel verschwinden die alten Daten (`data` ist `null`, `loading` ist `true`),
+ * damit nichts zum alten Schlüssel angezeigt oder angeklickt wird. Ältere Antworten werden verworfen.
  */
 export function useLoad<T>(requestKey: string | null, load: () => Promise<T>): Loaded<T> {
   const [state, setState] = useState<Loaded<T>>({ data: null, errorKey: null, loading: false });
@@ -35,7 +36,7 @@ export function useLoad<T>(requestKey: string | null, load: () => Promise<T>): L
       return;
     }
     let active = true;
-    setState((previous) => ({ ...previous, loading: true }));
+    setState({ data: null, errorKey: null, loading: true });
     loadRef
       .current()
       .then((data) => {
