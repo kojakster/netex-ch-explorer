@@ -48,4 +48,5 @@ NeTEx-Viewer/                          Sammelordner (nicht versioniert)
 - **Echte Bezeichnungen verwenden:** Fremde Quellen heissen im Projekt so wie im Original, z. B. Ordner `netexRealisationGuideSwitzerland` nach dem GitHub-Repo `openTdataCH/netexRealisationGuideSwitzerland`. Keine eigenen Kurznamen erfinden.
 - Technische Vorgaben des Plans dürfen hinterfragt werden. Abweichungen gemeinsam mit dem Benutzer festlegen.
 - **Offene Punkte einzeln klären:** genau eine Frage bzw. ein Punkt pro Nachricht. Erst wenn er geklärt und in `docs/decisions.md` eingetragen ist, folgt der nächste.
+- **Hilfeseite immer nachführen:** Jede Änderung an Funktionen, Frame-Farben, Grau-Liste, Schweregraden oder Prüfungen (neu, geändert, entfernt, „nicht durchgeführt“) führt die Hilfeseite und die Sprachdateien (de/en) **im selben Commit** nach. Ein Test stellt sicher, dass nichts ohne Hilfetext bleibt; vor jedem Commit prüfen. Gleiches gilt für das README bei Änderungen an Einrichtung oder Start.
 - Neue Entscheidungen in `docs/decisions.md` eintragen, neue Rechercheergebnisse unter `docs/research/`. Diese Datei bleibt kurz.

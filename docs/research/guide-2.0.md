@@ -96,3 +96,11 @@ Untersucht wurden die Blätter, die Codes erklären (`VMArt->NeTEx`, `Angebote`,
 - **Aufbau:** Jedes Blatt ist eine Tabelle mit 1–5 Titelzeilen und danach einer **Kopfzeile mit Spaltennamen**. Die Kopfzeile liegt je nach Blatt in Zeile 2, 3 oder 6. Danach folgt pro Zeile ein Wert, über eine Code-Spalte identifizierbar (z. B. `Abk`, `Value`, `Facility Value`, `Value for LineType`). Zusammengeführte Zellen gibt es nur in Titelzeilen (`Angebote` B1:C1/E1:F1, `LineType` A4:F4 u. a.).
 - **Farben tragen Bedeutung:** Blatt `Legend`: grün = „new value“, orange = „no longer used“. Viele Zellen sind farbig, besonders in `Angebote` und `LineType`.
 - **Datenqualität:** Die Tabelle hat eigene Schreibweisen und Tippfehler, z. B. Facility Value `Bar` (gross) oder „Abfahrstszeiten“. Das Tool zeigt die Werte so an, wie sie dort stehen.
+
+## XSD- und Schematron-Prüfung der Beispiele (31.10.2026)
+
+Mit lxml lokal geprüft (`b7ac158`, XSD `73b337e`):
+
+- Die NeTEx-2.1-XSD lädt in ~17 s, ist also beim Start einmal im Hintergrund zu laden.
+- **Alle 22 Beispiele sind XSD-gültig.** Verschachtelte `<Text lang="…">` innerhalb von `<Text>`/`<Name>` (Beispiel 05 Zeile 399, Beispiel 16 Zeile 64) sind die NeTEx-2.x-Form für Übersetzungen, kein Fehler.
+- `general_rules.sch`: 121 Verstösse in 11 Beispielen, alle „The order attribute is not allowed“ (95× `StopPointInJourneyPattern`, 12× `PassengerStopAssignment`, 8× `TrainComponent`, 5× `NoticeAssignment`, 1× `DayTypeAssignment`). Laut `03_xml_modelling.md` ergibt sich die Reihenfolge aus der XML-Reihenfolge.

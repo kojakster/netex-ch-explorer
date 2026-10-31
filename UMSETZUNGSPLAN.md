@@ -1,7 +1,7 @@
 # NeTEx CH Explorer – Umsetzungsplan, erste Ausbaustufe
 
 **Status:** Entwurf, Freigabe durch den Benutzer ausstehend. Ersetzt den ursprünglichen Plan `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md`.
-**Stand:** 30.10.2026
+**Stand:** 31.10.2026
 **Massgebend für Details:** [docs/decisions.md](docs/decisions.md). Bei Abweichungen gilt `decisions.md`; der Widerspruch wird dem Benutzer vorgelegt.
 **Abgleich mit dem ursprünglichen Plan:** [docs/plan-abgleich.md](docs/plan-abgleich.md)
 
@@ -31,7 +31,7 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 4. Nach dem Laden: Liste der Fahrten der Datei (Zugnummer, Linie, erster/letzter Halt) und eine **einfache Objektsuche** nach ID oder Name. Keine weitergehende Suche (Schwerpunkt ist die Fahrplandarstellung mit Herkunft).
 5. Fahrtansicht für eine `ServiceJourney` als Fahrplan: Halte mit Ein-/Aussteige-Eigenschaften, Ankunft/Abfahrt (auch berechnete Zeiten), Mitternacht, Betriebstage, Angebote.
 6. Herkunft jeder angezeigten Angabe bis zur exakten Stelle im XML.
-7. Visuelle Führung: klare Frame-Farben mit Legende, Herkunftskette als farbige Kästchen, XML-Ansicht mit farbigen Frame-Bereichen; Farben in `frame-colors.json` einstellbar.
+7. Visuelle Führung: klare Frame-Farben mit Legende, Herkunftskette als farbige Kästchen, XML-Ansicht mit farbigen Frame-Bereichen; Farben in `config/frame-colors.json` einstellbar.
 8. Objekt-Explorer mit Referenzen vor- und rückwärts und Frame-Zugehörigkeit.
 9. Stammdaten: Code und Bedeutung aus der Mappingtabelle.
 10. Eigene Dateien öffnen: XML, mehrere XML, ZIP.
@@ -67,7 +67,7 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 | **Nichts erfinden** | Fehlendes oder nicht Auflösbares wird als solches angezeigt („nicht in dieser Datei aufgelöst“, „nicht berechenbar“), nie durch Standardwerte ersetzt. Unsicherheiten (z. B. unklare Zuordnung) werden **in der Anwendung** sichtbar gemacht, nicht nur in `docs/assumptions.md`. |
 | **Fehlend ≠ fehlerhaft** | Was laut Guide nicht in der Datei steht, ist kein Fehler: z. B. Haltestellen in einer `NETWORK_OFFER`-Datei (kommen laut Guide aus ATLAS; Beispiel 18 hat keinen `SiteFrame`) oder Ziele in einer nicht geöffneten Datei. Anzeige „nicht in dieser Datei (extern bzw. nicht geladen)“, Referenzstatus `external_or_unloaded`. |
 | **Begriffe nicht vermischen** | `ScheduledStopPoint` (Fahrplanpunkt), `StopPlace` (Haltestelle) und `Quay` (Kante) werden getrennt beschriftet und angezeigt. |
-| **XML bleibt XML** | Werte, Codes und Texte aus den Dateien werden unverändert angezeigt, nie übersetzt. Mehrsprachige Texte: alle Fassungen mit Sprachkennzeichen. Der NeTEx-Elementname wird immer mit angezeigt. |
+| **XML bleibt XML** | Werte, Codes und Texte aus den Dateien werden unverändert angezeigt, nie übersetzt. Mehrsprachige Texte: alle Fassungen mit Sprachkennzeichen, auch die in NeTEx 2.x gültige verschachtelte Form (`<Text lang="en">…<Text lang="de">…</Text></Text>`, z. B. Beispiele 05, 16). Der NeTEx-Elementname wird immer mit angezeigt. |
 | **Codes und Stammdaten** | Immer den gesendeten Code zeigen. Bedeutung nur aus der Datei selbst oder aus der Mappingtabelle (mit Blatt, Zeile, Guide-Stand), sonst „keine Erläuterung in den Stammdaten“. |
 | **Frames** | Frame-Typ und Frame-ID aus der tatsächlichen XML-Struktur; Frame ist eindeutig als (Datei, Frame-ID). |
 | **Robustheit** | Fehlerhafte Dateien werden so weit wie möglich geladen; Fehler erscheinen als Diagnose, nie als Absturz. |
@@ -152,9 +152,9 @@ Jede Regel wird in `docs/mapping.md` mit Guide-Datei, Abschnitt und Commit beleg
 
 | Inhalt | Abbildung im Guide | Anzeige |
 |---|---|---|
-| Haltefolge | `ServiceJourney` → `ServiceJourneyPatternRef` → `StopPointInJourneyPattern` (Reihenfolge) → `ScheduledStopPoint` → `PassengerStopAssignment` → `StopPlace`/`Quay` | Halte in Reihenfolge, Name aus der Datei, Kante falls zugeordnet; fehlt die Zuordnung (z. B. `NETWORK_OFFER`), Hinweis „Haltestelle nicht in dieser Datei“ |
+| Haltefolge | `ServiceJourney` → `ServiceJourneyPatternRef` → `StopPointInJourneyPattern` (Reihenfolge = **Reihenfolge im XML** laut `03_xml_modelling.md`; das Attribut `order` ist laut `general_rules.sch` nicht erlaubt, steht aber in 95 Halten der Beispiele; weicht es ab → Hinweis) → `ScheduledStopPoint` → `PassengerStopAssignment` → `StopPlace`/`Quay` | Halte in Reihenfolge, Name aus der Datei, Kante falls zugeordnet; fehlt die Zuordnung (z. B. `NETWORK_OFFER`), Hinweis „Haltestelle nicht in dieser Datei“ |
 | Halt-Eigenschaften | `StopPointInJourneyPattern`: `ForBoarding`, `ForAlighting`, `RequestStop`, `StopUse` | Pro Halt sichtbar: nur Einsteigen, nur Aussteigen, Bedarfshalt (in den Beispielen häufig: 49× `ForBoarding false`, 36× `ForAlighting false`); Werte mit Herkunft |
-| Fahrtbezeichnung | `TrainNumberRef` → `TrainNumber`; `PrivateCode`; Linie | Zugnummer und Linie im Kopf der Fahrtansicht |
+| Fahrtbezeichnung | `TrainNumberRef` → `TrainNumber`; `privateCodes/PrivateCode` (`type="sjyid"`); Linie | Zugnummer und Linie im Kopf der Fahrtansicht |
 | Zeiten | `DepartureTime` + `TimeDemandTypeRef` → `JourneyRunTime`/`JourneyWaitTime` je `TimingLink` | Ankunft/Abfahrt wie ein Fahrplan, Markierung „berechnet“, Rechenkette mit Quellen; fehlt ein Summand: „nicht berechenbar“ |
 | Mitternacht | `DepartureDayOffset` (fehlend = 0, als Standardwert gekennzeichnet); Tageswechsel während der Fahrt nur rechnerisch; `JourneyPart` mit `Start-/EndTimeDayOffset` | „+1“/„−1“ je Zeit, ausdrücklich oder berechnet; Widersprüche als Diagnose; Hinweis in Nächten der Zeitumstellung |
 | Betriebstage | `AvailabilityConditionRef` → `AvailabilityCondition` (`FromDate`, `ToDate`, `ValidDayBits`); `DayType` nur Feiertage | Gültigkeitszeitraum und Anzahl Tage; Liste der Tage aufklappbar. Keine Pauschalaussagen wie „Mo–Fr“ |
@@ -201,13 +201,13 @@ Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung m
 
 - **Versionserkennung** mit Begründung: Namespace, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur. Ergebnis `detected`, `ambiguous` oder `unknown`; das Wurzelattribut allein entscheidet nie (die Guide-Beispiele tragen teils `1.09`).
 - **Passt die Datei nicht zum Guide-Stand** (z. B. 1.10-Lieferung): Ergebnis anzeigen, keine 2.0-Prüfung starten, generischer Explorer bleibt nutzbar.
-- **XSD-Prüfung** (lxml) gegen die XSD des Guide-Stands; Fehler mit Datei, Zeile, Spalte, Markierung im XML.
-- **Schematron:** `general_rules.sch` des Guides (4 allgemeine Regeln).
+- **XSD-Prüfung** (lxml) gegen die XSD des Guide-Stands; Fehler mit Datei, Zeile, Spalte, Markierung im XML. Geprüft am 31.10.2026: lxml lädt die NeTEx-2.1-XSD (`73b337e`) in **~17 s**, alle 22 Beispiele sind XSD-gültig. Deshalb XSD **einmal im Hintergrund beim Start laden** und wiederverwenden; Status in der Guide-Status-Box („XSD wird geladen …“).
+- **Schematron:** `general_rules.sch` des Guides (4 allgemeine Regeln). Geprüft: meldet in 11 Beispielen 121 Verstösse, alle „`order`-Attribut nicht erlaubt“ (95× `StopPointInJourneyPattern`, 12× `PassengerStopAssignment`, 8× `TrainComponent`, 5× `NoticeAssignment`, 1× `DayTypeAssignment`); gute Testfälle.
 - **Schweizer Kernregeln für den Fahrplan (~20):** selbst umgesetzt aus den Vorlagen `ServiceJourney.xml`, `ServiceJourneyPattern.xml`, `TimeDemandType.xml`: Pflichtelemente (z. B. `ServiceJourneyPatternRef`, `TimeDemandTypeRef`, `AvailabilityConditionRef`, `TrainNumberRef`; im Haltemuster `LineRef`, `DirectionType`, `ForBoarding`/`ForAlighting`; in Fahrzeiten `RunTime`), verbotene Elemente (z. B. `calls`, `passingTimes`, `LineRef`/`DirectionType` in der Fahrt) und erlaubte Werte (z. B. `ServiceAlteration` = `planned`). Jede Regel einzeln am Vorlagentext prüfen und mit Quelle (Vorlage, Stelle, Commit) versehen; unklare Regeln dem Benutzer vorlegen.
 - Anzeige: „Schweizer Kernregeln für den Fahrplan geprüft; übrige Profilregeln noch nicht eingebunden“. Prüfungen als erweiterbare Liste von Prüfschritten; später kommen die übrigen Regeln über das Build-Werkzeug des Guides dazu.
 - **Link zum Guide-Kapitel** über `A5_annex_index.md`, auf GitHub im exakt verwendeten Commit.
 - Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“.
-- Bekannte erste Testfälle: Beispiel 05 Zeile 399, Beispiel 16 Zeile 64, `TypeOfName` `offical`.
+- Bekannte erste Testfälle: `order`-Verstösse (z. B. Beispiel 22 mit 66 Meldungen), synthetische Fahrt mit `calls` (Kernregel). Hinweis: `TypeOfName` `offical` (Beispiele) ist vermutlich ein Tippfehler, aber kein Regelverstoss (freier Text) und wird nicht als Fehler gemeldet.
 
 ## 9. Sicherheit
 
@@ -218,7 +218,7 @@ Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung m
 
 ## 10. Phasen und Abnahme
 
-Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. Fehler vor der nächsten Phase beheben. Lässt sich eine Phase nicht vollständig umsetzen, wird der funktionierende Teil mit genauer Beschreibung der Lücke geliefert, **kein vorgetäuschter Erfolg**; die Lücke wird dem Benutzer vorgelegt.
+Nach jeder Phase: Tests ausführen, **Hilfeseite und README nachführen**, Ergebnis in `docs/test-report.md`, Commit. Fehler vor der nächsten Phase beheben. Lässt sich eine Phase nicht vollständig umsetzen, wird der funktionierende Teil mit genauer Beschreibung der Lücke geliefert, **kein vorgetäuschter Erfolg**; die Lücke wird dem Benutzer vorgelegt.
 
 | Phase | Inhalt | Abnahme |
 |---|---|---|
@@ -226,14 +226,14 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 | **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
 | **2 Referenzen und Herkunft** | Referenzen inkl. `Extensions`, Auflösung über ID + Typ, Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | Navigation vor/zurück; `Quay` und `ScheduledStopPoint` mit gleicher ID werden korrekt unterschieden; nicht auflösbare Referenzen als Diagnose |
 | **3 Fahrtansicht CH 2.0** | Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
-| **4 Eigene Dateien und Validierung** | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + `general_rules.sch` + Kernregeln, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; Fehler in Beispiel 05/16 erscheinen mit Stelle und Link; eine synthetische Fahrt mit `calls` verletzt die Kernregel mit Quellenangabe |
+| **4 Eigene Dateien und Validierung** | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + `general_rules.sch` + Kernregeln, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; `order`-Verstösse der Beispiele erscheinen mit Stelle und Link zum Guide-Kapitel; eine synthetische Fahrt mit `calls` verletzt die Kernregel mit Quellenangabe |
 | **5 Übergabe** | Hilfeseite, README, Start/Stopp, E2E-Test, Testbericht, bekannte Grenzen, Sprachdatei-Prüfung | Neue Person startet die App, lädt Beispiel 01, klickt einen Halt an und landet an der richtigen XML-Stelle, ohne Code zu ändern; Hilfeseite zeigt aktuelle Farben sowie durchgeführte und nicht durchgeführte Prüfungen |
 
 ## 11. Tests
 
 - **Unit:** Guide-Erkennung (Commit aus `.git`, fehlende XSD, neuer als getestet), Namespaces, Positionen (Byte/Zeile/Spalte), Frame-Zuordnung, Pfadberechnung, Referenzauflösung (ID + Typ, doppelte IDs), Zeitberechnung inkl. Mitternacht und fehlender Summanden, `ValidDayBits`, Versionserkennung, Mappingtabelle (fehlende Spalte → Hinweis), Übersetzungsschlüssel vollständig.
 - **Alle Guide-Beispiele:** parametrisierter Test lädt jedes Beispiel des aktiven Guide-Stands; keine Abstürze, Diagnosen erlaubt.
-- **Hilfeseite:** zeigt die Farben aus `config/` und genau die eingebauten bzw. nicht eingebauten Prüfungen (Test gegen die Liste der Prüfschritte).
+- **Hilfeseite aktuell:** Test schlägt fehl, wenn ein Prüfschritt, eine Frame-Farbe, ein Schweregrad oder eine Funktion (Liste in `app/core/features.py` bzw. gleichwertig) keinen Hilfetext in **beiden** Sprachdateien hat, oder wenn die Hilfeseite Farben/Prüfungen anders zeigt als `config/` und die Liste der Prüfschritte.
 - **Synthetische Fixtures** (eigene, klein, als synthetisch gekennzeichnet, z. B. `ParticipantRef` `SYNTHETIC`; nie als echte Fahrplandaten ausgeben): Fahrt mit drei Halten, Fahrt über Mitternacht, fehlender Summand, nicht auflösbare Referenz, Referenz über Dateigrenzen, Referenz auf nicht geladene Datei (`external_or_unloaded`), doppelte ID, defektes XML, ZIP mit mehreren Dateien, 1.10-artige Datei, Fahrt mit `calls` (verletzt Kernregel).
 - **Sicherheit:** XXE, Zip-Slip, ZIP-Grenzwerte, unzulässiger Pfad.
 - **E2E (Playwright, ein Pfad):** Beispiel 01 laden → Fahrt öffnen → Halt anklicken → richtige XML-Stelle und Frame.
@@ -251,14 +251,15 @@ Für eine neue Sitzung, die diesen Plan umsetzt:
 2. Prüfen, ob der Guide-Klon vorhanden ist (`../netexRealisationGuideSwitzerland`, Branch `next`, XSD-Submodul). Fehlt er: Benutzer auf die Befehle im README hinweisen, nicht selbst klonen.
 3. Phasen 0–5 der Reihe nach umsetzen. Nach jeder Phase: Tests, `docs/test-report.md`, Commit, kurze Rückmeldung an den Benutzer (was fertig ist, was offen ist).
 4. **Anhalten und den Benutzer fragen** bei: Elementen, deren Einordnung in Grau unklar ist, unklaren Kernregeln, jeder Unklarheit oder jedem Widerspruch (Plan, Entscheidungen, Guide, Daten), jeder Anforderung mit unerwartet hohem Aufwand. Fragen einzeln stellen.
-5. Neue Entscheidungen in `docs/decisions.md`, fachliche Belege in `docs/mapping.md`, Annahmen und Widersprüche im Guide in `docs/assumptions.md`.
-6. Nichts auf GitHub oder andere Server hochladen; keine Lieferdaten aus `../netex-files/` in den Kontext laden.
+5. **Jede Änderung an Funktionen, Farben oder Prüfungen führt die Hilfeseite im selben Commit nach** (Regel in CLAUDE.md, abgesichert durch Test).
+6. Neue Entscheidungen in `docs/decisions.md`, fachliche Belege in `docs/mapping.md`, Annahmen und Widersprüche im Guide in `docs/assumptions.md`.
+7. Nichts auf GitHub oder andere Server hochladen; keine Lieferdaten aus `../netex-files/` in den Kontext laden.
 
 ## 14. Während der Planung geklärte Fragen
 
 1. Referenzgraph → keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (Abschnitt 7).
 2. Index und Import → Index nur im Arbeitsspeicher, Datei wird beim Öffnen direkt eingelesen; keine Datenbankdatei, kein Hintergrundprozess.
 3. Profilregeln → XSD + `general_rules.sch` + ~20 selbst umgesetzte Kernregeln für den Fahrplan; übrige ~330 Regeln später über das Werkzeug des Guides; kein Halt nach Phase 3 (Abschnitt 8).
-6. Hilfeseite → Funktionen, Farben, durchgeführte und nicht durchgeführte Prüfungen, automatisch aus den Daten (Abschnitt 7).
 4. Plattformen → Windows bald nötig und wichtiger als die Webversion; Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
 5. Guide-Bezug → Git-Klon durch den Benutzer statt Download-Skript; Workspace-Datei; eigene Dateien nur über den „Datei öffnen“-Dialog.
+6. Hilfeseite → Funktionen, Farben, durchgeführte und nicht durchgeführte Prüfungen, automatisch aus den Daten; wird bei jeder Änderung nachgeführt (Abschnitt 7, 11, 13).
