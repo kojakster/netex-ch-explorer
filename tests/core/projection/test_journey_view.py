@@ -11,6 +11,7 @@ from tests.core.projection.builders import (
     element,
     fixture_index,
     fixture_view,
+    link,
     open_index,
     view_from_xml,
     view_in,
@@ -547,3 +548,50 @@ def test_part_on_single_days() -> None:
     [validity] = item.validity
     assert validity.days is not None
     assert [day.isoformat() for day in validity.days.days] == ["2026-06-01", "2026-06-02"]
+
+
+def test_assignment_is_found_among_many_references_to_the_stop_point() -> None:
+    # Über hundert andere Verweise auf den Fahrplanpunkt stehen vor der Zuordnung in der Datei.
+    many = "".join(link(f"tl-x{number}", "a", "c") for number in range(150))
+    scenario = Scenario(
+        links=many + link("tl-ab", "a", "b") + link("tl-bc", "b", "c"),
+        extra=(
+            "<PassengerStopAssignment id='x1'><ScheduledStopPointRef ref='a'/>"
+            "<StopPlaceRef ref='sp'/></PassengerStopAssignment>"
+            "<StopPlace id='sp'><Name>Bern</Name></StopPlace>"
+        ),
+    )
+    stop = scenario.view().stops[0]
+    assert stop.assignment is not None
+    assert stop.assignment.xml_id == "x1"
+    assert stop.stop_place.text == "Bern"
+
+
+def test_notices_of_a_journey_are_not_cut_off_at_five_hundred() -> None:
+    extra = (
+        "<Notice id='n1'/><noticeAssignments>"
+        + "".join(
+            f"<NoticeAssignment id='na{number:04d}'><NoticeRef ref='n1'/>"
+            "<ServiceJourneyRef ref='j'/></NoticeAssignment>"
+            for number in range(520)
+        )
+        + "</noticeAssignments>"
+    )
+    notices = Scenario(extra=extra).view().notices
+    assert len(notices) == 520
+    assert notices[-1].assignment.xml_id == "na0519"
+
+
+def test_notice_without_end_point_ends_at_the_start_point() -> None:
+    extra = (
+        "<Notice id='n1'/><noticeAssignments>"
+        "<NoticeAssignment id='na1'><NoticeRef ref='n1'/><ServiceJourneyRef ref='j'/>"
+        "<StartPointInPatternRef ref='p2'/></NoticeAssignment>"
+        "<NoticeAssignment id='na2'><NoticeRef ref='n1'/><ServiceJourneyRef ref='j'/>"
+        "<StartPointInPatternRef ref='p1'/><EndPointInPatternRef ref='p3'/></NoticeAssignment>"
+        "</noticeAssignments>"
+    )
+    single, span = Scenario(extra=extra).view().notices
+    assert (single.start_position, single.end_position) == (2, 2)
+    assert single.end_ref is None
+    assert (span.start_position, span.end_position) == (1, 3)

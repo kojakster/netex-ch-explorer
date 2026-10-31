@@ -9,7 +9,7 @@ Belege in docs/mapping.md: Z2 bis Z7, M1 bis M3.
   `TimingLink`, dessen `FromPointRef`/`ToPointRef` zu den beiden Halten passen (Z4, mit Hinweis).
 - Abfahrt am Halt: Ankunft + `JourneyWaitTime/WaitTime` (Z5). Ohne `JourneyWaitTime` gilt 0
   (der Guide verlangt Wartezeiten nur, wenn sie grösser als 0 sind); als Standardwert
-  gekennzeichnet.
+  gekennzeichnet (Z5a). Eine passende `JourneyWaitTime` ohne `WaitTime` ist dagegen eine Lücke.
 - Fehlt ein Summand oder ist er nicht eindeutig, ist die Zeit „nicht berechenbar“ mit Grund; alle
   folgenden Zeiten ebenfalls (Z7). Nichts wird ersetzt.
 - Der Tageswechsel folgt allein aus dem Aufsummieren (M3).
@@ -37,6 +37,7 @@ from app.core.projection.common import (
     children,
     follow,
     follow_child,
+    points_to,
     text_of,
 )
 
@@ -131,19 +132,8 @@ class _Run:
 @dataclass(frozen=True)
 class _Wait:
     journey_wait_time: ElementRow
-    ref_name: str
-    target: ElementRow | None
-    ref: str
+    ref: ElementRow
     duration: ElementRow | None
-
-
-@dataclass(frozen=True)
-class _Link:
-    element: ElementRow
-    from_target: ElementRow | None
-    from_ref: str
-    to_target: ElementRow | None
-    to_ref: str
 
 
 @dataclass
@@ -152,29 +142,14 @@ class _Context:
     stops: list[ElementRow]
     runs: list[_Run] = field(default_factory=list)
     waits: list[_Wait] = field(default_factory=list)
-    links: list[_Link] | None = None
     from_to_links: list[ElementRow] = field(default_factory=list)
-
-
-def _ref_target(index: DatasetIndex, ref: ElementRow | None) -> tuple[ElementRow | None, str]:
-    if ref is None:
-        return None, ""
-    return index.resolve(ref).target, ref.attributes.get("ref", "")
-
-
-def _matches(target: ElementRow | None, ref: str, candidate: ElementRow | None) -> bool:
-    if candidate is None:
-        return False
-    if target is not None:
-        return target.id == candidate.id
-    return candidate.xml_id is not None and ref == candidate.xml_id
 
 
 def _read_runs(index: DatasetIndex, demand: ElementRow) -> list[_Run]:
     runs = []
     for container in children(index, demand, "runTimes"):
         for item in children(index, container, "JourneyRunTime"):
-            link, _ = _ref_target(index, child(index, item, "TimingLinkRef"))
+            link, _ = follow_child(index, item, "TimingLinkRef")
             runs.append(_Run(item, link, child(index, item, "RunTime")))
     return runs
 
@@ -187,20 +162,8 @@ def _read_waits(index: DatasetIndex, demand: ElementRow) -> list[_Wait]:
             for name in _WAIT_REF_NAMES:
                 ref = child(index, item, name)
                 if ref is not None:
-                    target, text = _ref_target(index, ref)
-                    waits.append(_Wait(item, name, target, text, duration))
+                    waits.append(_Wait(item, ref, duration))
     return waits
-
-
-def _read_links(context: _Context) -> list[_Link]:
-    if context.links is None:
-        index = context.index
-        context.links = []
-        for link in index.elements_by_name(("TimingLink",)):
-            from_target, from_ref = _ref_target(index, child(index, link, "FromPointRef"))
-            to_target, to_ref = _ref_target(index, child(index, link, "ToPointRef"))
-            context.links.append(_Link(link, from_target, from_ref, to_target, to_ref))
-    return context.links
 
 
 def _scheduled_stop_point(index: DatasetIndex, stop: ElementRow) -> ElementRow | None:
@@ -232,22 +195,24 @@ def _link_from_to(context: _Context, position: int) -> ElementRow | Finding:
         return Finding(
             Severity.WARNING, MessageKey.TIME_STOP_UNAVAILABLE, {"position": number}, missing
         )
+    index = context.index
     candidates = [
-        link.element
-        for link in _read_links(context)
-        if _matches(link.from_target, link.from_ref, from_point)
-        and _matches(link.to_target, link.to_ref, to_point)
+        link
+        for link in index.referencing_parents(from_point, ("FromPointRef",), "TimingLink")
+        if points_to(index, child(index, link, "ToPointRef"), to_point)
     ]
-    if len(candidates) > 1:
+    several = len(candidates) > 1
+    if several:
         # Mehrere TimingLinks zwischen denselben Punkten: nur die mit RunTime in diesem
         # TimeDemandType kommen in Frage.
         candidates = [link for link in candidates if _has_run(context, link)]
     if len(candidates) == 1:
         context.from_to_links.append(candidates[0])
         return candidates[0]
+    # Mehrere passende TimingLinks, aber keiner (oder mehrere) mit RunTime: nicht eindeutig.
     key = (
         MessageKey.TIME_TIMING_LINK_AMBIGUOUS
-        if candidates
+        if several or candidates
         else MessageKey.TIME_TIMING_LINK_NOT_FOUND
     )
     params = {"from": from_point.xml_id or "", "to": to_point.xml_id or ""}
@@ -323,31 +288,39 @@ def _wait_step(context: _Context, position: int, arrival_total: int) -> CalcStep
     own = [
         wait
         for wait in context.waits
-        if wait.ref_name == "StopPointInJourneyPatternRef" and _matches(wait.target, wait.ref, stop)
+        if wait.ref.name == "StopPointInJourneyPatternRef"
+        and points_to(context.index, wait.ref, stop)
     ]
     # Der Verweis auf das StopPointInJourneyPattern übersteuert den auf den ScheduledStopPoint.
     matches = own or [
         wait
         for wait in context.waits
-        if wait.ref_name != "StopPointInJourneyPatternRef"
-        and _matches(wait.target, wait.ref, point)
+        if wait.ref.name != "StopPointInJourneyPatternRef"
+        and point is not None
+        and points_to(context.index, wait.ref, point)
     ]
     if len(matches) > 1:
         return Finding(
             Severity.WARNING, MessageKey.TIME_WAIT_TIME_AMBIGUOUS, {"position": position + 1}, stop
         )
-    result = (
-        _duration_step(
-            StepKind.WAIT_TIME,
-            matches[0].duration,
-            arrival_total,
-            (matches[0].journey_wait_time,),
-        )
-        if matches
-        else None
+    if not matches:
+        # Ohne JourneyWaitTime für den Halt gilt 0 als Standardwert (Z5a).
+        return CalcStep(StepKind.WAIT_TIME, None, None, True, 0, arrival_total)
+    # Eine JourneyWaitTime ohne Wert ist kein Standardwert, sondern eine Lücke (Z7).
+    result = _duration_step(
+        StepKind.WAIT_TIME,
+        matches[0].duration,
+        arrival_total,
+        (matches[0].journey_wait_time,),
     )
-    # Ohne JourneyWaitTime gilt 0 als Standardwert (Z5).
-    return result or CalcStep(StepKind.WAIT_TIME, None, None, True, 0, arrival_total)
+    if result is None:
+        return Finding(
+            Severity.WARNING,
+            MessageKey.TIME_WAIT_TIME_MISSING,
+            {"position": position + 1},
+            matches[0].journey_wait_time,
+        )
+    return result
 
 
 def _start(index: DatasetIndex, journey: ElementRow) -> _Start | Finding:

@@ -81,3 +81,29 @@ export function ValueText({ value, colors, selected, onSelect, className }: Valu
     </Sourced>
   );
 }
+
+interface ReasonTextProps {
+  /** Referenz, die nicht aufgelöst werden konnte (Quelle, wenn kein Grund vorliegt). */
+  element: ObjectInfo;
+  problem: ValueInfo | null;
+  /** Text, wenn die Auflösung keinen Grund meldet. */
+  fallback: string;
+  colors: readonly FrameColor[];
+  selected: string | null;
+  onSelect: (elementId: string) => void;
+}
+
+/**
+ * Grund, warum ein Verweis kein Ziel hat. Es entsteht immer genau ein Knopf: entweder der Grund
+ * mit seiner eigenen Quelle oder der Ersatztext mit der Referenz als Quelle (nie Knopf im Knopf).
+ */
+export function ReasonText({ element, problem, fallback, ...source }: ReasonTextProps) {
+  if (problem === null) {
+    return (
+      <Sourced element={element} {...source}>
+        {fallback}
+      </Sourced>
+    );
+  }
+  return <ValueText value={problem} {...source} />;
+}

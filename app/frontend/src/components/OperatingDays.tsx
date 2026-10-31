@@ -1,7 +1,7 @@
 import { formatDate } from "../format";
 import { useI18n } from "../i18n";
 import type { ValidityInfo } from "../types";
-import { Sourced, ValueText } from "./Sourced";
+import { ReasonText, Sourced } from "./Sourced";
 import type { SourceProps } from "./sourceProps";
 
 interface OperatingDaysProps extends SourceProps {
@@ -24,13 +24,12 @@ export function OperatingDays({ validities, ...source }: OperatingDaysProps) {
         if (days === null) {
           return (
             <div key={validity.ref.id} className="days">
-              <Sourced element={validity.ref} {...source}>
-                {validity.problem === null ? (
-                  t("days.unresolved")
-                ) : (
-                  <ValueText value={validity.problem} {...source} />
-                )}
-              </Sourced>
+              <ReasonText
+                element={validity.ref}
+                problem={validity.problem}
+                fallback={t("days.unresolved")}
+                {...source}
+              />
             </div>
           );
         }

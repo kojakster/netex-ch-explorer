@@ -59,6 +59,7 @@ class MessageKey(StrEnum):
     TIME_TIMING_LINK_AMBIGUOUS = "projection.time.timing_link_ambiguous"
     TIME_RUN_TIME_MISSING = "projection.time.run_time_missing"
     TIME_RUN_TIME_AMBIGUOUS = "projection.time.run_time_ambiguous"
+    TIME_WAIT_TIME_MISSING = "projection.time.wait_time_missing"
     TIME_WAIT_TIME_AMBIGUOUS = "projection.time.wait_time_ambiguous"
     TIME_DURATION_INVALID = "projection.time.duration_invalid"
     TIME_STOP_UNAVAILABLE = "projection.time.stop_unavailable"

@@ -170,6 +170,18 @@ def test_several_timing_links_between_the_same_points() -> None:
     assert reason_of(arrival) is MessageKey.TIME_TIMING_LINK_AMBIGUOUS
 
 
+def test_several_timing_links_without_any_run_time_are_ambiguous() -> None:
+    links = link("tl-ab", "a", "b") + link("tl-ab2", "a", "b") + link("tl-bc", "b", "c")
+    arrival = Scenario(links=links, runs=run("r2", "tl-bc", "PT15M")).view().stops[1].times.arrival
+    assert reason_of(arrival) is MessageKey.TIME_TIMING_LINK_AMBIGUOUS
+
+
+def test_timing_link_is_found_among_many_timing_links() -> None:
+    many = "".join(link(f"tl-x{number}", "a", "c") for number in range(600))
+    view = Scenario(links=many + link("tl-ab", "a", "b") + link("tl-bc", "b", "c")).view()
+    assert clock(view.stops[2].times.arrival) == "08:27:00 +0"
+
+
 def test_timing_link_matches_unresolved_endpoints_by_id() -> None:
     # Die Punkte der TimingLinks sind nicht auflösbar, ihre ids passen trotzdem zu den Halten.
     unknown = " nameOfRefClass='Unbekannt'"
@@ -244,9 +256,18 @@ def test_invalid_wait_time() -> None:
     assert reason_of(departure) is MessageKey.TIME_DURATION_INVALID
 
 
-def test_wait_time_without_value_is_the_default() -> None:
+def test_wait_time_without_value_is_a_gap_not_a_default() -> None:
     view = Scenario(waits=wait("w1", "b", None)).view()
-    assert clock(view.stops[1].times.departure) == "08:10:00 +0"
+    departure = view.stops[1].times.departure
+    assert reason_of(departure) is MessageKey.TIME_WAIT_TIME_MISSING
+    assert departure is not None
+    assert departure.reason is not None
+    assert departure.reason.params == {"position": 2}
+    assert departure.reason.element is not None
+    assert departure.reason.element.name == "JourneyWaitTime"
+    assert reason_of(view.stops[2].times.arrival) is MessageKey.TIME_WAIT_TIME_MISSING
+    assert view.stops[1].times.arrival is not None
+    assert view.stops[1].times.arrival.status is TimeStatus.COMPUTED
 
 
 @pytest.mark.parametrize(

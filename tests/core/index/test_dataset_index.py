@@ -166,3 +166,45 @@ def test_diagnostic_without_position() -> None:
     ).index
     [item] = index.diagnostics()
     assert item.diagnostic.position is None
+
+
+def test_has_object_type() -> None:
+    dataset = load("ch20_network_offer.xml")
+    assert dataset.index.has_object_type("ScheduledStopPoint")
+    assert not dataset.index.has_object_type("Gibtsnicht")
+    dataset.close()
+
+
+def test_cached_computes_once_per_key() -> None:
+    dataset = load("ch20_three_stops.xml")
+    calls = []
+
+    def compute() -> int:
+        calls.append(1)
+        return 7
+
+    assert dataset.index.cached("wert", compute) == 7
+    assert dataset.index.cached("wert", compute) == 7
+    assert len(calls) == 1
+    dataset.close()
+
+
+def test_referencing_parents_has_no_limit_and_matches_unresolved_ids() -> None:
+    links = "".join(
+        f"<TimingLink id='t{n}'><FromPointRef ref='a'/><ToPointRef ref='b'/></TimingLink>"
+        for n in range(700)
+    )
+    xml = (
+        "<PublicationDelivery><dataObjects><ServiceFrame id='sf'>"
+        "<ScheduledStopPoint id='a'/>"
+        f"{links}<TimingLink id='u'><FromPointRef ref='a' nameOfRefClass='Unbekannt'/>"
+        "<ToPointRef ref='b'/></TimingLink>"
+        "</ServiceFrame></dataObjects></PublicationDelivery>"
+    )
+    index = open_dataset([SourceFile("t.xml", xml.encode())], (), REF_TARGETS).index
+    point = index.elements_by_name(["ScheduledStopPoint"])[0]
+    found = index.referencing_parents(point, ("FromPointRef",), "TimingLink")
+    assert len(found) == 701
+    assert found == sorted(found, key=lambda row: row.id)
+    assert index.referencing_parents(point, ("ToPointRef",), "TimingLink") == []
+    assert index.referencing_parents(point, ("FromPointRef",), "Gibtsnicht") == []

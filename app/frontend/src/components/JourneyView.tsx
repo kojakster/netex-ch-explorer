@@ -15,7 +15,7 @@ import { MasterText } from "./MasterText";
 import { NoticeList } from "./NoticeList";
 import { OperatingDays } from "./OperatingDays";
 import { PartList } from "./PartList";
-import { Sourced, ValueText } from "./Sourced";
+import { ReasonText, Sourced, ValueText } from "./Sourced";
 import { StopTable } from "./StopTable";
 import type { SourceProps } from "./sourceProps";
 
@@ -67,13 +67,12 @@ function Category({
     <div className="category">
       <span className="badge">{t(`journey.role.${category.role}`)}</span>{" "}
       {category.target === null ? (
-        <Sourced element={category.ref} {...source}>
-          {category.problem === null ? (
-            t("lookup.absent")
-          ) : (
-            <ValueText value={category.problem} {...source} />
-          )}
-        </Sourced>
+        <ReasonText
+          element={category.ref}
+          problem={category.problem}
+          fallback={t("lookup.absent")}
+          {...source}
+        />
       ) : (
         <>
           <ValueText value={category.shortName} {...source} className="category-code" />{" "}

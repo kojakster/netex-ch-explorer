@@ -68,7 +68,7 @@ Beispiel 04 enthält `<RunTime>P3M</RunTime>` (drei Monate, vermutlich PT3M geme
 | d | `StartTime` einer `JourneyPart` ist die Abfahrt am Anfangshalt, `EndTime` die Ankunft am Endhalt. | Der Guide sagt nur „Time bounds of the part“. Beispiel 08: alle vier Zeiten stimmen mit den berechneten überein. | Abweichungen sind △ Warnungen. |
 | e | Die Zeitumstellung findet am letzten Sonntag im März (02:00 → 03:00) und im Oktober (03:00 → 02:00) statt. | Regel der Schweiz/EU; der Guide nennt sie nicht. | ℹ Hinweis, wenn eine Fahrt die Stunde 02:00 bis 03:00 eines Umstellungstags berührt. Die Tage kommen aus `ValidDayBits`; ohne verlässliche Tage kein Hinweis. |
 | f | Frame-Ebene: Eine `NoticeAssignment` mit `JourneyPatternRef` gilt für alle Fahrten dieses Fahrtmusters (Beispiel 08), mit `ServiceJourneyRef` für diese Fahrt (Beispiele 02, 05, 10). | Die Vorlage sieht nur die Einbettung vor; die Beispiele verwenden die Verweise. | Die Hinweise erscheinen mit ihrem Geltungsbereich (Fahrt, Fahrtmuster, Halt, Strecke). |
-| g | Keine `JourneyWaitTime` heisst Wartezeit 0. | `TimeDemandType.xml` Z. 75: Wartezeiten nur, wenn grösser als 0. | Standardwert in der Rechenkette gekennzeichnet. |
+| g | Keine `JourneyWaitTime` für den Halt heisst Wartezeit 0 (eine `JourneyWaitTime` ohne `WaitTime` dagegen: nicht berechenbar, Z5b). | `TimeDemandType.xml` Z. 75: Wartezeiten nur, wenn grösser als 0. | Standardwert in der Rechenkette gekennzeichnet. |
 | h | Fehlendes `DepartureDayOffset` heisst 0. | `ServiceJourney.xml` Z. 94–98 („0 for current operating day“). | Standardwert gekennzeichnet, ℹ Hinweis. |
 
 ## Prüfung der Kurswagen-Betriebstage (Beispiel 21)

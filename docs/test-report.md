@@ -225,6 +225,23 @@ Eigene Durchsicht der Commits gegen die Regeln aus `CLAUDE.md` und `docs/enginee
 
 Sicherheit: keine Funde. Der neue Aufruf nimmt nur eine zufällige Datensatz-ID mit Elementnummer (Format geprüft, unbekannte IDs und Nicht-Fahrten ergeben 404), kein Pfad, kein neues SQL (nur bestehende Abfragen des Index), keine neue XML-Verarbeitung. Werte aus Dateien erscheinen im Frontend nur als Text oder Attribut-Text (kein `innerHTML`), Farben stammen aus der geprüften Konfiguration, die CSP blieb unverändert (Browser-Konsole ohne Verstösse).
 
+### Review durch Opus und Korrekturen (über `e1eefa0..a6de59a`)
+
+Acht Funde des Reviews, alle behoben; der Entscheid zu den Phase-3-Festlegungen bleibt beim Benutzer ([decisions.md](decisions.md) unverändert).
+
+1. `_assignments`: die `PassengerStopAssignment` wurde nur unter den ersten 100 eingehenden Verweisen gesucht. Jetzt gezielte Abfrage `DatasetIndex.referencing_parents` ohne Obergrenze; Test mit 150 weiteren Verweisen auf den Fahrplanpunkt.
+2. Hinweiszuweisung ohne `EndPointInPatternRef`: Ende = Anfang (XSD „If absent same as Start Point“, Regel N2a in [mapping.md](mapping.md)); Beispiel 10 (`ch:1:NoticeAssignment:1`) zeigt „bei Halt n“ statt „nennt Halte, die nicht zu dieser Fahrt gehören“. Test.
+3. `_referencing` (Hinweise): kein Abschneiden bei 500 Verweisen mehr (gleiche Abfrage wie 1); Test mit 520 Zuweisungen.
+4. `JourneyWaitTime` ohne `WaitTime`: Abfahrt „nicht berechenbar“ mit Grund `projection.time.wait_time_missing` (Z5b, de/en); Standardwert 0 nur ohne passende `JourneyWaitTime`. Test angepasst.
+5. Frontend: Knopf im Knopf in `OperatingDays`, `JourneyView` (Kategorie) und `Facilities`; neuer Baustein `ReasonText` erzeugt immer genau einen Knopf. Vitest: kein `button button` in diesen Bausteinen, ein Klick löst genau eine Auswahl aus.
+6. Mehrere passende `TimingLink` ohne `RunTime`: „mehrdeutig“ statt „nicht gefunden“ (Text von `timing_link_ambiguous` entsprechend allgemeiner, de/en). Test.
+7. Leistung: `TimingLink` über gezielte Abfrage (Von-Punkt) statt alle je Anfrage; `unassigned_count` einmal je Datensatz (`DatasetIndex.cached`); Test auf `StopPlace` als `LIMIT 1` (`has_object_type`). Keine Verhaltensänderung ausser: Verweise, die nicht aufgelöst sind und dieselbe `id` nennen, zählen jetzt auch bei Zuordnung und Hinweisen (wie schon bei den `TimingLink`).
+8. Doppelter Code: `_matches`/`_ref_target` durch `common.points_to` ersetzt; `_assignments` und `_referencing` nutzen dieselbe Abfrage `referencing_parents`.
+
+**Abnahmewerte** (Zusammenfassung über alle 22 Beispiele vor und nach den Korrekturen verglichen: Fahrten, Zeiten, Zeitwerte, Hinweise samt Halteposition, Haltestellen und Quais): Beispiele 01, 08, 15, 21 unverändert; „nicht berechenbar“ unverändert 17 von 338 Zeiten (Beispiele 04, 07, 11; Grund: Lücken in den Daten). Einzige Änderung: Beispiel 10 (Hinweis `ch:1:NoticeAssignment:1`, Fund 2).
+
+**Nachweis:** `uv run python scripts/check.py` grün (alle Schritte). pytest: **513 Tests bestanden**; Abdeckung `app/core` **99 %**. Vitest: **117 Tests bestanden**. `scripts/test.py`: bestanden, `guide-tested.json` unverändert.
+
 ### Lücken und Hinweise
 
 - Offen und dem Benutzer vorgelegt: [open-points.md](open-points.md) 12–17 (Angebote Teilstrecke gegen Fahrt, Hinweiszuweisungen ohne Ziel, Betriebstage-Prüfung der Kurswagen, zu bestätigende Annahmen, Befunde und Beispielstatus, nicht dargestellte Inhalte).

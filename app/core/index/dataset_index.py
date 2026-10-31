@@ -18,9 +18,9 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Final
+from typing import Any, Final, cast
 
 from app.core.diagnostics import Diagnostic, DiagnosticCategory
 from app.core.index.references import (
@@ -270,10 +270,25 @@ class DatasetIndex:
         self._pending_references: list[_PendingReference] = []
         self._next_element_id = 1
         self._line_starts: dict[int, list[int]] = {}
+        self._memo: dict[str, object] = {}
         for file_id, parsed in enumerate(files, start=1):
             self._add_file(file_id, parsed)
         self._resolve_references()
         self._db.commit()
+
+    def cached[T](self, key: str, compute: Callable[[], T]) -> T:
+        """Berechnet einen Wert, der nur vom Datensatz abhängt, einmal und merkt ihn sich.
+
+        Der Index ändert sich nach dem Aufbau nicht mehr; `key` muss je Wert eindeutig sein.
+        """
+        with self._lock:
+            if key in self._memo:
+                # Der Schlüssel gehört zu genau einer Berechnung, der Typ stimmt also.
+                return cast(T, self._memo[key])
+        value = compute()
+        with self._lock:
+            self._memo[key] = value
+        return value
 
     def close(self) -> None:
         """Gibt den Speicher des Index frei."""
@@ -517,6 +532,14 @@ class DatasetIndex:
             ).fetchall()
         return [(name, count) for name, count in rows]
 
+    def has_object_type(self, name: str) -> bool:
+        """Ob der Datensatz mindestens ein Objekt (Element mit `id`) dieses Typs enthält."""
+        with self._lock:
+            row = self._db.execute(
+                "SELECT 1 FROM elements WHERE name = ? AND xml_id IS NOT NULL LIMIT 1", (name,)
+            ).fetchone()
+        return row is not None
+
     def search_objects(
         self, object_type: str | None, query: str | None, limit: int, offset: int
     ) -> tuple[int, list[ElementRow]]:
@@ -617,6 +640,27 @@ class DatasetIndex:
                 (target_id, limit),
             ).fetchall()
         return [_row_to_reference(row) for row in rows]
+
+    def referencing_parents(
+        self, target: ElementRow, ref_names: Collection[str], parent_name: str
+    ) -> list[ElementRow]:
+        """Elemente `parent_name`, die über eines der Ref-Elemente `ref_names` auf `target` zeigen.
+
+        Ohne Obergrenze, in Dokumentreihenfolge, jedes Element einmal. Eine Referenz zeigt auf das
+        Ziel, wenn sie darauf aufgelöst ist oder (nicht aufgelöst) dieselbe `id` nennt.
+        """
+        names = list(ref_names)
+        placeholders = ", ".join("?" * len(names))
+        with self._lock:
+            rows = self._db.execute(
+                _ELEMENT_SELECT + " WHERE e.name = ? AND e.id IN (SELECT ref.parent_id FROM refs r"
+                " JOIN elements ref ON ref.id = r.element_id"
+                f" WHERE ref.name IN ({placeholders})"
+                " AND (r.target_id = ? OR (r.target_id IS NULL AND r.target_ref = ?)))"
+                " ORDER BY e.id",
+                (parent_name, *names, target.id, target.xml_id),
+            ).fetchall()
+        return [_row_to_element(row) for row in rows]
 
     def references_among(self, element_ids: Sequence[int]) -> dict[int, ReferenceRow]:
         """Die Referenzen unter den angegebenen Elementen, nach Element-Nummer."""

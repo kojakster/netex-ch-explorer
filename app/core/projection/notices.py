@@ -121,7 +121,8 @@ def notice_view(
     start_ref = child(index, assignment, "StartPointInPatternRef")
     end_ref = child(index, assignment, "EndPointInPatternRef")
     start = stop_position or _position(index, start_ref, stops)
-    end = stop_position or _position(index, end_ref, stops)
+    # Fehlt `EndPointInPatternRef`, gilt das Ende „gleich wie Start Point“ (N2a).
+    end = stop_position or _position(index, end_ref or start_ref, stops)
     absent = Lookup(LookupStatus.ABSENT)
     return NoticeView(
         assignment,
@@ -156,15 +157,7 @@ def _referencing(
     """Hinweiszuweisungen, die über eines der Ref-Elemente `names` auf das Objekt verweisen."""
     if target is None:
         return []
-    found = []
-    for row in index.references_to(target.id, 500):
-        ref = index.element(row.element_id)
-        if ref is None or ref.name not in names or ref.parent_id is None:
-            continue
-        parent = index.element(ref.parent_id)
-        if parent is not None and parent.name == "NoticeAssignment":
-            found.append(parent)
-    return found
+    return index.referencing_parents(target, names, "NoticeAssignment")
 
 
 def journey_notices(

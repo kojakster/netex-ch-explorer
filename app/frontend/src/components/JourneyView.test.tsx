@@ -1,9 +1,17 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { I18nContext, messagesFor, translate } from "../i18n";
 import { JOURNEY_VIEW } from "../testData";
-import type { JourneyViewInfo, MasterInfo, NoticeInfo, TimeInfo, ValidityInfo } from "../types";
+import type {
+  CategoryInfo,
+  JourneyViewInfo,
+  MasterInfo,
+  NoticeInfo,
+  TimeInfo,
+  ValidityInfo,
+} from "../types";
 import { CalculationChain } from "./CalculationChain";
 import { Facilities } from "./Facilities";
+import { JourneyView } from "./JourneyView";
 import { MasterText } from "./MasterText";
 import { NoticeList } from "./NoticeList";
 import { OperatingDays } from "./OperatingDays";
@@ -340,5 +348,54 @@ describe("CalculationChain", () => {
     );
     fireEvent.click(screen.getByText(/Im TimeDemandType fehlt für den TimingLink tl-2/));
     expect(onSelect).toHaveBeenCalledWith("SYNTHETICDATASET01.121");
+  });
+});
+
+describe("keine verschachtelten Knöpfe", () => {
+  const ref = (JOURNEY_VIEW.validities[0] as ValidityInfo).ref;
+  const problem = { status: "not_resolved" as const, text: "x", element: ref };
+
+  it("ein Grund erzeugt genau einen Knopf und ein Klick genau eine Auswahl", () => {
+    const onSelect = vi.fn();
+    const { container } = render(
+      <OperatingDays validities={[{ ref, days: null, problem }]} {...PROPS} onSelect={onSelect} />,
+    );
+    expect(container.querySelector("button button")).toBeNull();
+    expect(container.querySelectorAll("button")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button"));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(ref.id);
+  });
+
+  it("die Fahrtansicht mit nicht aufgelösten Angeboten und Kategorien hat keinen Knopf im Knopf", () => {
+    const set = JOURNEY_VIEW.parts[0]?.facilities[0];
+    if (set === undefined) {
+      throw new Error("Testdaten ohne Angebote");
+    }
+    const category: CategoryInfo = {
+      role: "journey",
+      ref,
+      target: null,
+      problem,
+      shortName: problem,
+      names: [],
+      master: null,
+    };
+    const broken: JourneyViewInfo = {
+      ...JOURNEY_VIEW,
+      validities: [{ ref, days: null, problem }],
+      facilities: [{ ...set, facilitySet: null, groups: [], problem }],
+      categories: [category],
+    };
+    const { container } = render(
+      <JourneyView
+        journey={broken}
+        selectedTime={null}
+        onSelectTime={() => undefined}
+        onShowDiagnostic={() => undefined}
+        {...PROPS}
+      />,
+    );
+    expect(container.querySelector("button button")).toBeNull();
   });
 });

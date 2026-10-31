@@ -1,7 +1,7 @@
 import { useI18n } from "../i18n";
 import type { CodeInfo, FacilitySetInfo } from "../types";
 import { MasterText } from "./MasterText";
-import { Sourced, ValueText } from "./Sourced";
+import { ReasonText, Sourced } from "./Sourced";
 import type { SourceProps } from "./sourceProps";
 
 interface FacilitiesProps extends SourceProps {
@@ -28,13 +28,12 @@ export function Facilities({ sets, guideCommit, compact = false, ...source }: Fa
       {sets.map((set) => (
         <div key={set.ref.id} className="facility-set">
           {set.facilitySet === null ? (
-            <Sourced element={set.ref} {...source}>
-              {set.problem === null ? (
-                t("lookup.absent")
-              ) : (
-                <ValueText value={set.problem} {...source} />
-              )}
-            </Sourced>
+            <ReasonText
+              element={set.ref}
+              problem={set.problem}
+              fallback={t("lookup.absent")}
+              {...source}
+            />
           ) : (
             !compact && (
               <Sourced element={set.facilitySet} {...source} className="facility-id">

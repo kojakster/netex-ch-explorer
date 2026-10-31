@@ -179,14 +179,8 @@ def _name_of(index: DatasetIndex, element: ElementRow) -> Lookup:
 
 
 def _assignments(index: DatasetIndex, point: ElementRow) -> list[ElementRow]:
-    found = []
-    for row in index.references_to(point.id, 100):
-        ref = index.element(row.element_id)
-        parent = None if ref is None or ref.parent_id is None else index.element(ref.parent_id)
-        is_assignment_ref = ref is not None and ref.name == "ScheduledStopPointRef"
-        if is_assignment_ref and parent is not None and parent.name == "PassengerStopAssignment":
-            found.append(parent)
-    return found
+    """Alle `PassengerStopAssignment`, die den Fahrplanpunkt nennen (ohne Obergrenze)."""
+    return index.referencing_parents(point, ("ScheduledStopPointRef",), "PassengerStopAssignment")
 
 
 def _quay(index: DatasetIndex, assignment: ElementRow) -> Lookup:
@@ -252,7 +246,7 @@ def _stop_views(
     part_numbers: list[tuple[int, ...]],
     table: MappingTable,
 ) -> list[StopView]:
-    has_stop_places = any(name == "StopPlace" for name, _ in index.object_types())
+    has_stop_places = index.has_object_type("StopPlace")
     views = []
     rows = zip(points, times, part_numbers, strict=True)
     for position, (point, stop_times, numbers) in enumerate(rows, start=1):
@@ -478,7 +472,7 @@ def build_journey_view(
             findings.extend(validity.days.findings)
     findings.extend(_part_findings(parts, stops))
     findings.extend(_dst_findings(own_validities, stops, journey))
-    unassigned = unassigned_count(index)
+    unassigned = index.cached("notice_unassigned", lambda: unassigned_count(index))
     if unassigned:
         findings.append(Finding(Severity.INFO, MessageKey.NOTICE_UNASSIGNED, {"count": unassigned}))
     categories = [item for item in (category(index, journey, "journey", table),) if item]
