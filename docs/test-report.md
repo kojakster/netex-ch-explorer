@@ -53,3 +53,54 @@ Zusätzlicher Fund aus der Prüfung der Testdateien: lxml stürzt bei der Schema
 - Windows: nicht getestet (`start.ps1` vorhanden).
 - `pip-audit` und `npm audit` brauchen Internet. Ohne Verbindung ist der Prüfbefehl nicht grün, und es lässt sich nicht committen.
 - Offen vor Phase 3: Welcher `TimingLink` gilt (`OnwardTimingLinkRef`, docs/open-points.md Punkt 3).
+
+## Phase 1: Einlesen und Objekt-Explorer (31.10.2026)
+
+Umsetzung: Commits `fe208d5` und `5bfb694` (Funde aus dem Code-Review). Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`.
+
+### Prüfbefehl
+
+`uv run python scripts/check.py --hook`: **grün** bei beiden Commits (Git-Hook). Alle 14 Schritte OK, pip-audit und npm audit ohne Lücken.
+
+### Tests und Abdeckung
+
+- pytest: **266 Tests bestanden**, davon 25 gegen den Guide-Klon (alle 22 Beispiele einzeln geladen, Beispiel 01 fachlich). Abdeckung `app/core`: **98 %**.
+- Vitest: **50 Tests bestanden** (u. a. App-Ablauf Beispiel → Fahrt → Objekt → XML, CodeMirror-Markierung und Frame-Beschriftung, verworfene ältere Antworten).
+- `scripts/test.py`: bestanden; `guide-tested.json` (Schema 2) mit Prüfsumme und Ergebnis für 22 Beispiele, alle „ohne Meldungen“.
+
+### Abnahme
+
+| Kriterium | Ergebnis |
+|---|---|
+| Alle Guide-Beispiele laden ohne Absturz | erfüllt: parametrisierter Test über alle 22 Beispiele; bei jedem Objekt beginnt der markierte Ausschnitt mit `<` und endet mit `>` |
+| ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte | erfüllt: im Browser (Chrome, Playwright aus dem Scratchpad) Suche `ch:1:sloid:7483:0:90840` in Beispiel 01 → 2 Treffer (`Quay`, `ScheduledStopPoint` getrennt); `Quay` zeigt `SiteFrame`, Zeile 115, Spalte 9, Pfad |
+| Klick markiert exakt die Stelle | erfüllt: Markierung beginnt bei `<Quay id=…`; Klick auf `DepartureTime` markiert genau `<DepartureTime>10:35:00</DepartureTime>`; Frame-Bänder und Frame-Namen am Rand; keine Meldungen in der Browser-Konsole |
+| Beispielauswahl mit Status pro Beispiel, Prüfsummen in `guide-tested.json` | erfüllt |
+
+### Code-Review (eingebaute Prüfung `/code-review`, Stufe high, über `927633e..fe208d5`)
+
+10 Funde, alle behoben in `5bfb694`:
+
+1. Markierung bei CRLF-Dateien (Beispiel 15) und Zeichen ausserhalb der Basisebene verschoben. Jetzt Zeilenumbrüche LF und Offsets in UTF-16-Einheiten, Test mit CRLF und Emoji.
+2. UTF-16/32 wurde nicht abgewiesen. Jetzt Diagnose „nicht unterstützt“.
+3. Schnelles Umschalten der Beispiele: Eine ältere Antwort konnte die neuere überschreiben. Jetzt wird sie verworfen.
+4. Verdrängte Datensätze wurden während laufender Anfragen geschlossen (500). Jetzt nicht mehr ausdrücklich geschlossen.
+5. Elemente ohne Ende zeigten keine Kinder. Jetzt Nachfahren über die Tiefe.
+6. Nicht aufgelöste Zugnummern erschienen wie Zugnummern. Jetzt mit Status und Herkunft.
+7. `DepartureDayOffset` fehlte in der Liste. Jetzt angezeigt.
+8. Sehr grosse Zahlen führten zu 500. Jetzt Obergrenzen (422).
+9. Suche ohne Gross-/Kleinschreibung nur für ASCII. Jetzt `casefold`, ID und Name getrennt (ein Treffer über die Feldgrenze ist nicht mehr möglich).
+10. Die Zeilentabelle wurde bei jedem Ausschnitt neu berechnet. Jetzt zwischengespeichert.
+
+### Sicherheits-Review (eingebaute Prüfung `/security-review`, über `927633e..5bfb694`)
+
+**Keine Funde.** Geprüft: Path Traversal beim Öffnen von Beispielen (nur Namen aus der Beispielliste), XXE (`DOCTYPE` abgewiesen), SQL (nur feste Teile, Werte als Parameter), IDs (zufällig, Format geprüft), XSS (kein `innerHTML`, CodeMirror-Beschriftungen über `textContent`). Vorübergehende lokale Referenz `origin/HEAD` wie in Phase 0, danach gelöscht.
+
+Eigener Fund bei der Browser-Prüfung: Die strenge CSP blockierte die Stile von CodeMirror (`<style>`-Element). Gelöst ohne CSP-Lockerung durch einen Shadow-DOM (Entscheid „Umsetzung Phase 1“, Punkt 6).
+
+### Lücken und Hinweise
+
+- Referenzen nur als Grundstufe (Phase 2: Versionen, Rückwärtsreferenzen, `external_or_unloaded`, Referenzdiagnosen).
+- Der Build meldet ein Skriptpaket über 500 kB (CodeMirror). Für die lokale Nutzung unkritisch; bei der Webversion prüfen.
+- Dateien mit nur CR als Zeilenumbruch (ohne LF) werden in den Zeilennummern nicht unterstützt; in der Praxis nicht anzutreffen.
+- Windows: nicht getestet.
