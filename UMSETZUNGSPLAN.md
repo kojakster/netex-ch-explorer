@@ -185,7 +185,8 @@ Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie 
 Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung mit `ResourceFrame`).
 
 - Für Desktop ausgelegt; bei schmalerem Fenster bedienbar.
-- **Links:** aktiver Guide-Stand (mit „in Entwicklung“), Auswahl der Beispiele bzw. „Datei öffnen“, Versionserkennung, Liste der Fahrten der Datei, einfache Objektsuche, Diagnosen.
+- **Links oben: Guide-Status-Box** (Sicherheitsnetz, weil der Benutzer den Guide selbst per Git aktualisiert): Profil und „in Entwicklung“, Branch, Commit, Datum; ✔ „getestet“ bzw. ℹ „neuer als zuletzt getestet“ mit Hinweis `scripts/test.py`; ⚠ „XSD fehlt“ mit dem fehlenden Git-Befehl; ⚠ Probleme mit der Mappingtabelle.
+- **Links:** Auswahl der Beispiele bzw. „Datei öffnen“, Versionserkennung, Liste der Fahrten der Datei, einfache Objektsuche, Diagnosen.
 - **Mitte:** umschaltbar „Fahrt“ / „Objekt“.
   - Fahrt: Kopf mit Zugnummer, Linie, Verkehrsmittel, Betriebstagen; Tabelle Halt – Ein-/Aussteigen – Ankunft – Abfahrt – Angebote. **Jede Angabe trägt die Farbmarkierung ihres Frames.**
   - Objekt: Eigenschaften und Referenzen ein-/ausgehend als **farbige Liste** (Farbe des Ziel-Frames), jede anklickbar.
