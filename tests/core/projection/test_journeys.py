@@ -5,7 +5,8 @@ import pytest
 from app.core.dataset import SourceFile, open_dataset
 from app.core.index.dataset_index import DatasetIndex, ResolveResult
 from app.core.index.references import ResolveStatus
-from app.core.projection.journeys import LookupStatus, list_journeys
+from app.core.projection.common import LookupStatus
+from app.core.projection.journeys import list_journeys
 from tests.support import FIXTURES_DIR, REF_TARGETS
 
 

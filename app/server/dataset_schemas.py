@@ -11,7 +11,8 @@ from app.core.frames import color_key
 from app.core.index.dataset_index import ElementRow, IndexedDiagnostic
 from app.core.index.references import ResolveStatus
 from app.core.messages import MessageKey, Severity
-from app.core.projection.journeys import JourneySummary, Lookup, LookupStatus
+from app.core.projection.common import Lookup, LookupStatus
+from app.core.projection.journeys import JourneySummary
 from app.core.provenance import ChainLink, LinkKind
 from app.server.datasets import object_id
 from app.server.schemas import ApiModel

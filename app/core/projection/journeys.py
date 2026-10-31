@@ -15,36 +15,20 @@ Nichts wird ergänzt: Fehlt eine Angabe oder lässt sie sich nicht auflösen, st
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Final
 
 from app.core.index.dataset_index import DatasetIndex, ElementRow
-from app.core.index.references import ResolveStatus
+from app.core.projection.common import (
+    ABSENT,
+    Lookup,
+    LookupStatus,
+    child,
+    children,
+    follow,
+    text_of,
+)
 
 JOURNEY_TYPES: Final = ("ServiceJourney", "TemplateServiceJourney")
-
-
-class LookupStatus(StrEnum):
-    """Ergebnis einer Angabe in der Fahrtenliste."""
-
-    FOUND = "found"
-    ABSENT = "absent"
-    """Das Element fehlt in den Daten."""
-    NOT_RESOLVED = "not_resolved"
-    """Objekte des erwarteten Typs sind vorhanden, das gesuchte Ziel nicht (Fehler)."""
-    EXTERNAL_OR_UNLOADED = "external_or_unloaded"
-    """Der Datensatz enthält keine Objekte des erwarteten Typs (extern oder nicht geladen)."""
-    AMBIGUOUS = "ambiguous"
-    """Die Referenz passt auf mehrere Objekte."""
-
-
-@dataclass(frozen=True)
-class Lookup:
-    """Eine Angabe mit Herkunft: Status, Text aus der Datei und Element der Quelle."""
-
-    status: LookupStatus
-    text: str | None = None
-    element: ElementRow | None = None
 
 
 @dataclass(frozen=True)
@@ -60,101 +44,67 @@ class JourneySummary:
     last_stop: Lookup
 
 
-_ABSENT: Final = Lookup(LookupStatus.ABSENT)
-_RESOLVE_TO_LOOKUP: Final = {
-    ResolveStatus.UNRESOLVED: LookupStatus.NOT_RESOLVED,
-    ResolveStatus.EXTERNAL_OR_UNLOADED: LookupStatus.EXTERNAL_OR_UNLOADED,
-    ResolveStatus.AMBIGUOUS: LookupStatus.AMBIGUOUS,
-}
+def train_number(index: DatasetIndex, ref: ElementRow) -> Lookup:
+    """Zugnummer (`ForAdvertisement`) hinter einer `TrainNumberRef`."""
+    target, problem = follow(index, ref)
+    if target is None:
+        return problem or ABSENT
+    advertised = text_of(child(index, target, "ForAdvertisement"))
+    # Ohne ForAdvertisement bleibt die TrainNumber als Herkunft der fehlenden Angabe.
+    return advertised if advertised.element else Lookup(LookupStatus.ABSENT, None, target)
 
 
-def _child(index: DatasetIndex, element: ElementRow, name: str) -> ElementRow | None:
-    return next((child for child in index.children(element.id) if child.name == name), None)
-
-
-def _children(index: DatasetIndex, element: ElementRow, name: str) -> list[ElementRow]:
-    return [child for child in index.children(element.id) if child.name == name]
-
-
-def _text(element: ElementRow | None) -> Lookup:
-    if element is None or not element.text.strip():
-        return _ABSENT
-    return Lookup(LookupStatus.FOUND, element.text.strip(), element)
-
-
-def _follow(index: DatasetIndex, ref: ElementRow | None) -> tuple[ElementRow | None, Lookup | None]:
-    """Löst eine Referenz auf; liefert das Ziel oder eine Lookup-Angabe zum Grund."""
-    if ref is None:
-        return None, _ABSENT
-    result = index.resolve(ref)
-    if result.target is not None:
-        return result.target, None
-    if result.status is ResolveStatus.RESOLVED:
-        # Der Index liefert bei `RESOLVED` immer das Ziel; alles andere ist ein Programmfehler.
-        message = f"Referenz {ref.id} ist aufgelöst, aber das Ziel fehlt"
-        raise RuntimeError(message)
-    return None, Lookup(_RESOLVE_TO_LOOKUP[result.status], ref.attributes.get("ref"), ref)
-
-
-def _train_numbers(index: DatasetIndex, journey: ElementRow) -> list[Lookup]:
-    container = _child(index, journey, "trainNumbers")
+def train_numbers_of(index: DatasetIndex, journey: ElementRow) -> list[Lookup]:
+    """Zugnummern der Fahrt (`trainNumbers/TrainNumberRef`), je Verweis eine Angabe mit Herkunft."""
+    container = child(index, journey, "trainNumbers")
     if container is None:
         return []
-    numbers = []
-    for ref in _children(index, container, "TrainNumberRef"):
-        target, problem = _follow(index, ref)
-        if target is None:
-            numbers.append(problem or _ABSENT)
-            continue
-        advertised = _text(_child(index, target, "ForAdvertisement"))
-        # Ohne ForAdvertisement bleibt die TrainNumber als Herkunft der fehlenden Angabe.
-        numbers.append(
-            advertised if advertised.element else Lookup(LookupStatus.ABSENT, None, target)
-        )
-    return numbers
+    return [train_number(index, ref) for ref in children(index, container, "TrainNumberRef")]
 
 
-def _line(index: DatasetIndex, pattern: ElementRow) -> Lookup:
-    route_view = _child(index, pattern, "RouteView")
-    ref = None if route_view is None else _child(index, route_view, "LineRef")
-    line, problem = _follow(index, ref)
+def line_of(index: DatasetIndex, pattern: ElementRow) -> Lookup:
+    """Linie des Fahrtmusters: `PublicCode`, sonst `Name` der `Line`."""
+    route_view = child(index, pattern, "RouteView")
+    ref = None if route_view is None else child(index, route_view, "LineRef")
+    line, problem = follow(index, ref)
     if line is None:
-        return problem or _ABSENT
-    public_code = _child(index, line, "PublicCode")
+        return problem or ABSENT
+    public_code = child(index, line, "PublicCode")
     if public_code is not None and public_code.text.strip():
         return Lookup(LookupStatus.FOUND, public_code.text.strip(), public_code)
     if line.label:
-        return Lookup(LookupStatus.FOUND, line.label, _child(index, line, "Name") or line)
+        return Lookup(LookupStatus.FOUND, line.label, child(index, line, "Name") or line)
     return Lookup(LookupStatus.ABSENT, None, line)
 
 
-def _stop(index: DatasetIndex, point: ElementRow | None) -> Lookup:
+def stop_name(index: DatasetIndex, point: ElementRow | None) -> Lookup:
+    """Name des `ScheduledStopPoint` eines `StopPointInJourneyPattern`."""
     if point is None:
-        return _ABSENT
-    stop, problem = _follow(index, _child(index, point, "ScheduledStopPointRef"))
+        return ABSENT
+    stop, problem = follow(index, child(index, point, "ScheduledStopPointRef"))
     if stop is None:
-        return problem or _ABSENT
+        return problem or ABSENT
     if stop.label:
-        return Lookup(LookupStatus.FOUND, stop.label, _child(index, stop, "Name") or stop)
+        return Lookup(LookupStatus.FOUND, stop.label, child(index, stop, "Name") or stop)
     return Lookup(LookupStatus.ABSENT, None, stop)
 
 
 def journey_summary(index: DatasetIndex, journey: ElementRow) -> JourneySummary:
     """Fasst eine Fahrt für die Liste zusammen."""
-    pattern, pattern_problem = _follow(index, _child(index, journey, "ServiceJourneyPatternRef"))
+    pattern, pattern_problem = follow(index, child(index, journey, "ServiceJourneyPatternRef"))
     if pattern is None:
-        line = first = last = pattern_problem or _ABSENT
+        line = first = last = pattern_problem or ABSENT
     else:
-        sequence = _child(index, pattern, "pointsInSequence")
-        points = [] if sequence is None else _children(index, sequence, "StopPointInJourneyPattern")
-        line = _line(index, pattern)
-        first = _stop(index, points[0] if points else None)
-        last = _stop(index, points[-1] if points else None)
+        sequence = child(index, pattern, "pointsInSequence")
+        points = [] if sequence is None else children(index, sequence, "StopPointInJourneyPattern")
+        line = line_of(index, pattern)
+        first = stop_name(index, points[0] if points else None)
+        last = stop_name(index, points[-1] if points else None)
     return JourneySummary(
         element=journey,
-        train_numbers=_train_numbers(index, journey),
-        departure_time=_text(_child(index, journey, "DepartureTime")),
-        departure_day_offset=_text(_child(index, journey, "DepartureDayOffset")),
+        train_numbers=train_numbers_of(index, journey),
+        departure_time=text_of(child(index, journey, "DepartureTime")),
+        departure_day_offset=text_of(child(index, journey, "DepartureDayOffset")),
         line=line,
         first_stop=first,
         last_stop=last,

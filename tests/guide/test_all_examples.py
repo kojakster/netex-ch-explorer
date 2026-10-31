@@ -16,7 +16,8 @@ from app.core.config import load_config
 from app.core.dataset import SourceFile, open_dataset
 from app.core.explorer import element_xml_window, object_detail
 from app.core.guide.examples import examples_dir, list_examples
-from app.core.projection.journeys import LookupStatus, list_journeys
+from app.core.projection.common import LookupStatus
+from app.core.projection.journeys import list_journeys
 from tests.support import PROJECT_ROOT, REF_TARGETS
 
 GUIDE = load_config(PROJECT_ROOT).settings.guide_path

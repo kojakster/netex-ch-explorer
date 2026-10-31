@@ -5,6 +5,7 @@ Alle Dateien in diesem Ordner sind **selbst erstellt und synthetisch** (Projekt 
 | Datei | Zweck | XSD (NeTEx 2.1, `73b337e`) |
 |---|---|---|
 | `ch20_three_stops.xml` | Grunddatei: Fahrt SYN 1 mit drei Halten, alle Frames in einer Datei; `Quay` und `ScheduledStopPoint` mit gleicher ID. Zeiten: A ab 08:00, B an 08:10 / ab 08:12, C an 08:27 (berechnet). Betriebstage 14.–18.12.2026 (`ValidDayBits` `0111110`). | gültig |
+| `ch20_offers.xml` | Angebote, Teilstrecke, Hinweise und Stammdaten: Fahrt SYN 1 wie in `ch20_three_stops.xml`, dazu `TypeOfProductCategory` (`SYN`), `TransportSubmode`, `RequestStop`/`StopUse`, ein `ServiceFacilitySet` für die ganze Fahrt (`firstClass`, `secondClass`, `freeWifi`), eines für die `JourneyPart` A bis B (`bistro`), `NoticeAssignment` in der Fahrt, mit `JourneyPatternRef` und Von-/Bis-Halt sowie eine auf Frame-Ebene ohne Zuordnung. | gültig |
 | `ch20_midnight.xml` | Fahrten über Mitternacht: SYN 1 ab 23:50 ohne `DepartureDayOffset` (Standardwert 0), Tageswechsel während der Fahrt; SYN 2 ab 00:11 mit `DepartureDayOffset` 1. | gültig |
 | `ch20_missing_runtime.xml` | Fehlender Summand: keine `JourneyRunTime` für den zweiten `TimingLink`; Ankunft am dritten Halt „nicht berechenbar“. | gültig |
 | `ch20_unresolved_ref.xml` | Nicht auflösbare Referenz: dritter Halt verweist auf `ch:1:sloid:SYN9:0:1` (mit `versionRef`, damit nur die Referenzprüfung anschlägt). | gültig |

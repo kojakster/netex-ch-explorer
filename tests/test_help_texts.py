@@ -19,7 +19,7 @@ from app.core.guide.examples import ExampleResult
 from app.core.guide.status import ExampleChange, GuideTestState
 from app.core.index.references import ResolveStatus
 from app.core.messages import MessageKey, Severity
-from app.core.projection.journeys import LookupStatus
+from app.core.projection.common import LookupStatus
 from app.core.validation.steps import CHECK_STEPS, CheckStatus
 from app.server.errors import ErrorKey
 from tests.support import LOCALES_DIR
