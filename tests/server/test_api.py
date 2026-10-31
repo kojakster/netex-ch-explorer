@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -10,10 +11,11 @@ from app.core.features import Feature
 from app.core.guide.mapping import MappingRow, MappingSheet, MappingTable
 from app.core.guide.status import GuideRevision, GuideStatus, GuideTestState
 from app.core.messages import Issue, MessageKey, Severity
+from app.core.validation.steps import CHECK_STEPS
 from app.server.app import create_app
 from app.server.runtime import Runtime, load_runtime
 from app.server.security import CONTENT_SECURITY_POLICY
-from tests.support import SHA_A, SHA_B
+from tests.support import PROJECT_ROOT, SHA_A, SHA_B
 
 BASE_URL = "http://127.0.0.1"
 
@@ -89,6 +91,29 @@ def test_app_endpoint(client: TestClient) -> None:
     assert [issue["key"] for issue in data["issues"]] == ["config.file_missing"] * 4
 
 
+def test_help_data_shows_the_current_config_and_all_checks(tmp_path: Path) -> None:
+    """Abnahme Phase 5: Die Hilfeseite zeigt die Farben und die Grau-Liste aus `config/` sowie
+    alle durchgeführten und nicht durchgeführten Prüfungen der Liste der Prüfschritte."""
+    stub = runtime(tmp_path)
+    real = Runtime(config=load_config(PROJECT_ROOT), guide=stub.guide, work_dir=tmp_path / "work")
+    data = TestClient(create_app(real, None), base_url=BASE_URL).get("/api/app").json()
+    colors = json.loads((PROJECT_ROOT / "config" / "frame-colors.json").read_text(encoding="utf-8"))
+    assert {
+        color["key"]: (color["background"], color["text"]) for color in data["frameColors"]
+    } == {key: (value["background"], value["text"]) for key, value in colors.items()}
+    gray = json.loads(
+        (PROJECT_ROOT / "config" / "not-relevant-elements.json").read_text(encoding="utf-8")
+    )
+    assert data["notRelevantElements"] == gray["elements"]
+    assert [(check["id"], check["status"]) for check in data["checks"]] == [
+        (step.id, str(step.status)) for step in CHECK_STEPS
+    ]
+    statuses = {check["status"] for check in data["checks"]}
+    assert "performed" in statuses
+    assert statuses - {"performed"}, "mindestens eine nicht durchgeführte Prüfung"
+    assert data["issues"] == []
+
+
 def test_security_headers(client: TestClient) -> None:
     headers = client.get("/api/guide").headers
     assert headers["Content-Security-Policy"] == CONTENT_SECURITY_POLICY
@@ -117,6 +142,16 @@ def test_foreign_host_is_rejected(tmp_path: Path) -> None:
 def test_localhost_is_accepted(tmp_path: Path) -> None:
     client = TestClient(create_app(runtime(tmp_path), None), base_url="http://localhost:8765")
     assert client.get("/api/guide").status_code == 200
+
+
+def test_origin_check_uses_the_port_the_server_runs_on(tmp_path: Path) -> None:
+    """Mit `start.py --port` weicht der Port von `config/settings.json` ab (E2E-Test, Phase 5)."""
+    app = create_app(runtime(tmp_path), None, port=9000)
+    client = TestClient(app, base_url="http://127.0.0.1:9000")
+    own = {"Origin": "http://127.0.0.1:9000"}
+    configured = {"Origin": "http://127.0.0.1:8765"}
+    assert client.delete("/api/datasets/abc", headers=own).status_code != 403
+    assert client.delete("/api/datasets/abc", headers=configured).status_code == 403
 
 
 def test_internal_error_hides_details(tmp_path: Path) -> None:

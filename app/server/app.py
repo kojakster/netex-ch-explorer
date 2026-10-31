@@ -30,12 +30,14 @@ UPLOAD_PATH: Final = "/api/datasets/upload"
 MULTIPART_OVERHEAD_BYTES: Final = 1024 * 1024
 
 
-def create_app(runtime: Runtime, frontend_dist: Path | None) -> FastAPI:
+def create_app(runtime: Runtime, frontend_dist: Path | None, port: int | None = None) -> FastAPI:
     """Erzeugt die Anwendung.
 
     Args:
         runtime: Beim Start geladener Zustand.
         frontend_dist: Ordner der gebauten Oberfläche; `None` oder fehlend = nur Schnittstelle.
+        port: Port, auf dem der Server tatsächlich läuft (für die Origin-Prüfung); ohne Angabe
+            der Port aus `config/settings.json`.
     """
     app = FastAPI(
         title="NeTEx CH Explorer",
@@ -46,7 +48,7 @@ def create_app(runtime: Runtime, frontend_dist: Path | None) -> FastAPI:
     )
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=list(ALLOWED_HOSTS))
     app.middleware("http")(_add_security_headers)
-    app.middleware("http")(_origin_check(runtime.config.settings.port))
+    app.middleware("http")(_origin_check(runtime.config.settings.port if port is None else port))
     app.middleware("http")(_upload_limit(runtime.config.settings.zip_limits.max_total_bytes))
     register_error_handlers(app)
     # Reste früherer Läufe in work/ löschen.
