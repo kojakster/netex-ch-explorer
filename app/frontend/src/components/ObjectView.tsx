@@ -1,17 +1,17 @@
+import { colorOf } from "../colors";
 import { useDataSource, useLoad } from "../data";
 import { useI18n } from "../i18n";
-import type { FrameColor, ObjectInfo, PropertyInfo } from "../types";
+import { REFERENCE_SYMBOLS } from "../symbols";
+import type { FrameColor, PropertyInfo } from "../types";
 import { FrameSwatch } from "./FrameLabel";
+import { ReferenceList } from "./ReferenceList";
 
 interface ObjectViewProps {
   objectId: string;
   colors: readonly FrameColor[];
   selectedElement: string | null;
   onSelectElement: (elementId: string) => void;
-}
-
-function frameColor(info: ObjectInfo, colors: readonly FrameColor[]): FrameColor | null {
-  return colors.find((color) => color.key === info.colorKey) ?? null;
+  onNavigate: (objectId: string, elementId?: string) => void;
 }
 
 function Attributes({ attributes }: { attributes: Record<string, string> }) {
@@ -34,10 +34,12 @@ interface PropertyTreeProps {
   properties: readonly PropertyInfo[];
   selected: string | null;
   onSelect: (elementId: string) => void;
+  onNavigate: (objectId: string) => void;
 }
 
 /** Kindelemente als Baum; Werte unverändert, NeTEx-Elementname immer sichtbar. */
-function PropertyTree({ properties, selected, onSelect }: PropertyTreeProps) {
+function PropertyTree({ properties, selected, onSelect, onNavigate }: PropertyTreeProps) {
+  const { t } = useI18n();
   return (
     <ul className="property-tree">
       {properties.map((property) => (
@@ -53,12 +55,45 @@ function PropertyTree({ properties, selected, onSelect }: PropertyTreeProps) {
               <code className="property-value">{property.text}</code>
             )}
           </button>
+          {property.reference !== null && (
+            <span className={`property-reference reference-${property.reference.status}`}>
+              {" "}
+              <span aria-hidden="true">{REFERENCE_SYMBOLS[property.reference.status]}</span>{" "}
+              {t(`refs.status.${property.reference.status}`)}
+              {property.reference.targetId !== null && (
+                <ReferenceGoTo targetId={property.reference.targetId} onNavigate={onNavigate} />
+              )}
+            </span>
+          )}
           {property.children.length > 0 && (
-            <PropertyTree properties={property.children} selected={selected} onSelect={onSelect} />
+            <PropertyTree
+              properties={property.children}
+              selected={selected}
+              onSelect={onSelect}
+              onNavigate={onNavigate}
+            />
           )}
         </li>
       ))}
     </ul>
+  );
+}
+
+function ReferenceGoTo({
+  targetId,
+  onNavigate,
+}: {
+  targetId: string;
+  onNavigate: (objectId: string) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      {" "}
+      <button type="button" className="link-button" onClick={() => onNavigate(targetId)}>
+        {t("refs.goTo")} →
+      </button>
+    </>
   );
 }
 
@@ -68,6 +103,7 @@ export function ObjectView({
   colors,
   selectedElement,
   onSelectElement,
+  onNavigate,
 }: ObjectViewProps) {
   const { t } = useI18n();
   const source = useDataSource();
@@ -79,7 +115,7 @@ export function ObjectView({
     return <p>{t("app.loading")}</p>;
   }
   const info = data.object;
-  const color = frameColor(info, colors);
+  const color = colorOf(info, colors);
   return (
     <article className="object-view">
       <header>
@@ -123,6 +159,33 @@ export function ObjectView({
           </dd>
         </dl>
       </header>
+      {data.reference !== null && (
+        <section className="own-reference" aria-label={t("refs.own")}>
+          <h3>{t("refs.own")}</h3>
+          <ReferenceList
+            titleKey="refs.target"
+            direction="outgoing"
+            references={[data.reference]}
+            colors={colors}
+            onNavigate={onNavigate}
+          />
+        </section>
+      )}
+      <ReferenceList
+        titleKey="refs.outgoing"
+        direction="outgoing"
+        references={data.outgoing}
+        colors={colors}
+        onNavigate={onNavigate}
+      />
+      <ReferenceList
+        titleKey="refs.incoming"
+        direction="incoming"
+        references={data.incoming}
+        colors={colors}
+        onNavigate={onNavigate}
+      />
+      {data.referencesTruncated && <p className="note">{t("refs.truncated")}</p>}
       <h3>{t("object.properties")}</h3>
       {data.properties.length === 0 ? (
         <p>{t("object.noProperties")}</p>
@@ -131,6 +194,7 @@ export function ObjectView({
           properties={data.properties}
           selected={selectedElement}
           onSelect={onSelectElement}
+          onNavigate={onNavigate}
         />
       )}
       {data.truncated && <p className="note">{t("object.truncated")}</p>}

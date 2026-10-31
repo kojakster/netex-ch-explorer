@@ -45,6 +45,9 @@ class MessageKey(StrEnum):
     XML_SYNTAX_ERROR = "xml.syntax_error"
     XML_DOCTYPE_FORBIDDEN = "xml.doctype_forbidden"
     XML_ENCODING_UNSUPPORTED = "xml.encoding_unsupported"
+    REFERENCE_UNRESOLVED = "reference.unresolved"
+    REFERENCE_AMBIGUOUS = "reference.ambiguous"
+    REFERENCE_EXTERNAL_OR_UNLOADED = "reference.external_or_unloaded"
 
 
 @dataclass(frozen=True)

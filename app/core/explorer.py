@@ -6,8 +6,10 @@ from dataclasses import dataclass, field
 from typing import Final
 
 from app.core.index.dataset_index import DatasetIndex, ElementRow
+from app.core.index.references import ReferenceRow
 
 MAX_PROPERTY_NODES: Final = 2000
+MAX_REFERENCES: Final = 500
 CONTEXT_LINES: Final = 30
 MAX_WINDOW_LINES: Final = 2000
 
@@ -17,7 +19,18 @@ class PropertyNode:
     """Ein Element im Eigenschaftsbaum eines Objekts."""
 
     element: ElementRow
+    reference: ReferenceView | None = None
     children: list[PropertyNode] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class ReferenceView:
+    """Eine Referenz mit dem Ref-Element, dem enthaltenden Objekt und dem Ziel (falls aufgelöst)."""
+
+    row: ReferenceRow
+    element: ElementRow
+    owner: ElementRow | None
+    target: ElementRow | None
 
 
 @dataclass(frozen=True)
@@ -29,6 +42,10 @@ class ObjectDetail:
     path: str
     properties: list[PropertyNode]
     truncated: bool
+    reference: ReferenceView | None
+    outgoing: list[ReferenceView]
+    incoming: list[ReferenceView]
+    references_truncated: bool
 
 
 @dataclass(frozen=True)
@@ -70,17 +87,39 @@ def element_path(index: DatasetIndex, element: ElementRow) -> str:
     return "/" + "/".join(reversed(parts))
 
 
+def reference_view(index: DatasetIndex, row: ReferenceRow) -> ReferenceView | None:
+    """Ergänzt eine Referenz um Ref-Element, Objekt und Ziel; `None`, wenn das Element fehlt."""
+    element = index.element(row.element_id)
+    if element is None:
+        return None
+    owner = None if row.owner_id is None else index.element(row.owner_id)
+    target = None if row.target_id is None else index.element(row.target_id)
+    return ReferenceView(row, element, owner, target)
+
+
+def _views(index: DatasetIndex, rows: list[ReferenceRow]) -> list[ReferenceView]:
+    views = (reference_view(index, row) for row in rows)
+    return [view for view in views if view is not None]
+
+
 def object_detail(index: DatasetIndex, element_id: int) -> ObjectDetail | None:
-    """Objektdetail eines Elements; `None`, wenn es das Element nicht gibt."""
+    """Objektdetail eines Elements; `None`, wenn es das Element nicht gibt.
+
+    Ein Objekt zeigt seine ausgehenden und eingehenden Referenzen; ein Ref-Element zeigt
+    zusätzlich seine eigene Referenz mit Status und Ziel.
+    """
     element = index.element(element_id)
     if element is None:
         return None
     descendants = index.descendants(element_id, MAX_PROPERTY_NODES + 1)
     truncated = len(descendants) > MAX_PROPERTY_NODES
+    shown = descendants[:MAX_PROPERTY_NODES]
+    references = index.references_among([row.id for row in shown])
     nodes: dict[int, PropertyNode] = {}
     roots: list[PropertyNode] = []
-    for row in descendants[:MAX_PROPERTY_NODES]:
-        node = PropertyNode(row)
+    for row in shown:
+        reference = references.get(row.id)
+        node = PropertyNode(row, None if reference is None else reference_view(index, reference))
         nodes[row.id] = node
         parent = nodes.get(row.parent_id) if row.parent_id is not None else None
         if parent is not None:
@@ -88,7 +127,20 @@ def object_detail(index: DatasetIndex, element_id: int) -> ObjectDetail | None:
         elif row.parent_id == element_id:
             roots.append(node)
     frame = None if element.frame_id is None else index.element(element.frame_id)
-    return ObjectDetail(element, frame, element_path(index, element), roots, truncated)
+    own = index.reference(element_id)
+    outgoing = index.references_of(element_id, MAX_REFERENCES + 1) if element.xml_id else []
+    incoming = index.references_to(element_id, MAX_REFERENCES + 1)
+    return ObjectDetail(
+        element,
+        frame,
+        element_path(index, element),
+        roots,
+        truncated,
+        None if own is None else reference_view(index, own),
+        _views(index, outgoing[:MAX_REFERENCES]),
+        _views(index, incoming[:MAX_REFERENCES]),
+        len(outgoing) > MAX_REFERENCES or len(incoming) > MAX_REFERENCES,
+    )
 
 
 def xml_window(

@@ -31,7 +31,9 @@ class LookupStatus(StrEnum):
     ABSENT = "absent"
     """Das Element fehlt in den Daten."""
     NOT_RESOLVED = "not_resolved"
-    """Die Referenz lässt sich in diesem Datensatz nicht auflösen."""
+    """Objekte des erwarteten Typs sind vorhanden, das gesuchte Ziel nicht (Fehler)."""
+    EXTERNAL_OR_UNLOADED = "external_or_unloaded"
+    """Der Datensatz enthält keine Objekte des erwarteten Typs (extern oder nicht geladen)."""
     AMBIGUOUS = "ambiguous"
     """Die Referenz passt auf mehrere Objekte."""
 
@@ -60,7 +62,8 @@ class JourneySummary:
 
 _ABSENT: Final = Lookup(LookupStatus.ABSENT)
 _RESOLVE_TO_LOOKUP: Final = {
-    ResolveStatus.NOT_FOUND: LookupStatus.NOT_RESOLVED,
+    ResolveStatus.UNRESOLVED: LookupStatus.NOT_RESOLVED,
+    ResolveStatus.EXTERNAL_OR_UNLOADED: LookupStatus.EXTERNAL_OR_UNLOADED,
     ResolveStatus.AMBIGUOUS: LookupStatus.AMBIGUOUS,
 }
 

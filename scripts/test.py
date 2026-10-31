@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     examples = {
         status.name: ExampleRecord(status.sha256, status.result)
-        for status in analyze_examples(config.settings.guide_path, None)
+        for status in analyze_examples(config.settings.guide_path, None, config.ref_targets)
         if status.sha256 is not None
     }
     record = GuideTestRecord(revision.commit, revision.xsd_commit, examples)

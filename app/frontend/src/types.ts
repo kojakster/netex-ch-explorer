@@ -107,6 +107,14 @@ export interface ObjectSearchResult {
   items: ObjectInfo[];
 }
 
+export type ReferenceStatus = "resolved" | "unresolved" | "ambiguous" | "external_or_unloaded";
+
+export interface PropertyReference {
+  status: ReferenceStatus;
+  targetId: string | null;
+  expected: string[];
+}
+
 export interface PropertyInfo {
   id: string;
   name: string;
@@ -114,7 +122,25 @@ export interface PropertyInfo {
   text: string;
   line: number;
   column: number;
+  reference: PropertyReference | null;
   children: PropertyInfo[];
+}
+
+export interface ReferenceInfo {
+  element: ObjectInfo;
+  ref: string;
+  refVersion: string | null;
+  status: ReferenceStatus;
+  expected: string[];
+  target: ObjectInfo | null;
+  owner: ObjectInfo | null;
+}
+
+export type ChainKind = "frame" | "object" | "element" | "target";
+
+export interface ChainLink {
+  kind: ChainKind;
+  object: ObjectInfo;
 }
 
 export interface ObjectDetail {
@@ -123,9 +149,18 @@ export interface ObjectDetail {
   attributes: Record<string, string>;
   properties: PropertyInfo[];
   truncated: boolean;
+  reference: ReferenceInfo | null;
+  outgoing: ReferenceInfo[];
+  incoming: ReferenceInfo[];
+  referencesTruncated: boolean;
 }
 
-export type LookupStatus = "found" | "absent" | "not_resolved" | "ambiguous";
+export type LookupStatus =
+  | "found"
+  | "absent"
+  | "not_resolved"
+  | "ambiguous"
+  | "external_or_unloaded";
 
 export interface LookupInfo {
   status: LookupStatus;

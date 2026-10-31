@@ -2,7 +2,7 @@
 
 Jede fachliche Regel des Adapters „CH 2.0“ ist hier mit Guide-Datei, Stelle und Commit belegt. Grundlage: Guide-Klon `netexRealisationGuideSwitzerland`, Branch `next`, Commit **`b7ac158`** (XSD `73b337e`). Pfade relativ zum Guide-Klon. Zeilenangaben gelten für diesen Commit.
 
-**Stand:** Phase 0 (31.10.2026). Erfasst sind die Ketten, die bei der Planung bereits am Guide geprüft wurden ([research/guide-2.0.md](research/guide-2.0.md)). Umgesetzt werden sie ab Phase 3. Jede Regel wird bei der Umsetzung erneut am Text geprüft und hier nachgeführt.
+**Stand:** Phase 2 (31.10.2026). Erfasst sind die Ketten, die bei der Planung bereits am Guide geprüft wurden ([research/guide-2.0.md](research/guide-2.0.md)). Umgesetzt werden sie ab Phase 3. Jede Regel wird bei der Umsetzung erneut am Text geprüft und hier nachgeführt.
 
 Status: **belegt** = Guide-Text eindeutig; **offen** = Widerspruch oder Lücke, wird dem Benutzer vorgelegt.
 
@@ -69,6 +69,17 @@ Status: **belegt** = Guide-Text eindeutig; **offen** = Widerspruch oder Lücke, 
 |---|---|---|---|
 | F1 | Zugnummer über `trainNumbers/TrainNumberRef` → `TrainNumber` (`ForAdvertisement`). | `src/templates/ServiceJourney.xml` Z. 119–121; Beispiel 01 | belegt |
 | F2 | Schweizer Fahrt-ID (sjyid) in `privateCodes/PrivateCode` mit `type="sjyid"`, nicht in `keyList`. | `src/08_timetable.md` Z. 89; `src/templates/ServiceJourney.xml` Z. 23, 37–41 | belegt |
+
+## Referenzen (Phase 2)
+
+Umgesetzt in `app/core/index/references.py`; Entscheide in [decisions.md](decisions.md) („Zieltyp von Referenzen“, „Nicht gefundenes Ziel einer Referenz“). Geprüft an `b7ac158` und den 22 Beispielen: 1520 Referenzen, davon 1516 aufgelöst, 4 `external_or_unloaded` (Beispiel 17, `FromPointRef`/`ToPointRef`), keine nicht auflösbaren.
+
+| # | Regel | Beleg | Status |
+|---|---|---|---|
+| R1 | Eine Referenz ist ein Element mit Attribut `ref`, das auf `Ref` endet oder `nameOfRefClass` trägt; sie steht an beliebiger Stelle, auch in `Extensions`. | `xsd/xsd/*.xsd` (Ref-Elemente tragen `ref`, `version`/`versionRef`, `nameOfRefClass`); `src/02_files.md` | belegt |
+| R2 | Erwarteter Zieltyp: `nameOfRefClass`, sonst `config/ref-targets.json`, sonst Name ohne `Ref`. | XSD-Deklaration je Ref-Element (`<xsd:element name="…Ref" type="…RefStructure">`); Test `tests/guide/test_ref_targets.py` prüft jeden Eintrag gegen die XSD | belegt |
+| R3 | Die Liste enthält 16 Ref-Namen, deren Zieltyp vom Namen abweicht (z. B. `OnwardTimingLinkRef` → `TimingLink`, `FromServiceJourneyRef` → `ServiceJourney`, `ParentQuayRef` → `Quay`). Bei Strukturen mit Oberbegriff (`PointInSequenceRefStructure`, `OrganisationRefStructure`, `VehicleJourneyRefStructure`, `JourneyPatternRefStructure`) nennt die XSD nur den Oberbegriff; die Zieltypen stammen aus den Guide-Beispielen (`StopPointInJourneyPattern`, `Operator`/`Authority`, `ServiceJourney`, `ServiceJourneyPattern`). | `xsd/xsd/…`, Beispiele 06, 07, 08, 10, 14, 17, 19, 20, 21, 22 | belegt für die Struktur; Zieltypen bei Oberbegriffen **aus Beispielen beobachtet** |
+| R4 | Mehrere Objekte mit gleicher ID und gleichem Typ: `version`/`versionRef` der Referenz entscheidet (ausser `any`); sonst mehrdeutig. Eine abweichende Version bei genau einem Objekt ändert den Status nicht. | Projektentscheid (Phase 2); `version="any"` kommt in der 1.10-Lieferung vor ([open-points.md](open-points.md), Archiv Punkt 6) | belegt |
 
 ## Noch nicht belegt (folgt mit der Umsetzung)
 

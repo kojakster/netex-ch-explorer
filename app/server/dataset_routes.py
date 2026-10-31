@@ -13,7 +13,9 @@ from app.core.explorer import element_xml_window, object_detail, position_xml_wi
 from app.core.guide.examples import Example, read_example
 from app.core.messages import Severity
 from app.core.projection.journeys import list_journeys
+from app.core.provenance import provenance_chain
 from app.server.dataset_schemas import (
+    ChainLinkOut,
     Converter,
     DatasetOut,
     DiagnosticOut,
@@ -62,6 +64,7 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
     router = APIRouter(prefix="/api")
     examples = [Example(status.name, status.title) for status in runtime.guide.examples]
     not_relevant = runtime.config.not_relevant_elements
+    ref_targets = runtime.config.ref_targets
     lookup = _Lookup(registry)
 
     @router.post("/datasets")
@@ -70,7 +73,7 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
         data = read_example(runtime.config.settings.guide_path, request.example, examples)
         if data is None:
             raise _not_found()
-        dataset = open_dataset([SourceFile(request.example, data)], not_relevant)
+        dataset = open_dataset([SourceFile(request.example, data)], not_relevant, ref_targets)
         dataset_id = registry.add(dataset)
         return Converter(dataset_id, dataset).dataset()
 
@@ -128,7 +131,7 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
 
 
 def object_router(registry: DatasetRegistry) -> APIRouter:
-    """Router für Objekte und Elemente: Detail und XML-Ausschnitt."""
+    """Router für Objekte und Elemente: Detail, Herkunftskette und XML-Ausschnitt."""
     router = APIRouter(prefix="/api")
     lookup = _Lookup(registry)
 
@@ -140,6 +143,15 @@ def object_router(registry: DatasetRegistry) -> APIRouter:
         if detail is None:
             raise _not_found()
         return Converter(dataset_id, dataset).detail(detail)
+
+    @router.get("/objects/{object_id}/provenance")
+    def get_provenance(object_id: str) -> list[ChainLinkOut]:
+        """Herkunftskette: Frame, enthaltende Objekte, Angabe, bei Referenzen das Ziel."""
+        dataset_id, dataset, element_id = lookup.element(object_id)
+        links = provenance_chain(dataset.index, element_id)
+        if links is None:
+            raise _not_found()
+        return Converter(dataset_id, dataset).chain(links)
 
     @router.get("/objects/{object_id}/xml")
     def get_object_xml(object_id: str) -> XmlWindowOut:

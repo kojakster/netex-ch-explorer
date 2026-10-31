@@ -71,7 +71,7 @@
     },
     "17_NeTEx_CH_INTERCHANGE.xml": {
       "sha256": "6955a000d52da90f473aa5428053d4d5ade05dfff8a0bd6c466147442e98e8e5",
-      "result": "clean"
+      "result": "notes"
     },
     "18_NETWORK_OFFER_export_operators.xml": {
       "sha256": "8123be965d2da084167fb2d112c3040c867cb9223a1c209bec435014271ea209",

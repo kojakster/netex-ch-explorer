@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -98,8 +99,14 @@ def read_guide_revision(guide_path: Path) -> GuideRevision:
     )
 
 
-def inspect_guide(guide_path: Path, test_record_path: Path) -> GuideStatus:
+def inspect_guide(
+    guide_path: Path,
+    test_record_path: Path,
+    ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+) -> GuideStatus:
     """Untersucht den Guide-Klon und vergleicht ihn mit dem Testnachweis.
+
+    `ref_targets` (config/ref-targets.json) bestimmt, wie Referenzen der Beispiele aufgelöst werden.
 
     Bricht nie ab: Jedes Problem wird zu einer Meldung.
     """
@@ -137,7 +144,7 @@ def inspect_guide(guide_path: Path, test_record_path: Path) -> GuideStatus:
         test_state=test_state,
         tested_commit=tested_commit,
         mapping=mapping,
-        examples=tuple(analyze_examples(guide_path, record if record_valid else None)),
+        examples=tuple(analyze_examples(guide_path, record if record_valid else None, ref_targets)),
         issues=tuple(issues),
     )
 
@@ -205,7 +212,11 @@ def _compare_with_test_record(
     return GuideTestState.DIFFERS, record.guide_commit
 
 
-def analyze_examples(guide_path: Path, record: GuideTestRecord | None) -> list[ExampleStatus]:
+def analyze_examples(
+    guide_path: Path,
+    record: GuideTestRecord | None,
+    ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+) -> list[ExampleStatus]:
     """Lädt jedes Beispiel einzeln und vergleicht es mit dem Testnachweis.
 
     Ein fehlerhaftes Beispiel beeinträchtigt die anderen nicht.
@@ -226,7 +237,7 @@ def analyze_examples(guide_path: Path, record: GuideTestRecord | None) -> list[E
                 )
             )
             continue
-        dataset = open_dataset([SourceFile(example.name, data)], ())
+        dataset = open_dataset([SourceFile(example.name, data)], (), ref_targets)
         try:
             sha256 = dataset.index.files()[0].sha256
             counts: dict[Severity, int] = {}

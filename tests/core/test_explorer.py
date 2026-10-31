@@ -110,3 +110,72 @@ def test_position_window() -> None:
     assert clamped.focus_from <= len(clamped.text)
     assert position_xml_window(index, 5, 1, 1) is None
     assert xml_window(index, 5, (0, 1), (1, 1)) is None
+
+
+def test_object_detail_references() -> None:
+    index = load("ch20_three_stops.xml").index
+    [quay] = index.objects_by_id("ch:1:sloid:SYN1:0:1", "Quay")
+    detail = object_detail(index, quay.id)
+    assert detail is not None
+    assert detail.reference is None
+    assert detail.outgoing == []
+    assert detail.incoming
+    assert {view.element.name for view in detail.incoming} == {"QuayRef"}
+    owners = {view.owner.name for view in detail.incoming if view.owner is not None}
+    assert "PassengerStopAssignment" in owners
+    assert all(view.target is not None and view.target.id == quay.id for view in detail.incoming)
+    assert not detail.references_truncated
+
+
+def test_object_detail_of_a_reference_element() -> None:
+    index = load("ch20_unresolved_ref.xml").index
+    [journey] = index.elements_by_name(["ServiceJourney"])
+    detail = object_detail(index, journey.id)
+    assert detail is not None
+    assert {view.element.name for view in detail.outgoing} >= {"ServiceJourneyPatternRef"}
+    assert all(view.owner is not None and view.owner.id == journey.id for view in detail.outgoing)
+    [missing] = [
+        row
+        for row in index.descendants(1, 10_000)
+        if row.attributes.get("ref") == "ch:1:sloid:SYN9:0:1"
+    ]
+    own = object_detail(index, missing.id)
+    assert own is not None
+    assert own.reference is not None
+    assert own.reference.target is None
+    assert own.reference.row.expected == ("ScheduledStopPoint",)
+    assert own.incoming == []
+
+
+def test_property_nodes_carry_their_reference() -> None:
+    index = load("ch20_three_stops.xml").index
+    [assignment] = [
+        row
+        for row in index.elements_by_name(["PassengerStopAssignment"])
+        if row.attributes.get("id", "").endswith("1")
+    ][:1]
+    detail = object_detail(index, assignment.id)
+    assert detail is not None
+    with_reference = [n for n in detail.properties if n.reference is not None]
+    assert {n.element.name for n in with_reference} == {
+        "ScheduledStopPointRef",
+        "StopPlaceRef",
+        "QuayRef",
+    }
+    targets = {
+        n.element.name: n.reference.target.name
+        for n in with_reference
+        if n.reference and n.reference.target
+    }
+    assert targets["QuayRef"] == "Quay"
+    assert targets["ScheduledStopPointRef"] == "ScheduledStopPoint"
+
+
+def test_reference_lists_are_limited(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(explorer, "MAX_REFERENCES", 1)
+    index = load("ch20_three_stops.xml").index
+    [stop_point] = index.objects_by_id("ch:1:sloid:SYN1:0:1", "ScheduledStopPoint")
+    detail = object_detail(index, stop_point.id)
+    assert detail is not None
+    assert len(detail.incoming) == 1
+    assert detail.references_truncated

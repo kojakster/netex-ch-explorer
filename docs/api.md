@@ -1,6 +1,6 @@
 # Lokale Schnittstelle (JSON)
 
-Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 1.
+Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 2.
 
 ## Allgemein
 
@@ -125,7 +125,7 @@ Antwort (auch `GET /api/datasets/{id}`):
 
 ### `GET /api/datasets/{id}/journeys`
 
-Fahrten (`ServiceJourney`, `TemplateServiceJourney`) mit `trainNumbers`, `departureTime`, `departureDayOffset`, `line`, `firstStop`, `lastStop`. Jede Angabe: `{ "status": "found | absent | not_resolved | ambiguous", "text": "…", "objectId": "…" }`. `text` ist bei `not_resolved`/`ambiguous` die gesuchte Referenz; `objectId` zeigt auf die Herkunft (Element der Angabe bzw. die Referenz).
+Fahrten (`ServiceJourney`, `TemplateServiceJourney`) mit `trainNumbers`, `departureTime`, `departureDayOffset`, `line`, `firstStop`, `lastStop`. Jede Angabe: `{ "status": "found | absent | not_resolved | ambiguous | external_or_unloaded", "text": "…", "objectId": "…" }`. `text` ist bei `not_resolved`/`ambiguous` die gesuchte Referenz; `objectId` zeigt auf die Herkunft (Element der Angabe bzw. die Referenz).
 
 ### `GET /api/datasets/{id}/objects?type=&q=&limit=&offset=`
 
@@ -136,11 +136,41 @@ Einfache Objektsuche: `type` = Elementname, `q` = Teiltext in ID oder Name (ohne
 ```json
 { "object": Objekt, "path": "/PublicationDelivery/…/StopPlace[1]/quays/Quay",
   "attributes": { "id": "…", "version": "1" },
-  "properties": [{ "id": "…", "name": "PublicCode", "attributes": {}, "text": "8", "line": 130, "column": 10, "children": [] }],
-  "truncated": false }
+  "properties": [{ "id": "…", "name": "PublicCode", "attributes": {}, "text": "8", "line": 130, "column": 10,
+                   "reference": null, "children": [] }],
+  "truncated": false,
+  "reference": null,
+  "outgoing": [Verweis, …],
+  "incoming": [Verweis, …],
+  "referencesTruncated": false }
 ```
 
 `text` ist der direkte Textinhalt, unverändert (auch Leerzeichen). Positionsnummern im Pfad nur bei gleichnamigen Geschwistern. Höchstens 2000 Elemente, sonst `truncated`.
+
+**Referenzen** (Phase 2): `outgoing` = Verweise, die in diesem Objekt stehen (auch in `Extensions`; Verweise in verschachtelten Objekten gehören diesen); `incoming` = Verweise auf dieses Objekt (Rückwärtsreferenzen); `reference` = die eigene Referenz, wenn die abgerufene ID ein Ref-Element ist; `properties[].reference` = Status und Ziel eines Ref-Elements im Eigenschaftsbaum (`{ "status", "targetId", "expected" }`). Höchstens 500 Verweise je Richtung, sonst `referencesTruncated`.
+
+**Verweis:**
+
+```json
+{ "element": Objekt (das Ref-Element), "ref": "ch:1:sloid:7483:0:90840", "refVersion": "1",
+  "status": "resolved | unresolved | ambiguous | external_or_unloaded",
+  "expected": ["Quay"], "target": Objekt | null, "owner": Objekt | null }
+```
+
+- `expected`: erwartete Zieltypen (`nameOfRefClass`, sonst `config/ref-targets.json`, sonst Name ohne `Ref`).
+- Status: `resolved` (genau ein Ziel; bei mehreren entscheidet `version`/`versionRef`, ausser `any`), `unresolved` (Objekte des Typs vorhanden, `id` fehlt: ⚠ Fehler), `ambiguous` (mehrere Ziele: △ Warnung), `external_or_unloaded` (im Datensatz kein Objekt des Typs: ℹ Hinweis). Gleiche ID bei verschiedenen Typen (`Quay`/`ScheduledStopPoint`) wird über den Typ unterschieden.
+- `target` nur bei `resolved`. `owner`: das Objekt, in dem der Verweis steht.
+
+### `GET /api/objects/{id}/provenance`
+
+Herkunftskette eines Elements: Frame, enthaltende Objekte, die Angabe selbst und bei einer aufgelösten Referenz das Ziel.
+
+```json
+[{ "kind": "frame", "object": Objekt }, { "kind": "object", "object": Objekt },
+ { "kind": "element", "object": Objekt }, { "kind": "target", "object": Objekt }]
+```
+
+`kind`: `frame` (innerster Frame), `object` (Element mit `id`), `element` (Angabe ohne `id`, z. B. Eigenschaft oder Ref-Element), `target` (Ziel einer Referenz). Jedes Glied trägt die Farbe seines Frames (`colorKey`).
 
 ### `GET /api/objects/{id}/xml` und `GET /api/datasets/{id}/xml?file=&line=&column=`
 
@@ -161,8 +191,8 @@ XML-Ausschnitt um ein Element bzw. um eine Stelle (z. B. einer Diagnose), 30 Zei
    "fileId": 1, "fileName": "broken_xml.xml", "line": 48, "column": 34 }]
 ```
 
-Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. In Phase 1 entstehen nur `file` (Zeichenkodierung) und `xml_syntax` (Syntaxfehler, `DOCTYPE`).
+Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. Bisher entstehen `file` (Zeichenkodierung), `xml_syntax` (Syntaxfehler, `DOCTYPE`) und `reference` (Phase 2: `reference.unresolved` ⚠ Fehler, `reference.ambiguous` △ Warnung, `reference.external_or_unloaded` ℹ Hinweis; Parameter `element`, `ref`, `expected`; Stelle = das Ref-Element).
 
 ## Geplant
 
-`POST /api/datasets` für eigene Dateien (XML, mehrere XML, ZIP) und `POST /api/datasets/{id}/validate` folgen in Phase 4; Referenzen ein-/ausgehend im Objektdetail in Phase 2; `GET /api/journeys/{id}` (Fahrtansicht) in Phase 3.
+`POST /api/datasets` für eigene Dateien (XML, mehrere XML, ZIP) und `POST /api/datasets/{id}/validate` folgen in Phase 4; `GET /api/journeys/{id}` (Fahrtansicht) in Phase 3.

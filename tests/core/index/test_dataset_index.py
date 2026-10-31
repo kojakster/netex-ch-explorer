@@ -144,8 +144,13 @@ def test_elements_by_name() -> None:
 
 def test_diagnostics_filter() -> None:
     index = load("broken_xml.xml", "ch20_three_stops.xml").index
-    [item] = index.diagnostics()
+    [item] = index.diagnostics(DiagnosticCategory.XML_SYNTAX)
     assert item.file_name == "broken_xml.xml"
+    # Beide Dateien tragen dieselben IDs: die Referenzen sind mehrdeutig.
+    assert {d.diagnostic.category for d in index.diagnostics()} == {
+        DiagnosticCategory.XML_SYNTAX,
+        DiagnosticCategory.REFERENCE,
+    }
     assert item.diagnostic.position is not None
     assert index.diagnostics(DiagnosticCategory.XML_SYNTAX, Severity.ERROR) == [item]
     assert index.diagnostics(DiagnosticCategory.XSD) == []

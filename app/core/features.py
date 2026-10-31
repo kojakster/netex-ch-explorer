@@ -22,3 +22,6 @@ class Feature(StrEnum):
     OBJECT_DETAIL = "object_detail"
     XML_VIEW = "xml_view"
     DIAGNOSTICS_LIST = "diagnostics_list"
+    REFERENCES = "references"
+    PROVENANCE_CHAIN = "provenance_chain"
+    NAVIGATION_HISTORY = "navigation_history"

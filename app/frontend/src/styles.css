@@ -393,3 +393,95 @@ select:focus-visible {
 .xml-editor {
   border: 1px solid var(--border);
 }
+
+/* Verlauf */
+.history {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Referenzen */
+.reference-list h3,
+.own-reference h3 {
+  font-size: 1rem;
+  margin: 1rem 0 0.3rem;
+}
+
+.reference-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reference {
+  margin: 0.2rem 0;
+  word-break: break-all;
+}
+
+.reference-id {
+  font-size: 0.9em;
+}
+
+.reference-status,
+.property-reference {
+  font-size: 0.85em;
+  color: var(--muted);
+}
+
+.reference-unresolved .reference-status,
+.property-reference.reference-unresolved {
+  color: inherit;
+  font-weight: 600;
+}
+
+/* Herkunftskette */
+.provenance h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+
+.chain-item + .chain-item::before {
+  content: "→";
+  margin-right: 0.5rem;
+  color: var(--muted);
+}
+
+.chain-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font: inherit;
+  cursor: pointer;
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+}
+
+.chain-box:hover,
+.chain-box:focus-visible {
+  border-color: var(--focus);
+}
+
+.chain-name {
+  font-weight: 600;
+}
+
+.chain-box code,
+.chain-frame {
+  font-size: 0.8em;
+  word-break: break-all;
+}

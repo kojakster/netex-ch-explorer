@@ -10,10 +10,20 @@ import { JourneyList } from "./components/JourneyList";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { ObjectSearch } from "./components/ObjectSearch";
 import { ObjectView } from "./components/ObjectView";
+import { ProvenanceChain } from "./components/ProvenanceChain";
 import { XmlPanel, type XmlTarget } from "./components/XmlPanel";
 import { DataSourceContext, LOAD_ERROR_KEY } from "./data";
+import {
+  canGoBack,
+  canGoForward,
+  currentSelection,
+  EMPTY_HISTORY,
+  goBack,
+  goForward,
+  visit,
+} from "./history";
 import { DEFAULT_LANGUAGE, I18nContext, messagesFor, translate } from "./i18n";
-import type { AppInfo, DatasetInfo, DiagnosticInfo, GuideInfo } from "./types";
+import type { AppInfo, ChainLink, DatasetInfo, DiagnosticInfo, GuideInfo } from "./types";
 
 type View = "main" | "help";
 
@@ -34,9 +44,15 @@ export function App({ dataSource }: AppProps) {
   const [exampleName, setExampleName] = useState<string | null>(null);
   const [dataset, setDataset] = useState<DatasetInfo | null>(null);
   const [datasetErrorKey, setDatasetErrorKey] = useState<string | null>(null);
-  const [objectId, setObjectId] = useState<string | null>(null);
-  const [selectedElement, setSelectedElement] = useState<string | null>(null);
-  const [xmlTarget, setXmlTarget] = useState<XmlTarget | null>(null);
+  const [history, setHistory] = useState(EMPTY_HISTORY);
+  // Stelle einer Diagnose; ersetzt die Markierung der Auswahl, bis wieder etwas gewählt wird.
+  const [positionTarget, setPositionTarget] = useState<XmlTarget | null>(null);
+  const selection = currentSelection(history);
+  const objectId = selection?.objectId ?? null;
+  const selectedElement = selection?.elementId ?? null;
+  const xmlTarget: XmlTarget | null =
+    positionTarget ??
+    (selectedElement === null ? null : { kind: "object", objectId: selectedElement });
   // Nur die Antwort der zuletzt gestarteten Öffnung zählt (schnelles Umschalten).
   const openRequest = useRef(0);
 
@@ -78,9 +94,8 @@ export function App({ dataSource }: AppProps) {
     setExampleName(name);
     setDataset(null);
     setDatasetErrorKey(null);
-    setObjectId(null);
-    setSelectedElement(null);
-    setXmlTarget(null);
+    setHistory(EMPTY_HISTORY);
+    setPositionTarget(null);
     openRequest.current += 1;
     const request = openRequest.current;
     dataSource
@@ -97,21 +112,36 @@ export function App({ dataSource }: AppProps) {
       });
   };
 
-  const selectObject = (id: string) => {
-    setObjectId(id);
-    setSelectedElement(id);
-    setXmlTarget({ kind: "object", objectId: id });
+  /** Zeigt ein Objekt und markiert darin eine Angabe (Standard: das Objekt selbst). */
+  const navigate = (id: string, elementId: string = id) => {
+    setPositionTarget(null);
+    setHistory((previous) => visit(previous, { objectId: id, elementId }));
   };
 
+  const selectObject = (id: string) => navigate(id);
+
   const selectElement = (id: string) => {
-    setSelectedElement(id);
-    setXmlTarget({ kind: "object", objectId: id });
+    if (objectId !== null) {
+      navigate(objectId, id);
+    }
+  };
+
+  const selectLink = (link: ChainLink) => {
+    if (link.kind === "element") {
+      selectElement(link.object.id);
+    } else {
+      navigate(link.object.id);
+    }
+  };
+
+  const stepHistory = (step: typeof goBack) => {
+    setPositionTarget(null);
+    setHistory(step);
   };
 
   const showDiagnostic = (diagnostic: DiagnosticInfo) => {
     if (dataset !== null && diagnostic.line !== null) {
-      setSelectedElement(null);
-      setXmlTarget({
+      setPositionTarget({
         kind: "position",
         datasetId: dataset.id,
         file: diagnostic.fileId,
@@ -177,15 +207,39 @@ export function App({ dataSource }: AppProps) {
                 {objectId === null ? (
                   <p className="hint">{t(dataset === null ? "app.empty" : "app.selectObject")}</p>
                 ) : (
-                  <ObjectView
-                    objectId={objectId}
-                    colors={appInfo.frameColors}
-                    selectedElement={selectedElement}
-                    onSelectElement={selectElement}
-                  />
+                  <>
+                    <nav className="history" aria-label={t("feature.navigation_history.title")}>
+                      <button
+                        type="button"
+                        onClick={() => stepHistory(goBack)}
+                        disabled={!canGoBack(history)}
+                      >
+                        ← {t("nav.back")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => stepHistory(goForward)}
+                        disabled={!canGoForward(history)}
+                      >
+                        {t("nav.forward")} →
+                      </button>
+                    </nav>
+                    <ObjectView
+                      objectId={objectId}
+                      colors={appInfo.frameColors}
+                      selectedElement={selectedElement}
+                      onSelectElement={selectElement}
+                      onNavigate={navigate}
+                    />
+                  </>
                 )}
               </main>
               <aside className="xml-column">
+                <ProvenanceChain
+                  elementId={selectedElement}
+                  colors={appInfo.frameColors}
+                  onSelect={selectLink}
+                />
                 <XmlPanel target={xmlTarget} colors={appInfo.frameColors} />
               </aside>
             </div>

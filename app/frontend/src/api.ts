@@ -2,6 +2,7 @@
 
 import type {
   AppInfo,
+  ChainLink,
   DatasetInfo,
   DiagnosticInfo,
   GuideInfo,
@@ -21,6 +22,7 @@ export interface DataSource {
   getDiagnostics(datasetId: string): Promise<DiagnosticInfo[]>;
   getObject(objectId: string): Promise<ObjectDetail>;
   getObjectXml(objectId: string): Promise<XmlWindow>;
+  getProvenance(objectId: string): Promise<ChainLink[]>;
   getXmlAt(datasetId: string, file: number, line: number, column: number): Promise<XmlWindow>;
 }
 
@@ -130,6 +132,10 @@ export class HttpDataSource implements DataSource {
 
   getObjectXml(objectId: string): Promise<XmlWindow> {
     return requestJson<XmlWindow>(this.fetcher, `api/objects/${enc(objectId)}/xml`);
+  }
+
+  getProvenance(objectId: string): Promise<ChainLink[]> {
+    return requestJson<ChainLink[]>(this.fetcher, `api/objects/${enc(objectId)}/provenance`);
   }
 
   getXmlAt(datasetId: string, file: number, line: number, column: number): Promise<XmlWindow> {

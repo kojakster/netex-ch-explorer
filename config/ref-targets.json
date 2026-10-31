@@ -1,0 +1,20 @@
+{
+  "refs": {
+    "EndPointInPatternRef": { "targets": ["StopPointInJourneyPattern"], "xsdType": "PointInSequenceRefStructure" },
+    "StartPointInPatternRef": { "targets": ["StopPointInJourneyPattern"], "xsdType": "PointInSequenceRefStructure" },
+    "FromPointInPatternRef": { "targets": ["StopPointInJourneyPattern"], "xsdType": "PointInSequenceRefStructure" },
+    "ToPointInPatternRef": { "targets": ["StopPointInJourneyPattern"], "xsdType": "PointInSequenceRefStructure" },
+    "FromPointRef": { "targets": ["ScheduledStopPoint"], "xsdType": "ScheduledStopPointRefStructure" },
+    "ToPointRef": { "targets": ["ScheduledStopPoint"], "xsdType": "ScheduledStopPointRefStructure" },
+    "FromServiceJourneyRef": { "targets": ["ServiceJourney"], "xsdType": "ServiceJourneyRefStructure" },
+    "ToServiceJourneyRef": { "targets": ["ServiceJourney"], "xsdType": "ServiceJourneyRefStructure" },
+    "ParentJourneyRef": { "targets": ["ServiceJourney"], "xsdType": "VehicleJourneyRefStructure" },
+    "JourneyPatternRef": { "targets": ["ServiceJourneyPattern"], "xsdType": "JourneyPatternRefStructure" },
+    "MainLineRef": { "targets": ["Line"], "xsdType": "LineRefStructure" },
+    "OnwardTimingLinkRef": { "targets": ["TimingLink"], "xsdType": "TimingLinkRefStructure" },
+    "ParentQuayRef": { "targets": ["Quay"], "xsdType": "QuayRefStructure" },
+    "ParentTopographicPlaceRef": { "targets": ["TopographicPlace"], "xsdType": "TopographicPlaceRefStructure" },
+    "ResponsibleOrganisationRef": { "targets": ["Operator", "Authority"], "xsdType": "OrganisationRefStructure" },
+    "TimingPointRef": { "targets": ["ScheduledStopPoint"], "xsdType": "TimingPointRefStructure" }
+  }
+}

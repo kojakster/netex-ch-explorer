@@ -83,8 +83,8 @@ def test_app_endpoint(client: TestClient) -> None:
         "status": "not_implemented",
         "sources": ["xsd/xsd/NeTEx_publication.xsd"],
     } in data["checks"]
-    # Leerer Projektordner: alle drei Einstellungsdateien fehlen.
-    assert [issue["key"] for issue in data["issues"]] == ["config.file_missing"] * 3
+    # Leerer Projektordner: alle vier Einstellungsdateien fehlen.
+    assert [issue["key"] for issue in data["issues"]] == ["config.file_missing"] * 4
 
 
 def test_security_headers(client: TestClient) -> None:

@@ -207,3 +207,59 @@ def test_xml_offsets_for_browser_with_crlf(tmp_path: Path, synthetic_guide: Path
     utf16 = window["text"].encode("utf-16-le")
     marked = utf16[2 * window["focusFrom"] : 2 * window["focusTo"]].decode("utf-16-le")
     assert marked.startswith("<Quay") and marked.endswith("</Quay>")
+
+
+def test_object_references_and_provenance(client: TestClient) -> None:
+    data = open_example(client)
+    quays = client.get(
+        f"/api/datasets/{data['id']}/objects", params={"type": "Quay", "q": "SYN1"}
+    ).json()["items"]
+    quay = quays[0]
+    detail = client.get(f"/api/objects/{quay['id']}").json()
+    assert detail["reference"] is None
+    assert detail["referencesTruncated"] is False
+    assert detail["incoming"]
+    first = detail["incoming"][0]
+    assert first["element"]["name"] == "QuayRef"
+    assert first["status"] == "resolved"
+    assert first["target"]["id"] == quay["id"]
+    assert first["owner"]["name"] == "PassengerStopAssignment"
+    assert first["expected"] == ["Quay"]
+
+    chain = client.get(f"/api/objects/{quay['id']}/provenance").json()
+    assert [(link["kind"], link["object"]["name"]) for link in chain] == [
+        ("frame", "SiteFrame"),
+        ("object", "StopPlace"),
+        ("object", "Quay"),
+    ]
+    assert chain[0]["object"]["colorKey"] == "SiteFrame"
+
+
+def test_property_reference_and_reference_element(client: TestClient) -> None:
+    data = open_example(client)
+    assignments = client.get(
+        f"/api/datasets/{data['id']}/objects", params={"type": "PassengerStopAssignment"}
+    ).json()["items"]
+    detail = client.get(f"/api/objects/{assignments[0]['id']}").json()
+    refs = {p["name"]: p["reference"] for p in detail["properties"] if p["reference"]}
+    assert set(refs) == {"ScheduledStopPointRef", "StopPlaceRef", "QuayRef"}
+    assert refs["QuayRef"]["status"] == "resolved"
+    assert refs["QuayRef"]["targetId"].startswith(data["id"] + ".")
+    quay_ref = next(p for p in detail["properties"] if p["name"] == "QuayRef")
+    own = client.get(f"/api/objects/{quay_ref['id']}").json()
+    assert own["reference"]["ref"] == quay_ref["attributes"]["ref"]
+    assert own["reference"]["target"]["name"] == "Quay"
+
+
+def test_provenance_unknown_ids(client: TestClient) -> None:
+    data = open_example(client)
+    assert client.get(f"/api/objects/{data['id']}.99999999/provenance").status_code == 404
+    assert client.get("/api/objects/ungueltig/provenance").status_code == 404
+
+
+def test_reference_diagnostics_are_listed(client: TestClient) -> None:
+    data = open_example(client, "ch20_midnight.xml")
+    items = client.get(
+        f"/api/datasets/{data['id']}/diagnostics", params={"category": "reference"}
+    ).json()
+    assert items == []

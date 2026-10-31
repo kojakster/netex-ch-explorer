@@ -8,6 +8,9 @@ Frames: Ein Element ist ein Frame, wenn sein Name auf `Frame` endet und es direk
 oder `dataObjects` steht. Jedes Element gehört zum innersten Frame, in dem es steht.
 Grau: Ein Element ist „für den Fahrplan nicht relevant“, wenn es selbst oder ein Vorfahre in der
 Grau-Liste steht.
+Referenzen: Nach dem Einlesen aller Dateien wird jede Referenz (`…Ref` mit `ref`, auch in
+`Extensions`) über ID, erwarteten Typ und Version aufgelöst; das Ergebnis steht in `refs`, nicht
+Aufgelöstes zusätzlich als Diagnose (Art `reference`).
 """
 
 from __future__ import annotations
@@ -15,11 +18,20 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Final
 
 from app.core.diagnostics import Diagnostic, DiagnosticCategory
+from app.core.index.references import (
+    Candidate,
+    ReferenceRow,
+    ResolveStatus,
+    classify,
+    expected_types,
+    is_reference,
+    reference_version,
+)
 from app.core.messages import MessageKey, Severity
 from app.core.positions import Position
 from app.core.reader.xml_reader import ParsedFile
@@ -71,6 +83,17 @@ CREATE TABLE elements (
 CREATE INDEX elements_xml_id ON elements(xml_id);
 CREATE INDEX elements_name ON elements(name);
 CREATE INDEX elements_parent ON elements(parent_id);
+CREATE TABLE refs (
+    element_id INTEGER PRIMARY KEY REFERENCES elements(id),
+    owner_id INTEGER REFERENCES elements(id),
+    target_ref TEXT NOT NULL,
+    ref_version TEXT,
+    expected TEXT NOT NULL,
+    status TEXT NOT NULL,
+    target_id INTEGER REFERENCES elements(id)
+);
+CREATE INDEX refs_owner ON refs(owner_id);
+CREATE INDEX refs_target ON refs(target_id);
 CREATE TABLE diagnostics (
     id INTEGER PRIMARY KEY,
     file_id INTEGER NOT NULL REFERENCES files(id),
@@ -90,6 +113,19 @@ _ELEMENT_COLUMNS: Final = (
     "e.xml_id, e.version, e.label, e.start_byte, e.start_char, e.start_line, e.start_column, "
     "e.end_byte, e.end_char, e.end_line, e.end_column, e.is_frame, e.frame_id, e.not_relevant, "
     "e.sibling_position"
+)
+_REFERENCE_SEVERITY: Final = {
+    ResolveStatus.UNRESOLVED: Severity.ERROR,
+    ResolveStatus.AMBIGUOUS: Severity.WARNING,
+    ResolveStatus.EXTERNAL_OR_UNLOADED: Severity.INFO,
+}
+_REFERENCE_KEY: Final = {
+    ResolveStatus.UNRESOLVED: MessageKey.REFERENCE_UNRESOLVED,
+    ResolveStatus.AMBIGUOUS: MessageKey.REFERENCE_AMBIGUOUS,
+    ResolveStatus.EXTERNAL_OR_UNLOADED: MessageKey.REFERENCE_EXTERNAL_OR_UNLOADED,
+}
+_REFERENCE_COLUMNS: Final = (
+    "element_id, owner_id, target_ref, ref_version, expected, status, target_id"
 )
 _ELEMENT_SELECT: Final = (
     f"SELECT {_ELEMENT_COLUMNS} FROM elements e JOIN files f ON f.id = e.file_id"
@@ -134,6 +170,18 @@ class ElementRow:
 
 
 @dataclass(frozen=True)
+class _PendingReference:
+    """Eine Referenz, die nach dem Einlesen aller Dateien aufgelöst wird."""
+
+    element_id: int
+    file_id: int
+    owner_id: int | None
+    name: str
+    attributes: dict[str, str]
+    position: Position
+
+
+@dataclass(frozen=True)
 class IndexedDiagnostic:
     """Eine Diagnose mit Datei."""
 
@@ -166,6 +214,18 @@ def _row_to_element(row: Sequence[Any]) -> ElementRow:
     )
 
 
+def _row_to_reference(row: Sequence[Any]) -> ReferenceRow:
+    return ReferenceRow(
+        element_id=row[0],
+        owner_id=row[1],
+        target_ref=row[2],
+        ref_version=row[3],
+        expected=tuple(json.loads(row[4])),
+        status=ResolveStatus(row[5]),
+        target_id=row[6],
+    )
+
+
 def _label(parsed: ParsedFile, children: dict[int, list[int]], index: int) -> str | None:
     """Anzeigename eines Objekts: Text des ersten direkten `Name`, sonst dessen erstes `Text`."""
     for child_index in children.get(index, ()):
@@ -185,16 +245,24 @@ def _label(parsed: ParsedFile, children: dict[int, list[int]], index: int) -> st
 class DatasetIndex:
     """Index aller Elemente eines Datensatzes; Abfragen sind threadsicher."""
 
-    def __init__(self, files: Iterable[ParsedFile], not_relevant: Iterable[str]) -> None:
+    def __init__(
+        self,
+        files: Iterable[ParsedFile],
+        not_relevant: Iterable[str],
+        ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+    ) -> None:
         self._lock = threading.Lock()
         # Ein Index gehört zu einem Datensatz; Zugriffe aus mehreren Threads schützt das Lock.
         self._db = sqlite3.connect(":memory:", check_same_thread=False)
         self._db.executescript(_SCHEMA)
         self._not_relevant = frozenset(not_relevant)
+        self._ref_targets: Mapping[str, tuple[str, ...]] = ref_targets or {}
+        self._pending_references: list[_PendingReference] = []
         self._next_element_id = 1
         self._line_starts: dict[int, list[int]] = {}
         for file_id, parsed in enumerate(files, start=1):
             self._add_file(file_id, parsed)
+        self._resolve_references()
         self._db.commit()
 
     def close(self) -> None:
@@ -222,6 +290,7 @@ class DatasetIndex:
         shapes: list[str] = []
         frames: list[int | None] = []
         gray: list[bool] = []
+        owners: list[int | None] = []
         sibling_counts: dict[tuple[int | None, str], int] = {}
         rows = []
         for record in parsed.elements:
@@ -240,6 +309,19 @@ class DatasetIndex:
             sibling_key = (parent, record.name)
             sibling_counts[sibling_key] = sibling_counts.get(sibling_key, 0) + 1
             xml_id = record.attributes.get("id")
+            inherited_owner = None if parent is None else owners[parent]
+            owners.append(offset + record.index if xml_id else inherited_owner)
+            if is_reference(record.name, record.attributes):
+                self._pending_references.append(
+                    _PendingReference(
+                        offset + record.index,
+                        file_id,
+                        inherited_owner,
+                        record.name,
+                        record.attributes,
+                        record.start,
+                    )
+                )
             label = _label(parsed, children, record.index) if xml_id else None
             end = record.end
             rows.append(
@@ -279,6 +361,61 @@ class DatasetIndex:
         self._next_element_id = offset + len(parsed.elements)
         for diagnostic in parsed.diagnostics:
             self._insert_diagnostic(file_id, diagnostic)
+
+    def _resolve_references(self) -> None:
+        """Löst alle Referenzen auf, nachdem alle Dateien im Index stehen."""
+        type_present: dict[tuple[str, ...], bool] = {}
+        for pending in self._pending_references:
+            types = expected_types(pending.name, pending.attributes, self._ref_targets)
+            target_ref = pending.attributes["ref"]
+            ref_version = reference_version(pending.attributes)
+            placeholders = ", ".join("?" * len(types))
+            candidates = [
+                Candidate(row[0], row[1])
+                for row in self._db.execute(
+                    "SELECT id, version FROM elements"
+                    f" WHERE xml_id = ? AND name IN ({placeholders}) ORDER BY id",
+                    (target_ref, *types),
+                )
+            ]
+            if types not in type_present:
+                type_present[types] = (
+                    self._db.execute(
+                        "SELECT 1 FROM elements WHERE xml_id IS NOT NULL"
+                        f" AND name IN ({placeholders}) LIMIT 1",
+                        types,
+                    ).fetchone()
+                    is not None
+                )
+            status, target_id = classify(candidates, ref_version, type_present[types])
+            self._db.execute(
+                "INSERT INTO refs VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    pending.element_id,
+                    pending.owner_id,
+                    target_ref,
+                    ref_version,
+                    json.dumps(types),
+                    status,
+                    target_id,
+                ),
+            )
+            if status is not ResolveStatus.RESOLVED:
+                self._insert_diagnostic(
+                    pending.file_id,
+                    Diagnostic(
+                        DiagnosticCategory.REFERENCE,
+                        _REFERENCE_SEVERITY[status],
+                        _REFERENCE_KEY[status],
+                        {
+                            "element": pending.name,
+                            "ref": target_ref,
+                            "expected": ", ".join(types),
+                        },
+                        pending.position,
+                    ),
+                )
+        self._pending_references = []
 
     def _insert_diagnostic(self, file_id: int, diagnostic: Diagnostic) -> None:
         position = diagnostic.position
@@ -411,6 +548,46 @@ class DatasetIndex:
                 (element.file_id, element.id, *(() if boundary is None else (boundary,)), limit),
             ).fetchall()
         return [_row_to_element(row) for row in rows]
+
+    def reference(self, element_id: int) -> ReferenceRow | None:
+        """Die Referenz eines Ref-Elements; `None`, wenn das Element keine Referenz ist."""
+        with self._lock:
+            row = self._db.execute(
+                f"SELECT {_REFERENCE_COLUMNS} FROM refs WHERE element_id = ?", (element_id,)
+            ).fetchone()
+        return None if row is None else _row_to_reference(row)
+
+    def references_of(self, owner_id: int, limit: int) -> list[ReferenceRow]:
+        """Ausgehende Referenzen eines Objekts in Dokumentreihenfolge, höchstens `limit`."""
+        with self._lock:
+            rows = self._db.execute(
+                f"SELECT {_REFERENCE_COLUMNS} FROM refs WHERE owner_id = ?"
+                " ORDER BY element_id LIMIT ?",
+                (owner_id, limit),
+            ).fetchall()
+        return [_row_to_reference(row) for row in rows]
+
+    def references_to(self, target_id: int, limit: int) -> list[ReferenceRow]:
+        """Eingehende (rückwärtige) Referenzen auf ein Objekt, höchstens `limit`."""
+        with self._lock:
+            rows = self._db.execute(
+                f"SELECT {_REFERENCE_COLUMNS} FROM refs WHERE target_id = ?"
+                " ORDER BY element_id LIMIT ?",
+                (target_id, limit),
+            ).fetchall()
+        return [_row_to_reference(row) for row in rows]
+
+    def references_among(self, element_ids: Sequence[int]) -> dict[int, ReferenceRow]:
+        """Die Referenzen unter den angegebenen Elementen, nach Element-Nummer."""
+        if not element_ids:
+            return {}
+        placeholders = ", ".join("?" * len(element_ids))
+        with self._lock:
+            rows = self._db.execute(
+                f"SELECT {_REFERENCE_COLUMNS} FROM refs WHERE element_id IN ({placeholders})",
+                list(element_ids),
+            ).fetchall()
+        return {row[0]: _row_to_reference(row) for row in rows}
 
     def objects_by_id(self, xml_id: str, object_type: str) -> list[ElementRow]:
         """Objekte mit dieser `id` und diesem Typ (Elementname)."""

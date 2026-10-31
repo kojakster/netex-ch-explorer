@@ -3,11 +3,13 @@
 import type { DataSource } from "./api";
 import type {
   AppInfo,
+  ChainLink,
   DatasetInfo,
   GuideInfo,
   JourneyInfo,
   ObjectDetail,
   ObjectInfo,
+  ReferenceInfo,
   XmlWindow,
 } from "./types";
 
@@ -75,6 +77,51 @@ export const JOURNEY_OBJECT: ObjectInfo = {
   notRelevant: false,
 };
 
+export const TARGET_OBJECT: ObjectInfo = {
+  id: "SYNTHETICDATASET01.60",
+  name: "Operator",
+  xmlId: "ch:1:sboid:SYN1",
+  version: "1",
+  label: "Synthetischer Betreiber",
+  fileName: "ch20_three_stops.xml",
+  line: 30,
+  column: 7,
+  frame: JOURNEY_OBJECT.frame,
+  colorKey: "TimetableFrame",
+  notRelevant: false,
+};
+
+const OPERATOR_REF_ELEMENT: ObjectInfo = {
+  ...TARGET_OBJECT,
+  id: "SYNTHETICDATASET01.106",
+  name: "OperatorRef",
+  xmlId: null,
+  label: null,
+  line: 158,
+};
+
+/** Verweis des Fahrt-Objekts auf den Betreiber (aufgelöst). */
+export const OUTGOING_REFERENCE: ReferenceInfo = {
+  element: OPERATOR_REF_ELEMENT,
+  ref: "ch:1:sboid:SYN1",
+  refVersion: "1",
+  status: "resolved",
+  expected: ["Operator"],
+  target: TARGET_OBJECT,
+  owner: JOURNEY_OBJECT,
+};
+
+/** Verweis, der ins Leere zeigt: Objekte des Typs sind vorhanden, die ID fehlt. */
+export const UNRESOLVED_REFERENCE: ReferenceInfo = {
+  element: { ...OPERATOR_REF_ELEMENT, id: "SYNTHETICDATASET01.107", name: "LineRef" },
+  ref: "ch:1:slnid:SYN9",
+  refVersion: "1",
+  status: "unresolved",
+  expected: ["Line"],
+  target: null,
+  owner: JOURNEY_OBJECT,
+};
+
 export const DATASET: DatasetInfo = {
   id: "SYNTHETICDATASET01",
   files: [
@@ -121,11 +168,49 @@ export const DETAIL: ObjectDetail = {
       text: "08:00:00",
       line: 156,
       column: 8,
+      reference: null,
+      children: [],
+    },
+    {
+      id: "SYNTHETICDATASET01.106",
+      name: "OperatorRef",
+      attributes: { ref: "ch:1:sboid:SYN1", version: "1" },
+      text: "",
+      line: 158,
+      column: 8,
+      reference: { status: "resolved", targetId: "SYNTHETICDATASET01.60", expected: ["Operator"] },
       children: [],
     },
   ],
   truncated: false,
+  reference: null,
+  outgoing: [OUTGOING_REFERENCE, UNRESOLVED_REFERENCE],
+  incoming: [],
+  referencesTruncated: false,
 };
+
+/** Der Betreiber: wird von der Fahrt verwiesen (eingehender Verweis). */
+export const TARGET_DETAIL: ObjectDetail = {
+  object: TARGET_OBJECT,
+  path: "/PublicationDelivery/dataObjects/CompositeFrame/frames/TimetableFrame/Operator",
+  attributes: { id: "ch:1:sboid:SYN1", version: "1" },
+  properties: [],
+  truncated: false,
+  reference: null,
+  outgoing: [],
+  incoming: [OUTGOING_REFERENCE],
+  referencesTruncated: false,
+};
+
+export const PROVENANCE: ChainLink[] = [
+  {
+    kind: "frame",
+    object: { ...JOURNEY_OBJECT, id: "SYNTHETICDATASET01.90", name: "TimetableFrame" },
+  },
+  { kind: "object", object: JOURNEY_OBJECT },
+  { kind: "element", object: OPERATOR_REF_ELEMENT },
+  { kind: "target", object: TARGET_OBJECT },
+];
 
 export const XML: XmlWindow = {
   fileName: "ch20_three_stops.xml",
@@ -155,8 +240,9 @@ export function fakeSource(overrides: Partial<DataSource> = {}): DataSource {
     getJourneys: () => Promise.resolve(JOURNEYS),
     searchObjects: () => Promise.resolve({ total: 1, items: [JOURNEY_OBJECT] }),
     getDiagnostics: () => Promise.resolve([]),
-    getObject: () => Promise.resolve(DETAIL),
+    getObject: (id) => Promise.resolve(id === TARGET_OBJECT.id ? TARGET_DETAIL : DETAIL),
     getObjectXml: () => Promise.resolve(XML),
+    getProvenance: () => Promise.resolve(PROVENANCE),
     getXmlAt: () => Promise.resolve(XML),
     ...overrides,
   };

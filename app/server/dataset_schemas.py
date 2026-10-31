@@ -6,11 +6,13 @@ from pydantic import Field
 
 from app.core.dataset import Dataset
 from app.core.diagnostics import DiagnosticCategory
-from app.core.explorer import ObjectDetail, PropertyNode, XmlWindow, editor_text
+from app.core.explorer import ObjectDetail, PropertyNode, ReferenceView, XmlWindow, editor_text
 from app.core.frames import color_key
 from app.core.index.dataset_index import ElementRow, IndexedDiagnostic
+from app.core.index.references import ResolveStatus
 from app.core.messages import MessageKey, Severity
 from app.core.projection.journeys import JourneySummary, Lookup, LookupStatus
+from app.core.provenance import ChainLink, LinkKind
 from app.server.datasets import object_id
 from app.server.schemas import ApiModel
 
@@ -81,6 +83,14 @@ class ObjectSearchOut(ApiModel):
     items: list[ObjectOut]
 
 
+class PropertyReferenceOut(ApiModel):
+    """Status und Ziel einer Referenz im Eigenschaftsbaum."""
+
+    status: ResolveStatus
+    target_id: str | None
+    expected: list[str]
+
+
 class PropertyOut(ApiModel):
     """Ein Kindelement im Eigenschaftsbaum (Text unverändert)."""
 
@@ -90,7 +100,20 @@ class PropertyOut(ApiModel):
     text: str
     line: int
     column: int
+    reference: PropertyReferenceOut | None
     children: list[PropertyOut]
+
+
+class ReferenceOut(ApiModel):
+    """Eine Referenz: Ref-Element, Wert, Status, erwartete Typen, Ziel und enthaltendes Objekt."""
+
+    element: ObjectOut
+    ref: str
+    ref_version: str | None
+    status: ResolveStatus
+    expected: list[str]
+    target: ObjectOut | None
+    owner: ObjectOut | None
 
 
 class ObjectDetailOut(ApiModel):
@@ -101,6 +124,17 @@ class ObjectDetailOut(ApiModel):
     attributes: dict[str, str]
     properties: list[PropertyOut]
     truncated: bool
+    reference: ReferenceOut | None
+    outgoing: list[ReferenceOut]
+    incoming: list[ReferenceOut]
+    references_truncated: bool
+
+
+class ChainLinkOut(ApiModel):
+    """Ein Glied der Herkunftskette."""
+
+    kind: LinkKind
+    object: ObjectOut
 
 
 class LookupOut(ApiModel):
@@ -215,8 +249,33 @@ class Converter:
             diagnostic_counts=counts,
         )
 
+    def reference(self, view: ReferenceView) -> ReferenceOut:
+        """Eine Referenz mit Ziel und enthaltendem Objekt."""
+        row = view.row
+        return ReferenceOut(
+            element=self.object(view.element),
+            ref=row.target_ref,
+            ref_version=row.ref_version,
+            status=row.status,
+            expected=list(row.expected),
+            target=None if view.target is None else self.object(view.target),
+            owner=None if view.owner is None else self.object(view.owner),
+        )
+
     def _property(self, node: PropertyNode) -> PropertyOut:
         element = node.element
+        view = node.reference
+        reference = (
+            None
+            if view is None
+            else PropertyReferenceOut(
+                status=view.row.status,
+                target_id=None
+                if view.target is None
+                else object_id(self.dataset_id, view.target.id),
+                expected=list(view.row.expected),
+            )
+        )
         return PropertyOut(
             id=object_id(self.dataset_id, element.id),
             name=element.name,
@@ -224,6 +283,7 @@ class Converter:
             text=element.text,
             line=element.start.line,
             column=element.start.column,
+            reference=reference,
             children=[self._property(child) for child in node.children],
         )
 
@@ -235,7 +295,15 @@ class Converter:
             attributes=detail.element.attributes,
             properties=[self._property(node) for node in detail.properties],
             truncated=detail.truncated,
+            reference=None if detail.reference is None else self.reference(detail.reference),
+            outgoing=[self.reference(view) for view in detail.outgoing],
+            incoming=[self.reference(view) for view in detail.incoming],
+            references_truncated=detail.references_truncated,
         )
+
+    def chain(self, links: list[ChainLink]) -> list[ChainLinkOut]:
+        """Herkunftskette."""
+        return [ChainLinkOut(kind=link.kind, object=self.object(link.element)) for link in links]
 
     def _lookup(self, lookup: Lookup) -> LookupOut:
         element = lookup.element

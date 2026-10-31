@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { App } from "./App";
 import { ApiError } from "./api";
-import { APP_INFO, DATASET, fakeSource as source } from "./testData";
+import { APP_INFO, DATASET, fakeSource as source, TARGET_OBJECT } from "./testData";
 import type { DatasetInfo } from "./types";
 
 describe("App", () => {
@@ -119,5 +119,55 @@ describe("App mit Datensatz", () => {
     );
     fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
     expect((await screen.findByRole("alert")).textContent).toContain("Nicht gefunden");
+  });
+});
+
+describe("App mit Referenzen und Herkunft", () => {
+  async function openJourney(overrides = {}) {
+    render(<App dataSource={source(overrides)} />);
+    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
+    fireEvent.click(await screen.findByRole("button", { name: "ServiceJourney" }));
+    await screen.findByText("Verweist auf");
+  }
+
+  it("zeigt ausgehende Verweise mit Status und Ziel", async () => {
+    await openJourney();
+    expect(screen.getAllByText("aufgelöst").length).toBeGreaterThan(0);
+    expect(screen.getByText("nicht auflösbar")).toBeTruthy();
+    expect(screen.getByText("erwartet: Line")).toBeTruthy();
+    expect(screen.getByText("keine Verweise")).toBeTruthy();
+  });
+
+  it("folgt einem Verweis zum Ziel, zeigt eingehende Verweise und geht zurück und vor", async () => {
+    const getObjectXml = vi.fn(source().getObjectXml);
+    await openJourney({ getObjectXml });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /^Operator ch:1:sboid/ })[0] as HTMLElement,
+    );
+    expect(await screen.findByText("Wird verwiesen von")).toBeTruthy();
+    expect(getObjectXml).toHaveBeenLastCalledWith(TARGET_OBJECT.id);
+    expect(screen.getByRole("button", { name: /Vor im Verlauf/ }).hasAttribute("disabled")).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Zurück im Verlauf/ }));
+    expect(await screen.findByText("Verweist auf")).toBeTruthy();
+    expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.100");
+    fireEvent.click(screen.getByRole("button", { name: /Vor im Verlauf/ }));
+    expect(getObjectXml).toHaveBeenLastCalledWith(TARGET_OBJECT.id);
+  });
+
+  it("springt aus der Eigenschaft zum Ziel des Verweises", async () => {
+    const getObjectXml = vi.fn(source().getObjectXml);
+    await openJourney({ getObjectXml });
+    fireEvent.click(screen.getByRole("button", { name: /Zum Ziel/ }));
+    expect(getObjectXml).toHaveBeenLastCalledWith(TARGET_OBJECT.id);
+  });
+
+  it("zeigt die Herkunftskette und markiert das gewählte Glied", async () => {
+    const getObjectXml = vi.fn(source().getObjectXml);
+    await openJourney({ getObjectXml });
+    const frame = await screen.findByRole("button", { name: /^TimetableFrame/ });
+    fireEvent.click(frame);
+    expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.90");
   });
 });

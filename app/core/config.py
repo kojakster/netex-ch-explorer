@@ -18,6 +18,7 @@ CONFIG_DIR_NAME: Final = "config"
 SETTINGS_FILE: Final = "settings.json"
 FRAME_COLORS_FILE: Final = "frame-colors.json"
 NOT_RELEVANT_FILE: Final = "not-relevant-elements.json"
+REF_TARGETS_FILE: Final = "ref-targets.json"
 
 MAX_CONFIG_BYTES: Final = 1_000_000
 SUPPORTED_LANGUAGES: Final = ("de-CH", "en")
@@ -109,6 +110,7 @@ class AppConfig:
     settings: Settings
     frame_colors: dict[str, FrameColor]
     not_relevant_elements: tuple[str, ...]
+    ref_targets: dict[str, tuple[str, ...]]
     issues: tuple[Issue, ...] = field(default=())
 
 
@@ -135,11 +137,13 @@ def load_config(project_root: Path) -> AppConfig:
     settings, settings_issues = _load_settings(config_dir, project_root)
     frame_colors, color_issues = _load_frame_colors(config_dir)
     not_relevant, not_relevant_issues = _load_not_relevant(config_dir)
+    ref_targets, ref_target_issues = _load_ref_targets(config_dir)
     return AppConfig(
         settings=settings,
         frame_colors=frame_colors,
         not_relevant_elements=not_relevant,
-        issues=(*settings_issues, *color_issues, *not_relevant_issues),
+        ref_targets=ref_targets,
+        issues=(*settings_issues, *color_issues, *not_relevant_issues, *ref_target_issues),
     )
 
 
@@ -312,3 +316,39 @@ def _load_not_relevant(config_dir: Path) -> tuple[tuple[str, ...], list[Issue]]:
         else:
             collector.add(MessageKey.CONFIG_VALUE_INVALID, f"elements[{index}]")
     return tuple(elements), collector.issues
+
+
+def _load_ref_targets(config_dir: Path) -> tuple[dict[str, tuple[str, ...]], list[Issue]]:
+    """Zieltypen von Referenzen, deren Name nicht dem Zieltyp entspricht (Entscheid „Zieltyp“)."""
+    collector = _IssueCollector(f"{CONFIG_DIR_NAME}/{REF_TARGETS_FILE}")
+    data = _read_json_object(config_dir / REF_TARGETS_FILE, collector)
+    if data is None:
+        return {}, collector.issues
+    _report_unknown_fields(data, ("refs",), collector)
+    raw = data.get("refs")
+    if not isinstance(raw, dict):
+        collector.add(MessageKey.CONFIG_VALUE_INVALID, "refs")
+        return {}, collector.issues
+    refs: dict[str, tuple[str, ...]] = {}
+    for name, entry in raw.items():
+        targets = _ref_entry_targets(name, entry, collector)
+        if targets:
+            refs[name] = targets
+    return refs, collector.issues
+
+
+def _ref_entry_targets(name: str, entry: object, collector: _IssueCollector) -> tuple[str, ...]:
+    label = f"refs.{name}"
+    if not _XML_NAME.match(name) or not isinstance(entry, dict):
+        collector.add(MessageKey.CONFIG_VALUE_INVALID, label)
+        return ()
+    _report_unknown_fields(entry, ("targets", "xsdType"), collector, prefix=f"{label}.")
+    targets = entry.get("targets")
+    if (
+        not isinstance(targets, list)
+        or not targets
+        or not all(isinstance(t, str) and _XML_NAME.match(t) for t in targets)
+    ):
+        collector.add(MessageKey.CONFIG_VALUE_INVALID, f"{label}.targets")
+        return ()
+    return tuple(dict.fromkeys(targets))

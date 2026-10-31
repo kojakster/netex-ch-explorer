@@ -151,3 +151,19 @@ def test_example_changes_against_record(guide: Path, tmp_path: Path) -> None:
         "ch20_midnight.xml": ExampleChange.CHANGED,
         "broken_xml.xml": ExampleChange.NEW,
     }
+
+
+def test_example_status_uses_the_reference_target_list(guide: Path, tmp_path: Path) -> None:
+    role_file = guide / "src" / "examples" / "zz_role.xml"
+    role_file.write_text(
+        "<R><Operator id='o1' version='1'/><ResponsibleOrganisationRef ref='o1' version='1'/></R>",
+        encoding="utf-8",
+    )
+    record = tmp_path / "guide-tested.json"
+
+    def result(targets: dict[str, tuple[str, ...]] | None) -> ExampleResult:
+        examples = inspect_guide(guide, record, targets).examples
+        return {example.name: example.result for example in examples}["zz_role.xml"]
+
+    assert result(None) is ExampleResult.NOTES
+    assert result({"ResponsibleOrganisationRef": ("Operator",)}) is ExampleResult.CLEAN

@@ -21,5 +21,7 @@ class Runtime:
 def load_runtime(project_root: Path) -> Runtime:
     """Lädt Einstellungen und untersucht den Guide-Klon."""
     config = load_config(project_root)
-    guide = inspect_guide(config.settings.guide_path, project_root / TEST_RECORD_FILE)
+    guide = inspect_guide(
+        config.settings.guide_path, project_root / TEST_RECORD_FILE, config.ref_targets
+    )
     return Runtime(config=config, guide=guide)

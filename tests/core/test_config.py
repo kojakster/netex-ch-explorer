@@ -44,7 +44,7 @@ def test_missing_files_give_defaults_and_warnings(tmp_path: Path) -> None:
     assert config.not_relevant_elements == DEFAULT_NOT_RELEVANT_ELEMENTS
     assert config.settings.language == "de-CH"
     assert config.settings.port == 8765
-    assert [issue.key for issue in config.issues] == [MessageKey.CONFIG_FILE_MISSING] * 3
+    assert [issue.key for issue in config.issues] == [MessageKey.CONFIG_FILE_MISSING] * 4
     assert all(issue.severity is Severity.WARNING for issue in config.issues)
     assert config.issues[0].params == {"file": "config/settings.json"}
 

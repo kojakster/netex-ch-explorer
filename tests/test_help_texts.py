@@ -17,6 +17,7 @@ from app.core.diagnostics import DiagnosticCategory
 from app.core.features import Feature
 from app.core.guide.examples import ExampleResult
 from app.core.guide.status import ExampleChange, GuideTestState
+from app.core.index.references import ResolveStatus
 from app.core.messages import MessageKey, Severity
 from app.core.projection.journeys import LookupStatus
 from app.core.validation.steps import CHECK_STEPS, CheckStatus
@@ -44,6 +45,7 @@ def required_keys() -> set[str]:
     keys |= {f"examples.result.{result}" for result in ExampleResult}
     keys |= {f"examples.change.{change}" for change in ExampleChange}
     keys |= {f"lookup.{status}" for status in LookupStatus}
+    keys |= {f"refs.status.{status}" for status in ResolveStatus}
     keys |= {f"language.{language}" for language in SUPPORTED_LANGUAGES}
     # NeTEx-Frame-Namen bleiben unübersetzt; nur die übrigen Farben brauchen einen Text.
     keys |= {f"frame.{key}" for key in DEFAULT_FRAME_COLORS if not key.endswith("Frame")}

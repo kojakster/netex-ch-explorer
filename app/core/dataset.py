@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 from app.core.index.dataset_index import DatasetIndex
@@ -28,7 +28,11 @@ class Dataset:
         self.index.close()
 
 
-def open_dataset(sources: Iterable[SourceFile], not_relevant: Iterable[str]) -> Dataset:
+def open_dataset(
+    sources: Iterable[SourceFile],
+    not_relevant: Iterable[str],
+    ref_targets: Mapping[str, tuple[str, ...]] | None = None,
+) -> Dataset:
     """Liest alle Dateien ein und baut den Index. Fehler werden zu Diagnosen."""
     parsed = [read_xml(source.name, source.data) for source in sources]
-    return Dataset(DatasetIndex(parsed, not_relevant))
+    return Dataset(DatasetIndex(parsed, not_relevant, ref_targets))
