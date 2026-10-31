@@ -2,7 +2,7 @@
 
 Schritt a von Phase 4 ([UMSETZUNGSPLAN.md](../UMSETZUNGSPLAN.md) Abschnitt 8; Entscheid „Profilregeln“ in [decisions.md](decisions.md)). Die Regeln sind selbst hergeleitet aus den Vorlagen des Guides `netexRealisationGuideSwitzerland`, Branch `next`, Commit **`b7ac158`** (`git rev-parse --short HEAD` ergibt `b7ac1586`; gleicher Stand wie in [mapping.md](mapping.md)). Pfade relativ zu `../netexRealisationGuideSwitzerland/src/`. Zeilenangaben gelten für diesen Commit.
 
-**Stand:** Entwurf zur Freigabe durch den Benutzer. Es ist **kein Programmcode** umgesetzt. Die Regeln mit Status „unklar“ und die Fragen unten werden einzeln geklärt (siehe [open-points.md](open-points.md) Punkt 1), erst danach folgt die Umsetzung als Prüfschritte.
+**Stand:** Die Fragen 1–6 sind vom Benutzer am 31.10.2026 entschieden, wie empfohlen (siehe [decisions.md](decisions.md) „Kernregeln Phase 4: Entscheide zu den unklaren Punkten"). Umsetzung als Prüfschritte in Phase 4. **Nicht umgesetzt** sind CH-SJP-08 und CH-SJ-16 (Entscheide (2) und (4)). CH-SJ-15 bleibt ℹ Hinweis.
 
 ## Herleitung
 
@@ -67,7 +67,7 @@ Schritt a von Phase 4 ([UMSETZUNGSPLAN.md](../UMSETZUNGSPLAN.md) Abschnitt 8; En
 
 ## Unklare Regeln
 
-Fragen werden einzeln geklärt. Bis zur Antwort wird die betroffene Regel nicht umgesetzt. Das Ergebnis kommt in [decisions.md](decisions.md).
+**Alle sechs Fragen sind entschieden (31.10.2026, Empfehlung angenommen)**; der Wortlaut bleibt als Begründung stehen. Massgebend ist [decisions.md](decisions.md) „Kernregeln Phase 4: Entscheide zu den unklaren Punkten". Abweichend von der Empfehlung zu Frage 1 gilt die Erkennung am Inhalt (Rumpf-Fahrt = `ServiceJourney` ohne `ServiceJourneyPatternRef`, nur mit `privateCodes`), nicht am Dateityp; bei Frage 5 gelten beide Schreibweisen als erlaubt.
 
 ### Frage 1: Gelten die Regeln für `ServiceJourney` auch in `INTERCHANGE`-Dateien?
 
