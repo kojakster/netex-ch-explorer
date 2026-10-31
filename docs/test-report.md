@@ -104,3 +104,61 @@ Eigener Fund bei der Browser-Prüfung: Die strenge CSP blockierte die Stile von 
 - Der Build meldet ein Skriptpaket über 500 kB (CodeMirror). Für die lokale Nutzung unkritisch; bei der Webversion prüfen.
 - Dateien mit nur CR als Zeilenumbruch (ohne LF) werden in den Zeilennummern nicht unterstützt; in der Praxis nicht anzutreffen.
 - Windows: nicht getestet.
+
+## Phase 2: Referenzen und Herkunft (31.10.2026)
+
+Umsetzung: Commits `ff81a5d` und `17e08dc` (Funde aus dem Code-Review). Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`.
+
+### Prüfbefehl
+
+`uv run python scripts/check.py --hook`: **grün** bei beiden Commits (Git-Hook). Alle 14 Schritte OK, pip-audit und npm audit ohne Lücken.
+
+### Tests und Abdeckung
+
+- pytest: **311 Tests bestanden**, davon 28 gegen den Guide-Klon (alle 22 Beispiele einzeln geladen, Beispiel 01 fachlich, Zieltyp-Liste gegen XSD und Beispiele). Abdeckung `app/core`: **98 %**.
+- Vitest: **63 Tests bestanden** (u. a. Verweis folgen, Zurück/Vor im Verlauf, Sprung aus dem Eigenschaftsbaum, Herkunftskette, Ausblenden der Kette bei Diagnosen).
+- `scripts/test.py`: bestanden; `guide-tested.json` neu geschrieben: 21 Beispiele „ohne Meldungen“, Beispiel 17 „mit Hinweisen“ (4× `external_or_unloaded`).
+
+### Abnahme
+
+| Kriterium | Ergebnis |
+|---|---|
+| Referenzen inkl. `Extensions`, Auflösung über ID + Typ | erfüllt: alle Elemente mit `ref` an beliebiger Stelle; Test mit Verweisen in `Extensions`; 1520 Referenzen der 22 Beispiele: 1516 aufgelöst, 4 `external_or_unloaded`, keine nicht auflösbaren |
+| `Quay` und `ScheduledStopPoint` mit gleicher ID werden unterschieden | erfüllt: Test an `ch20_three_stops.xml`; im Browser (Chrome, Playwright aus dem Scratchpad) Beispiel 01: `Quay` hat nur `QuayRef` als eingehenden Verweis, `ScheduledStopPoint` zusätzlich `FromPointRef` und `ScheduledStopPointRef` |
+| Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | erfüllt: eingehende und ausgehende Verweise als Liste mit Frame-Farbe der Gegenseite, Herkunftskette als farbige Kästchen (anklickbar), Status im Eigenschaftsbaum |
+| Navigation vor/zurück | erfüllt: im Browser Verweis gefolgt, „Zurück im Verlauf“ führt zum vorherigen Objekt; Vitest-Test für Vor und Zurück |
+| Nicht auflösbare Referenzen als Diagnose | erfüllt: `reference.unresolved` (⚠ Fehler), `reference.ambiguous` (△ Warnung), `reference.external_or_unloaded` (ℹ Hinweis) mit Stelle; Beispiel 17 im Browser: 4 Hinweise, Klick markiert die Stelle im XML; Keine Meldungen in der Browser-Konsole |
+| Hilfeseite nachgeführt | erfüllt: Funktionen „Referenzen“, „Herkunftskette“, „Verlauf“, Prüfschritt „Referenzen“ jetzt „durchgeführt“, beide Sprachdateien; Test `tests/test_help_texts.py` |
+
+### Wichtigster Befund der Phase
+
+Mit „Zieltyp = Name ohne `Ref`“ blieben 125 von 1520 Referenzen der Beispiele unaufgelöst, obwohl das Ziel in der Datei steht (z. B. `ResponsibleOrganisationRef` → `Operator`). Gelöst mit `config/ref-targets.json` (16 Einträge, Entscheid vom Benutzer); ein Test prüft die Einträge gegen die XSD und meldet fehlende Einträge für die Beispiele. Zwei Fälle fielen beim Beispielstatus auf: Er wurde zunächst ohne die Liste berechnet (alle 22 Beispiele „mit Hinweisen“); behoben, mit Test.
+
+### Code-Review (eingebaute Prüfung `/code-review`, Stufe high, über `7e69a47..ff81a5d`)
+
+9 Funde. Behoben in `17e08dc`:
+
+1. Eigenschaftsbaum rief je Referenz bis zu dreimal den Index ab; jetzt nur noch das Ziel.
+2. `references_among` mit bis zu 2000 Platzhaltern (ältere SQLite-Versionen: 999); jetzt in Stapeln zu 500, mit Test.
+3. Diagnosen standen nicht nach Datei gruppiert; jetzt nach Datei sortiert, mit Test.
+4. Unbekannter Referenzstatus in der Fahrtenliste konnte einen `KeyError` auslösen; jetzt Rückfall auf „nicht aufgelöst“.
+5. Herkunftskette zeigte nach Klick auf eine Diagnose weiter die alte Auswahl; jetzt ausgeblendet, solange die Stelle einer Diagnose gezeigt wird, mit Test.
+6. Eingehende Verweise ohne umschliessendes Objekt zeigten „erwartet: …“ statt der Quelle; jetzt das Ref-Element.
+
+Nicht behoben, dem Benutzer vorgelegt ([open-points.md](open-points.md) Punkte 5–7):
+
+- **Ref-Namen ausserhalb der Liste** (z. B. `DefaultCodespaceRef` aus den Guide-Vorlagen) erscheinen als „extern oder nicht geladen“, auch wenn das Ziel in der Datei steht. Die vom Review vorgeschlagene Abhilfe („ID unter anderem Typ vorhanden → Fehler“) habe ich ausprobiert und verworfen: Sie erzeugt Fehlalarme bei `Quay`/`ScheduledStopPoint` mit gleicher ID in `NETWORK_OFFER`-Dateien, dem zentralen Fall des Guides. Test mit Fixture ergänzt.
+- **Abweichende Version** einer Referenz auf genau ein Objekt ist „aufgelöst“ ohne Hinweis (so entschieden, Frage offen).
+- **Je Referenz eine Abfrage** beim Öffnen und alle Referenzen im Speicher: für kleine Dateien unkritisch, für grosse Lieferungen nicht geeignet (Variante B des Index).
+
+### Sicherheits-Review (eingebaute Prüfung `/security-review`, über `7e69a47..17e08dc`)
+
+**Keine Funde.** Geprüft: SQL (nur Platzhalter und feste Spaltennamen, alle Werte als Parameter), neuer Aufruf `GET /api/objects/{id}/provenance` (nur zufällige Datensatz-ID plus Elementnummer, kein Pfad), `config/ref-targets.json` (Grösse, JSON-Form und Namensmuster geprüft), keine neue XML-Verarbeitung (`DOCTYPE`-Abweisung gilt weiter), Frontend (Werte nur als Text, Farben nur aus validiertem `#RRGGBB`), keine Datenpreisgabe über den bereits geöffneten Datensatz hinaus. Die eingebaute Prüfung vergleicht mit `origin/HEAD`; das Repository hat kein Remote, deshalb wurde vorübergehend eine lokale Referenz auf `7e69a47` angelegt und danach gelöscht.
+
+### Lücken und Hinweise
+
+- Herkunftskette zeigt in Phase 2 nur Frame, Objekte, Angabe und Ziel; Rechenketten berechneter Zeiten folgen mit Phase 3.
+- Verweise ausserhalb des Datensatzes lösen sich erst, wenn die Gegendatei mit geöffnet wird; „Datei öffnen“ mit mehreren Dateien folgt in Phase 4. Im Beispiel 17 bleiben deshalb 4 Hinweise.
+- Der Build meldet weiter ein Skriptpaket über 500 kB (CodeMirror).
+- Windows: nicht getestet.
+- Offen vor Phase 3: Welcher `TimingLink` gilt (`OnwardTimingLinkRef`, open-points.md Punkt 3).
