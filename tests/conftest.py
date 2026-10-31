@@ -11,8 +11,10 @@ import pytest
 from openpyxl import Workbook
 
 from app.core.config import load_config
+from app.core.guide.git import find_git_dir, read_head
 from app.core.guide.layout import EXAMPLES_DIR, MAPPING_TABLE_FILE, XSD_MAIN_FILE
 from app.core.guide.mapping import SHEET_SPECS
+from app.core.validation.engine import ValidationEngine
 from tests.support import (
     FIXTURES_DIR,
     PROJECT_ROOT,
@@ -131,3 +133,23 @@ def synthetic_guide(
         encoding="utf-8",
     )
     return root
+
+
+@pytest.fixture(scope="session")
+def guide_engine() -> ValidationEngine:
+    """Prüfmaschine mit der echten XSD des Guide-Klons; die XSD wird einmal je Testlauf geladen.
+
+    Fehlt der Guide-Klon, wird der Test übersprungen; unter `scripts/test.py` schlägt er fehl.
+    """
+    path = load_config(PROJECT_ROOT).settings.guide_path
+    if not (path / ".git").exists():
+        message = f"Guide-Klon fehlt: {path}"
+        if os.environ.get(REQUIRE_GUIDE_ENV) == "1":
+            pytest.fail(message)
+        pytest.skip(message)
+    git_dir = find_git_dir(path)
+    head = None if git_dir is None else read_head(git_dir)
+    engine = ValidationEngine(path, None if head is None else head.commit)
+    if not engine.preload():
+        pytest.fail("Die XSD des Guide-Klons lässt sich nicht laden")
+    return engine

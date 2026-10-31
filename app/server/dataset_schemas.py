@@ -2,26 +2,66 @@
 
 from __future__ import annotations
 
+import re
+
 from pydantic import Field
 
 from app.core.dataset import Dataset
 from app.core.diagnostics import DiagnosticCategory
 from app.core.explorer import ObjectDetail, PropertyNode, ReferenceView, XmlWindow, editor_text
 from app.core.frames import color_key
-from app.core.index.dataset_index import ElementRow, IndexedDiagnostic
+from app.core.guide.links import GuideLinks, guide_url
+from app.core.index.dataset_index import ElementRow, FileSummary, IndexedDiagnostic
 from app.core.index.references import ResolveStatus
 from app.core.messages import MessageKey, Severity
 from app.core.projection.common import Lookup, LookupStatus
 from app.core.projection.journeys import JourneySummary
 from app.core.provenance import ChainLink, LinkKind
+from app.core.validation.detection import (
+    DetectionStatus,
+    Evidence,
+    ProfileVersion,
+    VersionDetection,
+)
+from app.core.validation.result import ValidationSummary
 from app.server.datasets import object_id
-from app.server.schemas import ApiModel
+from app.server.schemas import ApiModel, IssueOut
+
+_CHAPTER_PATH = re.compile(r"^src/[A-Za-z0-9_]+\.md$")
 
 
 class OpenDatasetIn(ApiModel):
     """Anfrage `POST /api/datasets`: ein Beispiel des Guides über seinen Dateinamen."""
 
     example: str = Field(min_length=1, max_length=255)
+
+
+class DetectionReasonOut(ApiModel):
+    """Ein Hinweis der Versionserkennung: wofür er spricht, Schlüssel und Parameter."""
+
+    evidence: Evidence
+    key: MessageKey
+    params: dict[str, str | int]
+
+
+class DetectionOut(ApiModel):
+    """Ergebnis der Versionserkennung einer Datei, mit Begründung."""
+
+    status: DetectionStatus
+    profile: ProfileVersion | None
+    reasons: list[DetectionReasonOut]
+
+    @classmethod
+    def from_detection(cls, detection: VersionDetection) -> DetectionOut:
+        """Wandelt das Ergebnis des Kerns um."""
+        return cls(
+            status=detection.status,
+            profile=detection.profile,
+            reasons=[
+                DetectionReasonOut(evidence=r.evidence, key=r.key, params=dict(r.params))
+                for r in detection.reasons
+            ],
+        )
 
 
 class FileOut(ApiModel):
@@ -34,6 +74,54 @@ class FileOut(ApiModel):
     readable: bool
     elements: int
     objects: int
+    detection: DetectionOut | None
+
+
+class StepOutcomeOut(ApiModel):
+    """Prüfschritt der Validierung: durchgeführt oder, mit Grund, nicht durchgeführt."""
+
+    id: str
+    performed: bool
+    reason: IssueOut | None
+
+
+class FileOutcomeOut(ApiModel):
+    """Datei der Validierung: geprüft oder, mit Grund, nicht geprüft."""
+
+    file_id: int
+    checked: bool
+    reason: IssueOut | None
+
+
+class ValidationOut(ApiModel):
+    """Ergebnis einer Validierung: „geprüft gegen Entwurf <Commit>“, nie „gültig“."""
+
+    guide_commit: str | None
+    steps: list[StepOutcomeOut]
+    files: list[FileOutcomeOut]
+
+    @classmethod
+    def from_summary(cls, summary: ValidationSummary) -> ValidationOut:
+        """Wandelt das Ergebnis des Kerns um."""
+        return cls(
+            guide_commit=summary.guide_commit,
+            steps=[
+                StepOutcomeOut(
+                    id=s.step_id,
+                    performed=s.performed,
+                    reason=None if s.reason is None else IssueOut.from_issue(s.reason),
+                )
+                for s in summary.steps
+            ],
+            files=[
+                FileOutcomeOut(
+                    file_id=f.file_id,
+                    checked=f.checked,
+                    reason=None if f.reason is None else IssueOut.from_issue(f.reason),
+                )
+                for f in summary.files
+            ],
+        )
 
 
 class CountOut(ApiModel):
@@ -75,6 +163,7 @@ class DatasetOut(ApiModel):
     object_types: list[CountOut]
     frames: list[ObjectOut]
     diagnostic_counts: dict[Severity, int]
+    validation: ValidationOut | None
 
 
 class ObjectSearchOut(ApiModel):
@@ -169,6 +258,7 @@ class DiagnosticOut(ApiModel):
     file_name: str
     line: int | None
     column: int | None
+    guide_link: str | None = None
 
 
 class FrameBandOut(ApiModel):
@@ -201,9 +291,18 @@ class XmlWindowOut(ApiModel):
 class Converter:
     """Wandelt Ergebnisse des Kerns für einen Datensatz in Antwortmodelle um."""
 
-    def __init__(self, dataset_id: str, dataset: Dataset) -> None:
+    def __init__(
+        self,
+        dataset_id: str,
+        dataset: Dataset,
+        links: GuideLinks | None = None,
+        guide_commit: str | None = None,
+    ) -> None:
         self.dataset_id = dataset_id
+        self._dataset = dataset
         self.index = dataset.index
+        self._links = links or GuideLinks()
+        self._guide_commit = guide_commit
         self._frames: dict[int, ElementRow | None] = {}
 
     def _frame(self, element: ElementRow) -> ElementRow | None:
@@ -244,10 +343,20 @@ class Converter:
             counts[item.diagnostic.severity] += 1
         return DatasetOut(
             id=self.dataset_id,
-            files=[FileOut(**vars(summary)) for summary in self.index.files()],
+            files=[self._file(summary) for summary in self.index.files()],
             object_types=[CountOut(name=n, count=c) for n, c in self.index.object_types()],
             frames=[self.object(frame) for frame in self.index.frames()],
             diagnostic_counts=counts,
+            validation=None
+            if self._dataset.validation is None
+            else ValidationOut.from_summary(self._dataset.validation),
+        )
+
+    def _file(self, summary: FileSummary) -> FileOut:
+        detection = self._dataset.detections.get(summary.id)
+        return FileOut(
+            **vars(summary),
+            detection=None if detection is None else DetectionOut.from_detection(detection),
         )
 
     def reference(self, view: ReferenceView) -> ReferenceOut:
@@ -326,11 +435,19 @@ class Converter:
             last_stop=self._lookup(journey.last_stop),
         )
 
-    @staticmethod
-    def diagnostic(item: IndexedDiagnostic) -> DiagnosticOut:
-        """Eine Diagnose."""
+    def _chapter(self, params: dict[str, str | int]) -> str | None:
+        """Kapitel einer Diagnose: das genannte, sonst das erste im Index zum Element."""
+        named = params.get("chapter")
+        if isinstance(named, str) and _CHAPTER_PATH.match(named):
+            return named
+        element = params.get("element")
+        return self._links.chapter(element) if isinstance(element, str) else None
+
+    def diagnostic(self, item: IndexedDiagnostic) -> DiagnosticOut:
+        """Eine Diagnose, bei Elementbezug mit Verweis auf das Guide-Kapitel."""
         diagnostic = item.diagnostic
         position = diagnostic.position
+        chapter = self._chapter(diagnostic.params)
         return DiagnosticOut(
             category=diagnostic.category,
             severity=diagnostic.severity,
@@ -340,6 +457,7 @@ class Converter:
             file_name=item.file_name,
             line=None if position is None else position.line,
             column=None if position is None else position.column,
+            guide_link=guide_url(self._guide_commit, chapter),
         )
 
     def xml_window(self, window: XmlWindow) -> XmlWindowOut:

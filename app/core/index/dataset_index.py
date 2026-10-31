@@ -483,6 +483,43 @@ class DatasetIndex:
             ),
         )
 
+    def add_diagnostics(self, file_id: int, diagnostics: Sequence[Diagnostic]) -> None:
+        """Fügt Diagnosen zu einer Datei hinzu (z. B. Ergebnisse der Validierung)."""
+        with self._lock:
+            for diagnostic in diagnostics:
+                self._insert_diagnostic(file_id, diagnostic)
+            self._db.commit()
+
+    def clear_diagnostics(self, categories: Sequence[DiagnosticCategory]) -> None:
+        """Löscht alle Diagnosen dieser Arten (vor einer erneuten Validierung)."""
+        placeholders = ", ".join("?" * len(categories))
+        with self._lock:
+            self._db.execute(
+                f"DELETE FROM diagnostics WHERE category IN ({placeholders})", list(categories)
+            )
+            self._db.commit()
+
+    def position_at(
+        self, file_id: int, line: int, column: int = 1, *, skip_indent: bool = False
+    ) -> Position | None:
+        """Position zu Zeile und Spalte (ab 1) in einer Datei; `None` bei unbekannter Datei.
+
+        Zeilen und Spalten ausserhalb der Datei werden auf die nächstgelegene Stelle gesetzt. Mit
+        `skip_indent` rückt die Stelle hinter die Einrückung (bei Prüfern, die nur die Zeile
+        kennen). Der Byte-Offset zählt den UTF-8-Text ohne BOM.
+        """
+        text = self.file_text(file_id)
+        starts = self.line_starts(file_id)
+        if text is None or starts is None:
+            return None
+        line = min(max(line, 1), len(starts))
+        line_end = starts[line] - 1 if line < len(starts) else len(text)
+        char = min(starts[line - 1] + max(column, 1) - 1, line_end)
+        while skip_indent and char < line_end and text[char] in " \t":
+            char += 1
+        byte = len(text[:char].encode("utf-8"))
+        return Position(byte=byte, char=char, line=line, column=char - starts[line - 1] + 1)
+
     # Abfragen
 
     def files(self) -> list[FileSummary]:
@@ -685,6 +722,15 @@ class DatasetIndex:
                 _ELEMENT_SELECT
                 + f" WHERE e.name IN ({placeholders}) AND e.xml_id IS NOT NULL ORDER BY e.id",
                 list(names),
+            ).fetchall()
+        return [_row_to_element(row) for row in rows]
+
+    def elements_named(self, names: Sequence[str]) -> list[ElementRow]:
+        """Alle Elemente mit einem dieser Namen (auch ohne `id`), in Dokumentreihenfolge."""
+        placeholders = ", ".join("?" * len(names))
+        with self._lock:
+            rows = self._db.execute(
+                _ELEMENT_SELECT + f" WHERE e.name IN ({placeholders}) ORDER BY e.id", list(names)
             ).fetchall()
         return [_row_to_element(row) for row in rows]
 

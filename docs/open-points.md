@@ -7,10 +7,15 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 1. *(Erledigt für die Kernregeln: Entscheide zu den Fragen 1–6 in [decisions.md](decisions.md) „Kernregeln Phase 4: Entscheide zu den unklaren Punkten". Offen bleibt nur: unklare Grau-Einordnungen, falls bei der Umsetzung welche auftauchen.)*
 2. **Glossar Englisch/Deutsch:** Benutzer reicht nach; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
 3. *(Erledigt: Entscheid (3) in [decisions.md](decisions.md) „Entscheide nach Review Phase 2“, Regel Z4 in [mapping.md](mapping.md).)*
-4. **Phase 4: Dateien mit `DOCTYPE` vor lxml abweisen.** lxml stürzt bei der Schema-Prüfung von `fixtures/security_xxe.xml` mit „Internal error“ ab (geprüft 31.10.2026). Die Regel steht bereits in den Qualitätsregeln; der Testfall ist vorhanden.
+4. *(Erledigt in Phase 4: Dateien mit `DOCTYPE` weist der Einleser vor lxml ab, `parse_safely` ein zweites Mal; Tests `test_xxe_and_doctype_are_rejected_without_leaking`.)*
 5. *(Erledigt: Entscheid (1) „Zieltypen aus der XSD“ in [decisions.md](decisions.md).)*
 6. *(Erledigt: Entscheid (2) „Abweichende Version“ in [decisions.md](decisions.md).)*
 7. **Öffnen grosser Dateien (Phase 2, Code-Review).** Die Auflösung stellt je Referenz mehrere Abfragen an den Index, und `object_detail`/`reference_view` fragen je Verweis einzeln ab (Ziel, Besitzer, Frame); alle Referenzen liegen bis zum Ende im Speicher; für die kleinen Guide-Dateien unkritisch, für grosse Lieferungen ungeeignet. Wird mit Variante B des Index (Entscheid „Index: alle Elemente im Arbeitsspeicher“) angepasst. Gilt auch für die Fahrtansicht (Phase 3): je Halt mehrere Einzelabfragen (Haltestellenzuordnung, Verweise, Stammdaten); bei den kleinen Dateien unkritisch.
+
+18. **Phase 4: „11 Beispiele“ im Entscheid „Prüfergebnisse Guide-Beispiele“.** Die Messung mit `general_rules.sch` ergibt 121 `order`-Verstösse (Summe stimmt, Beispiel 22: 66) in **9** Beispielen (02, 03, 08, 12, 14, 19, 20, 21, 22), nicht in 11. Empfehlung: Zahl im Entscheid auf 9 berichtigen (kein Einfluss auf die Umsetzung).
+19. **Phase 4: Dateien mit Version „mehrdeutig“ oder „unbekannt“ lassen sich nicht prüfen.** Eine eigene 2.0-Datei ohne genügend Hinweise (z. B. nur `version="2.1"` ohne Struktur) wird nicht gegen 2.0 geprüft (Entscheid „Eigene Dateien prüfen“: keine irreführende Prüfung). Empfehlung: ein Knopf „trotzdem als CH 2.0 prüfen“, der die Prüfung auf ausdrücklichen Wunsch erzwingt und das im Ergebnis vermerkt (kleiner Aufwand: ein Parameter im Endpunkt).
+20. **Phase 4: Welches Guide-Kapitel verlinkt wird.** `A5_annex_index.md` nennt mehrere Kapitel je Element (z. B. `ServiceJourney`: 02_files, 03_xml_modelling, … 08_timetable). Umgesetzt: das erste. Für `ServiceJourney` ist das `02_files`, nicht das Kapitel der Fahrplanregeln (`08_timetable`). Empfehlung: je Regel ein festes Kapitel in der Regelliste (Kernregeln: `08_timetable`), für Schematron/XSD das erste Kapitel des Index.
+21. **Phase 4: Fixtures ohne Produktkategorie.** Die `ch20_*`-Fixtures ausser `ch20_three_stops.xml` haben keine `TypeOfProductCategoryRef` und verletzen deshalb CH-SJ-07, wenn man sie prüft. Empfehlung: so lassen (jede Fixture hat ihren Zweck) oder alle ergänzen.
 
 ## Zurückgestellt
 

@@ -20,6 +20,8 @@ from app.core.guide.status import ExampleChange, GuideTestState
 from app.core.index.references import ResolveStatus
 from app.core.messages import MessageKey, Severity
 from app.core.projection.common import LookupStatus
+from app.core.validation.core_rules import RuleKind
+from app.core.validation.detection import DetectionStatus, Evidence, ProfileVersion
 from app.core.validation.steps import CHECK_STEPS, CheckStatus
 from app.server.errors import ErrorKey
 from tests.support import LOCALES_DIR
@@ -44,6 +46,10 @@ def required_keys() -> set[str]:
     keys |= {f"diagnostics.category.{category}" for category in DiagnosticCategory}
     keys |= {f"examples.result.{result}" for result in ExampleResult}
     keys |= {f"examples.change.{change}" for change in ExampleChange}
+    keys |= {f"detection.status.{status}" for status in DetectionStatus}
+    keys |= {f"detection.profile.{profile}" for profile in ProfileVersion}
+    keys |= {f"detection.evidence.{evidence}" for evidence in Evidence}
+    keys |= {f"coreRule.kind.{kind}" for kind in RuleKind}
     keys |= {f"lookup.{status}" for status in LookupStatus}
     keys |= {f"refs.status.{status}" for status in ResolveStatus}
     keys |= {f"language.{language}" for language in SUPPORTED_LANGUAGES}

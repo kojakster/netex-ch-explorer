@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from app.core.dataset import Dataset, SourceFile, open_dataset
-from app.core.diagnostics import DiagnosticCategory
-from app.core.messages import Severity
+from app.core.diagnostics import Diagnostic, DiagnosticCategory
+from app.core.messages import MessageKey, Severity
 from tests.support import FIXTURES_DIR, REF_TARGETS, objects_by_id
 
 
@@ -208,3 +208,51 @@ def test_referencing_parents_has_no_limit_and_matches_unresolved_ids() -> None:
     assert found == sorted(found, key=lambda row: row.id)
     assert index.referencing_parents(point, ("ToPointRef",), "TimingLink") == []
     assert index.referencing_parents(point, ("FromPointRef",), "Gibtsnicht") == []
+
+
+def test_diagnostics_can_be_added_and_cleared() -> None:
+    dataset = load("ch20_three_stops.xml")
+    index = dataset.index
+    position = index.position_at(1, 5, 3)
+    assert position is not None
+    diagnostic = Diagnostic(
+        DiagnosticCategory.XSD, Severity.ERROR, MessageKey.XSD_VIOLATION, {"detail": "x"}, position
+    )
+    index.add_diagnostics(1, [diagnostic])
+    [item] = index.diagnostics(DiagnosticCategory.XSD)
+    assert item.diagnostic == diagnostic
+    index.clear_diagnostics([DiagnosticCategory.PROFILE_RULE])
+    assert len(index.diagnostics(DiagnosticCategory.XSD)) == 1
+    index.clear_diagnostics([DiagnosticCategory.XSD, DiagnosticCategory.PROFILE_RULE])
+    assert index.diagnostics(DiagnosticCategory.XSD) == []
+    dataset.close()
+
+
+def test_position_at_line_and_column() -> None:
+    dataset = load("ch20_three_stops.xml")
+    index = dataset.index
+    text = index.file_text(1)
+    assert text is not None
+    lines = text.split("\n")
+    position = index.position_at(1, 3, 2)
+    assert position is not None
+    assert (position.line, position.column) == (3, 2)
+    assert text[position.char] == lines[2][1]
+    assert position.byte == len(text[: position.char].encode())
+    indented = index.position_at(1, 10, skip_indent=True)
+    assert indented is not None
+    assert text[indented.char] == "<"
+    assert indented.column == len(lines[9]) - len(lines[9].lstrip()) + 1
+    last = index.position_at(1, 10**6, 10**6)
+    assert last is not None
+    assert last.line == len(lines)
+    assert index.position_at(9, 1) is None
+    dataset.close()
+
+
+def test_elements_named_includes_elements_without_id() -> None:
+    dataset = load("ch20_three_stops.xml")
+    names = dataset.index.elements_named(["ServiceJourney", "DepartureTime"])
+    assert {row.name for row in names} == {"ServiceJourney", "DepartureTime"}
+    assert [row.id for row in names] == sorted(row.id for row in names)
+    dataset.close()

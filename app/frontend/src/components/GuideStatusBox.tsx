@@ -51,6 +51,23 @@ export function GuideStatusBox({ guide }: GuideStatusBoxProps) {
               </>
             )}
           </dd>
+          {guide.xsdPresent && (
+            <>
+              <dt>{t("guide.validation")}</dt>
+              <dd>
+                {guide.examplesReady ? (
+                  <>
+                    <span aria-hidden="true">{OK_SYMBOL}</span> {t("guide.validationReady")}
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden="true">{SEVERITY_SYMBOLS.info}</span>{" "}
+                    {t(guide.xsdLoaded ? "guide.examplesChecking" : "guide.xsdLoading")}
+                  </>
+                )}
+              </dd>
+            </>
+          )}
           <dt>{t("guide.test")}</dt>
           <dd>
             <span aria-hidden="true">{testSymbol}</span> {t(`guide.testState.${guide.testState}`)}

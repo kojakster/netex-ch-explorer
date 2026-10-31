@@ -1,6 +1,6 @@
 # Lokale Schnittstelle (JSON)
 
-Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 3.
+Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 4.
 
 ## Allgemein
 
@@ -23,6 +23,7 @@ Jeder Fehler hat dieselbe Form, ohne interne Details (keine Stacktraces):
 | `error.not_found` | 404 | Pfad unbekannt |
 | `error.method_not_allowed` | 405 | Methode nicht erlaubt |
 | `error.invalid_request` | 422 | Ungültige Parameter |
+| `error.payload_too_large` | 413 | Upload grösser als erlaubt, mit zu vielen Dateien oder ohne `Content-Length` |
 | `error.http` | andere 4xx/5xx | Allgemeiner HTTP-Fehler |
 | `error.internal` | 500 | Programmfehler (Details nur im Serverprotokoll) |
 
@@ -38,7 +39,7 @@ Alle Schlüssel des Kerns stehen in `app/core/messages.py` (`MessageKey`), die d
 
 ### `GET /api/guide`
 
-Guide-Status für die Guide-Status-Box. Wird beim Start einmal ermittelt; nach einem Guide-Update den Server neu starten.
+Guide-Status für die Guide-Status-Box. Wird beim Start ermittelt; nach einem Guide-Update den Server neu starten. **Die Beispiele werden im Hintergrund geprüft** (die XSD braucht rund 17 s zum Laden): Bis `examplesReady` `true` ist, enthält `examples` nur Namen und Titel (`result` ist `null`); die Oberfläche fragt dann alle 2 s nach. `xsdLoaded` zeigt, ob die XSD geladen ist.
 
 ```json
 {
@@ -51,11 +52,13 @@ Guide-Status für die Guide-Status-Box. Wird beim Start einmal ermittelt; nach e
   "testState": "tested | differs | never_tested | unknown",
   "testedCommit": "b7ac15860369818a8fb53c64ed6f71318f019380",
   "mappingSheets": [{ "name": "StopUse", "headerRow": 3, "rows": 4 }],
+  "examplesReady": true,
+  "xsdLoaded": true,
   "examples": [
     {
       "name": "01_NeTEx_Spiez_Interlaken_Ost.xml",
       "title": "Basic train with TimeDemandType",
-      "result": "clean | notes | errors | unreadable",
+      "result": "clean | notes | errors | unreadable | null",
       "counts": { "error": 0 },
       "change": "unchanged | changed | new | untested"
     }
@@ -64,6 +67,7 @@ Guide-Status für die Guide-Status-Box. Wird beim Start einmal ermittelt; nach e
 }
 ```
 
+- `result` zählt die Prüfungen der **Datei** (Entscheid „Kernregeln Phase 4“ (6)): XML-Syntax, XSD, `general_rules.sch` (inkl. `order`), Kernregeln und Referenzen. Befunde der Fahrtansicht zählen nicht.
 - `branch` ist `null` bei losgelöstem HEAD; `commit`/`xsdCommit` sind `null`, wenn nicht bestimmbar.
 - Kein Commit-Datum (Entscheid „Guide-Stand ohne Datum“). `testState` `differs` heisst „weicht vom zuletzt getesteten Stand ab“ (Guide- oder XSD-Commit).
 - Mögliche Meldungen: `guide.not_found`, `guide.not_git`, `guide.git_unreadable`, `guide.xsd_missing`, `guide.never_tested`, `guide.tested_differs`, `guide.test_record_invalid`, `mapping.*`.
@@ -80,6 +84,7 @@ Daten für Farblegende, Hilfeseite und Sprache. Ergänzt den Plan (Abschnitt 5),
   "notRelevantElements": ["SiteFacilitySet"],
   "features": ["guide_status", "frame_legend", "language_switch", "help_page"],
   "checks": [{ "id": "xsd", "status": "performed | not_implemented | deferred", "sources": ["xsd/xsd/NeTEx_publication.xsd"] }],
+  "coreRules": [{ "id": "CH-SJ-13", "kind": "required | exactly_one | forbidden | value | expected", "severity": "error", "context": "ServiceJourney", "targets": ["calls"], "source": "templates/ServiceJourney.xml Z. 145-153", "allowed": [] }],
   "severities": ["error", "warning", "info"],
   "issues": []
 }
@@ -105,12 +110,33 @@ Antwort (auch `GET /api/datasets/{id}`):
 ```json
 {
   "id": "Zuf4ll1g3-ID",
-  "files": [{ "id": 1, "name": "01_….xml", "size": 16651, "sha256": "…", "readable": true, "elements": 278, "objects": 47 }],
+  "files": [{ "id": 1, "name": "01_….xml", "size": 16651, "sha256": "…", "readable": true, "elements": 278, "objects": 47,
+              "detection": Versionserkennung }],
   "objectTypes": [{ "name": "Quay", "count": 3 }],
   "frames": [Objekt, …],
-  "diagnosticCounts": { "error": 0, "warning": 0, "info": 0 }
+  "diagnosticCounts": { "error": 0, "warning": 0, "info": 0 },
+  "validation": null
 }
 ```
+
+**Versionserkennung** (`detection`, je Datei; Regeln: [mapping.md](mapping.md) „Versionserkennung“):
+
+```json
+{ "status": "detected | ambiguous | unknown", "profile": "ch_2_0 | netex_1_10 | null",
+  "reasons": [{ "evidence": "ch_2_0 | netex_1_10 | neutral", "key": "version.attribute_20", "params": { "version": "2.1" } }] }
+```
+
+`profile` ist nur bei `detected` gesetzt. Nur `ch_2_0` wird geprüft. Das Wurzelattribut `version` entscheidet nie allein.
+
+**Validierung** (`validation`, `null` bis zur ersten Prüfung, siehe `POST /api/datasets/{id}/validate`):
+
+```json
+{ "guideCommit": "b7ac158…",
+  "steps": [{ "id": "xsd | general_rules | ch_core_rules", "performed": true, "reason": Meldung | null }],
+  "files": [{ "fileId": 1, "checked": true, "reason": Meldung | null }] }
+```
+
+Das Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“. `reason` nennt, warum ein Schritt oder eine Datei nicht geprüft wurde (z. B. `validation.file_skipped_profile`, `validation.step_unavailable`).
 
 **Objekt** (in allen Antworten gleich):
 
@@ -122,6 +148,27 @@ Antwort (auch `GET /api/datasets/{id}`):
   "colorKey": "SiteFrame | … | unknown | notRelevant | null", "notRelevant": false
 }
 ```
+
+### `POST /api/datasets/upload` (eigene Dateien)
+
+Öffnet eigene Dateien aus dem Dialog „Datei öffnen“ der Oberfläche: eine XML-Datei, mehrere XML-Dateien oder ZIP-Dateien. **Eigener Endpunkt** (technische Festlegung): `POST /api/datasets` bleibt für Beispiele des Guides. Es gibt keine Pfadeingabe; die Schnittstelle nimmt nie Dateipfade entgegen.
+
+- Anfrage: `multipart/form-data`, ein oder mehrere Teile mit dem Namen `files`. Pflicht ist `Content-Length` (sonst 413).
+- Grenzen aus `config/settings.json` (`zipLimits`): Der Upload darf `maxTotalBytes` (plus 1 MB Multipart-Rahmen) nicht überschreiten, höchstens `maxFiles` Dateien (sonst 413 `error.payload_too_large`, ohne den Rumpf zu lesen). Je Datei gilt `maxFileBytes`; ZIP: Gesamtgrösse entpackt, Anzahl Einträge, Kompressionsrate (ab 1 MiB je Eintrag), Einzelgrösse.
+- Dateinamen werden bereinigt (kein Ordnerteil, nur Buchstaben, Ziffern und `. - _ ( ) + , @ = Leerzeichen`; Geräte­namen unter Windows erhalten ein `_`); eine Änderung meldet `file.name_changed` (ℹ Hinweis).
+- Nur `.xml` (direkt oder im ZIP) wird gelesen. Andere Dateien: `file.type_unsupported` (⚠). Im ZIP: Einträge mit `..`, absolutem Pfad oder Laufwerk (`zip.unsafe_path`), Symlinks (`zip.symlink`), zu grosse oder zu stark komprimierte Einträge werden übersprungen (⚠); andere Einträge (und `__MACOSX`, `._…`) erscheinen als ein Hinweis `zip.entries_skipped`. Ein nicht lesbares, zu grosses oder mit zu vielen Einträgen versehenes Archiv wird nicht entpackt (`zip.unreadable`, `zip.total_too_large`, `zip.too_many_files`).
+- Alle Meldungen erscheinen als **Diagnosen der Art `file`** zur Datei bzw. zum Archiv (Eintrag ohne Inhalt, `readable: false`); der Aufruf stürzt nie ab und liefert 200 mit der Datensatzübersicht (wie `POST /api/datasets`, jede Datei mit `detection`).
+- Die Dateien liegen nur in `work/` (per `.gitignore` ausgeschlossen) und werden beim Schliessen des Datensatzes (`DELETE`), beim Herausfallen aus der Liste der 10 offenen Datensätze und beim Start gelöscht.
+
+### `DELETE /api/datasets/{id}`
+
+Schliesst den Datensatz und löscht seine Dateien in `work/`. 204 ohne Inhalt; unbekannte oder ungültige ID: 404. Die Oberfläche ruft das beim Öffnen eines anderen Datensatzes auf.
+
+### `POST /api/datasets/{id}/validate`
+
+Startet die Validierung (Plan Abschnitt 8) für alle Dateien, die als **CH 2.0 erkannt** sind; Dateien anderer Version (z. B. 1.10), mehrdeutige, unbekannte und nicht lesbare Dateien werden nicht geprüft (Grund in `validation.files[].reason`), bleiben aber im Explorer nutzbar. Ohne Rumpf. Antwort: die Datensatzübersicht wie `GET /api/datasets/{id}` mit gefülltem `validation` und aktualisierten `diagnosticCounts`.
+
+Schritte (immer in dieser Reihenfolge): `xsd` (lxml gegen `xsd/xsd/NeTEx_publication.xsd`; Art `xsd`, ⚠), `general_rules` (`src/schematron_rules/general_rules.sch` mit `lxml.isoschematron`; Art `profile_rule`, ⚠), `ch_core_rules` (Schweizer Kernregeln, [core-rules.md](core-rules.md); Art `profile_rule`, Schweregrad je Regel). Ist die XSD noch nicht geladen, blockiert der Aufruf bis zum Ende des Ladens (rund 17 s). Fehlt die XSD oder lässt sie sich nicht laden, ist der Schritt `performed: false` mit `validation.step_unavailable`. Eine wiederholte Validierung ersetzt die Befunde der Arten `xsd` und `profile_rule`. Je Schritt und Datei werden höchstens 500 Befunde aufgenommen (`validation.truncated`).
 
 ### `GET /api/datasets/{id}/journeys`
 
@@ -188,10 +235,12 @@ XML-Ausschnitt um ein Element bzw. um eine Stelle (z. B. einer Diagnose), 30 Zei
 
 ```json
 [{ "category": "xml_syntax", "severity": "error", "key": "xml.syntax_error", "params": { "detail": "mismatched tag" },
-   "fileId": 1, "fileName": "broken_xml.xml", "line": 48, "column": 34 }]
+   "fileId": 1, "fileName": "broken_xml.xml", "line": 48, "column": 34, "guideLink": null }]
 ```
 
-Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. Bisher entstehen `file` (Zeichenkodierung), `xml_syntax` (Syntaxfehler, `DOCTYPE`) und `reference` (Phase 2: `reference.unresolved` ⚠ Fehler, `reference.ambiguous` △ Warnung, `reference.external_or_unloaded` ℹ Hinweis, `reference.version_differs` ℹ Hinweis für eine aufgelöste Referenz mit abweichender Version; Parameter `element`, `ref`, `expected` bzw. bei `version_differs` `version` (Referenz) und `found` (Ziel); Stelle = das Ref-Element).
+`guideLink`: GitHub-Adresse des Guide-Kapitels im **exakt geprüften Commit** (`…/blob/<Commit>/src/08_timetable.md`), ermittelt über `src/A5_annex_index.md` aus dem Parameter `element` der Diagnose (erstes Kapitel des Index); `null` ohne Elementbezug oder ohne Eintrag.
+
+Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. Bisher entstehen `file` (Zeichenkodierung, abgewiesene Uploads und ZIP-Probleme), `xsd` (`xsd.violation` mit `detail` im Originalwortlaut der XSD-Meldung, `xsd.uncheckable`), `profile_rule` (`schematron.*` mit `rule` = `general_rules.<Muster>`; `core.*` mit `rule` = Kennung, `source` = Vorlage und Zeilen, `path`, `id`; `core.stub_journey` ℹ Hinweis für Rumpf-Fahrten), `xml_syntax` (Syntaxfehler, `DOCTYPE`) und `reference` (Phase 2: `reference.unresolved` ⚠ Fehler, `reference.ambiguous` △ Warnung, `reference.external_or_unloaded` ℹ Hinweis, `reference.version_differs` ℹ Hinweis für eine aufgelöste Referenz mit abweichender Version; Parameter `element`, `ref`, `expected` bzw. bei `version_differs` `version` (Referenz) und `found` (Ziel); Stelle = das Ref-Element).
 
 ### `GET /api/journeys/{id}`
 
@@ -229,4 +278,4 @@ Fahrtansicht einer `ServiceJourney` oder `TemplateServiceJourney`. `{id}` ist di
 
 ## Geplant
 
-`POST /api/datasets` für eigene Dateien (XML, mehrere XML, ZIP) und `POST /api/datasets/{id}/validate` folgen in Phase 4.
+Nichts mehr für die erste Ausbaustufe. Erklärungen und Korrekturvorschläge der Validierung folgen später (Entscheid „Validierung mit Erklärung“).

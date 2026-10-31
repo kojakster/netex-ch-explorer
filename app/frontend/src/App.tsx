@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type DataSource } from "./api";
 import { CalculationChain } from "./components/CalculationChain";
+import { DatasetPanel } from "./components/DatasetPanel";
 import { DiagnosticList } from "./components/DiagnosticList";
 import { ExampleList } from "./components/ExampleList";
 import { FrameLegend } from "./components/FrameLegend";
@@ -12,6 +13,7 @@ import { JourneyView } from "./components/JourneyView";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { ObjectSearch } from "./components/ObjectSearch";
 import { ObjectView } from "./components/ObjectView";
+import { OpenFiles } from "./components/OpenFiles";
 import { ProvenanceChain } from "./components/ProvenanceChain";
 import { XmlPanel, type XmlTarget } from "./components/XmlPanel";
 import { DataSourceContext, LOAD_ERROR_KEY, useLoad } from "./data";
@@ -38,6 +40,9 @@ import type {
 
 type View = "main" | "help";
 
+// Abstand der Nachfragen, solange die Beispiele noch geprüft werden (die XSD wird geladen).
+const GUIDE_POLL_MS = 2000;
+
 interface AppProps {
   dataSource: DataSource;
 }
@@ -52,9 +57,13 @@ export function App({ dataSource }: AppProps) {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [view, setView] = useState<View>("main");
+  // Name des geöffneten Beispiels; eigene Dateien haben keinen Namen in der Beispielliste.
   const [exampleName, setExampleName] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
   const [dataset, setDataset] = useState<DatasetInfo | null>(null);
   const [datasetErrorKey, setDatasetErrorKey] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [validationErrorKey, setValidationErrorKey] = useState<string | null>(null);
   const [history, setHistory] = useState(EMPTY_HISTORY);
   // Stelle einer Diagnose; ersetzt die Markierung der Auswahl, bis wieder etwas gewählt wird.
   const [positionTarget, setPositionTarget] = useState<XmlTarget | null>(null);
@@ -94,6 +103,32 @@ export function App({ dataSource }: AppProps) {
     };
   }, [dataSource]);
 
+  // Solange die Beispiele geprüft werden, fragt die Oberfläche den Stand regelmässig nach.
+  useEffect(() => {
+    if (guide === null || guide.examplesReady) {
+      return;
+    }
+    let active = true;
+    const timer = window.setTimeout(() => {
+      dataSource
+        .getGuide()
+        .then((next) => {
+          if (active) {
+            setGuide(next);
+          }
+        })
+        .catch((error: unknown) => {
+          if (active) {
+            setErrorKey(errorKeyOf(error));
+          }
+        });
+    }, GUIDE_POLL_MS);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [guide, dataSource]);
+
   const i18n = useMemo(() => {
     const messages = messagesFor(language);
     return {
@@ -108,26 +143,60 @@ export function App({ dataSource }: AppProps) {
     document.documentElement.lang = language;
   }, [language]);
 
-  const openExample = (name: string) => {
+  /** Schliesst den bisherigen Datensatz auf dem Server (löscht seine Dateien in work/). */
+  const closeDataset = (id: string) => {
+    dataSource.closeDataset(id).catch(() => undefined);
+  };
+
+  const openDataset = (open: () => Promise<DatasetInfo>, name: string | null) => {
+    if (dataset !== null) {
+      closeDataset(dataset.id);
+    }
     setExampleName(name);
+    setOpening(true);
     setDataset(null);
     setDatasetErrorKey(null);
+    setValidationErrorKey(null);
     setHistory(EMPTY_HISTORY);
     setPositionTarget(null);
     openRequest.current += 1;
     const request = openRequest.current;
-    dataSource
-      .openExample(name)
+    open()
       .then((opened) => {
         if (request === openRequest.current) {
           setDataset(opened);
+          setOpening(false);
+        } else {
+          closeDataset(opened.id);
         }
       })
       .catch((error: unknown) => {
         if (request === openRequest.current) {
           setDatasetErrorKey(errorKeyOf(error));
+          setOpening(false);
         }
       });
+  };
+
+  const openExample = (name: string) => openDataset(() => dataSource.openExample(name), name);
+
+  const openFiles = (files: File[]) => openDataset(() => dataSource.openFiles(files), null);
+
+  const validate = () => {
+    if (dataset === null) {
+      return;
+    }
+    const id = dataset.id;
+    setValidating(true);
+    setValidationErrorKey(null);
+    dataSource
+      .validate(id)
+      .then((validated) => {
+        // Nur anwenden, wenn derselbe Datensatz noch offen ist.
+        setDataset((current) => (current?.id === id ? validated : current));
+      })
+      .catch((error: unknown) => setValidationErrorKey(errorKeyOf(error)))
+      .finally(() => setValidating(false));
   };
 
   /** Zeigt ein Objekt oder eine Fahrt und markiert darin eine Angabe (Standard: das Objekt selbst). */
@@ -242,6 +311,7 @@ export function App({ dataSource }: AppProps) {
                   </section>
                 )}
                 <FrameLegend colors={appInfo.frameColors} onHelp={() => setView("help")} />
+                <OpenFiles onOpen={openFiles} />
                 {guide !== null && (
                   <ExampleList
                     examples={guide.examples}
@@ -250,11 +320,15 @@ export function App({ dataSource }: AppProps) {
                   />
                 )}
                 {datasetErrorKey !== null && <p role="alert">{t(datasetErrorKey)}</p>}
-                {exampleName !== null && dataset === null && datasetErrorKey === null && (
-                  <p>{t("app.loading")}</p>
-                )}
+                {opening && datasetErrorKey === null && <p>{t("app.loading")}</p>}
                 {dataset !== null && (
                   <>
+                    <DatasetPanel
+                      dataset={dataset}
+                      validating={validating}
+                      validationErrorKey={validationErrorKey}
+                      onValidate={validate}
+                    />
                     <JourneyList
                       journeys={journeys.data}
                       errorKey={journeys.errorKey}
@@ -262,7 +336,11 @@ export function App({ dataSource }: AppProps) {
                       onOpenJourney={openJourney}
                     />
                     <ObjectSearch dataset={dataset} onSelect={selectObject} />
-                    <DiagnosticList datasetId={dataset.id} onShow={showDiagnostic} />
+                    <DiagnosticList
+                      datasetId={dataset.id}
+                      refreshKey={dataset.validation === null ? "open" : "validated"}
+                      onShow={showDiagnostic}
+                    />
                   </>
                 )}
               </aside>

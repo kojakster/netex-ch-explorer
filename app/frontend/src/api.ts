@@ -18,6 +18,10 @@ export interface DataSource {
   getAppInfo(): Promise<AppInfo>;
   getGuide(): Promise<GuideInfo>;
   openExample(name: string): Promise<DatasetInfo>;
+  /** Öffnet eigene Dateien aus dem Dialog „Datei öffnen“ (XML oder ZIP). */
+  openFiles(files: readonly File[]): Promise<DatasetInfo>;
+  validate(datasetId: string): Promise<DatasetInfo>;
+  closeDataset(datasetId: string): Promise<void>;
   getJourneys(datasetId: string): Promise<JourneyInfo[]>;
   getJourney(journeyId: string): Promise<JourneyViewInfo>;
   searchObjects(datasetId: string, params: SearchParams): Promise<ObjectSearchResult>;
@@ -54,23 +58,29 @@ function errorKey(body: unknown): string {
   return FALLBACK_ERROR_KEY;
 }
 
+async function failure(response: Response): Promise<ApiError> {
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    // Antwort ohne JSON-Inhalt: allgemeiner Fehlerschlüssel.
+  }
+  return new ApiError(errorKey(body));
+}
+
 async function requestJson<T>(
   fetcher: typeof fetch,
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const response = await fetcher(path, {
-    ...init,
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-  });
+  // Bei einem FormData-Rumpf setzt der Browser Content-Type samt Multipart-Grenze selbst.
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (!(init.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
+  const response = await fetcher(path, { ...init, headers });
   if (!response.ok) {
-    let body: unknown = null;
-    try {
-      body = await response.json();
-    } catch {
-      // Antwort ohne JSON-Inhalt: allgemeiner Fehlerschlüssel.
-    }
-    throw new ApiError(errorKey(body));
+    throw await failure(response);
   }
   return (await response.json()) as T;
 }
@@ -98,6 +108,30 @@ export class HttpDataSource implements DataSource {
       method: "POST",
       body: JSON.stringify({ example: name }),
     });
+  }
+
+  openFiles(files: readonly File[]): Promise<DatasetInfo> {
+    const form = new FormData();
+    for (const file of files) {
+      form.append("files", file, file.name);
+    }
+    return requestJson<DatasetInfo>(this.fetcher, "api/datasets/upload", {
+      method: "POST",
+      body: form,
+    });
+  }
+
+  validate(datasetId: string): Promise<DatasetInfo> {
+    return requestJson<DatasetInfo>(this.fetcher, `api/datasets/${enc(datasetId)}/validate`, {
+      method: "POST",
+    });
+  }
+
+  async closeDataset(datasetId: string): Promise<void> {
+    const response = await this.fetcher(`api/datasets/${enc(datasetId)}`, { method: "DELETE" });
+    if (!response.ok) {
+      throw await failure(response);
+    }
   }
 
   getJourneys(datasetId: string): Promise<JourneyInfo[]> {

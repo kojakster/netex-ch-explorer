@@ -71,6 +71,30 @@ export function HelpPage({ appInfo, guide, onBack }: HelpPageProps) {
       </section>
 
       <section>
+        <h2>{t("help.coreRules")}</h2>
+        <p>{t("help.coreRulesText")}</p>
+        <dl className="help-core-rules">
+          {appInfo.coreRules.map((rule) => (
+            <div key={rule.id}>
+              <dt>
+                {rule.id} <span aria-hidden="true">{SEVERITY_SYMBOLS[rule.severity]}</span>{" "}
+                {t(`severity.${rule.severity}`)}
+              </dt>
+              <dd>
+                {t(`coreRule.kind.${rule.kind}`, {
+                  context: rule.context,
+                  path: rule.targets.join(" | "),
+                  allowed: rule.allowed.join(", "),
+                })}
+                <br />
+                {t("help.source")}: <code className="source">{rule.source}</code>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      <section>
         <h2>{t("help.severities")}</h2>
         <dl>
           {appInfo.severities.map((severity) => (

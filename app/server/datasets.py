@@ -24,7 +24,8 @@ class DatasetRegistry:
     """Hält die zuletzt geöffneten Datensätze; der älteste fällt bei Überlauf heraus.
 
     Ein herausgefallener Datensatz wird nicht ausdrücklich geschlossen: Eine laufende Anfrage kann
-    ihn noch benutzen. Sein Speicher wird frei, sobald niemand mehr auf ihn verweist.
+    ihn noch benutzen. Seine Dateien in `work/` werden gelöscht, sein Speicher wird frei, sobald
+    niemand mehr auf ihn verweist.
     """
 
     def __init__(self, max_open: int = MAX_OPEN_DATASETS) -> None:
@@ -37,9 +38,24 @@ class DatasetRegistry:
         dataset_id = secrets.token_urlsafe(_TOKEN_BYTES)
         with self._lock:
             self._datasets[dataset_id] = dataset
+            evicted = []
             while len(self._datasets) > self._max_open:
-                self._datasets.popitem(last=False)
+                evicted.append(self._datasets.popitem(last=False)[1])
+        for old in evicted:
+            # Der Index bleibt für laufende Anfragen benutzbar; nur die Dateien in work/ gehen weg.
+            old.release_files()
         return dataset_id
+
+    def remove(self, dataset_id: str) -> bool:
+        """Schliesst einen Datensatz (löscht seine Dateien in `work/`); `False`, wenn unbekannt."""
+        if not _DATASET_ID.match(dataset_id):
+            return False
+        with self._lock:
+            dataset = self._datasets.pop(dataset_id, None)
+        if dataset is None:
+            return False
+        dataset.close()
+        return True
 
     def get(self, dataset_id: str) -> Dataset | None:
         """Datensatz zur ID; `None` bei unbekannter oder ungültiger ID."""

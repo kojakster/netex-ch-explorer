@@ -2,7 +2,7 @@
 
 Lokales Werkzeug, um Schweizer NeTEx-Dateien visuell und selbsterklärend zu verstehen: Fahrt als Fahrplan, Herkunft jeder Angabe bis zur Stelle im XML, Frame-Farben, Objekte und Verweise, Fehler mit Guide-Verweis.
 
-> **Stand:** Phase 3 (Fahrtansicht CH 2.0) des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte, zeigt jedes Objekt mit Frame, Stelle, Verweisen vor und zurück und exakter Markierung im XML, und zeigt jede Fahrt als Fahrplan: Halte in XML-Reihenfolge, berechnete Zeiten mit Rechenkette, Tageswechsel, Betriebstage, Angebote, Teilstrecken und Hinweise, jede Angabe mit Herkunft. Eigene Dateien und die Prüfungen (XSD, Profilregeln) folgen in den nächsten Phasen. Unter Windows noch **nicht getestet**.
+> **Stand:** Phase 4 (Eigene Dateien und Validierung) des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte, zeigt jedes Objekt mit Frame, Stelle, Verweisen vor und zurück und exakter Markierung im XML, und zeigt jede Fahrt als Fahrplan: Halte in XML-Reihenfolge, berechnete Zeiten mit Rechenkette, Tageswechsel, Betriebstage, Angebote, Teilstrecken und Hinweise, jede Angabe mit Herkunft. Eigene Dateien (XML, mehrere XML oder ZIP) öffnet der Dialog „Datei öffnen“; das Tool erkennt ihre Version und prüft CH-2.0-Dateien mit XSD, den allgemeinen Guide-Regeln und den Schweizer Kernregeln für den Fahrplan (Ergebnis „geprüft gegen Entwurf <Commit>“). Unter Windows noch **nicht getestet**.
 
 ## Ordnerstruktur
 
@@ -140,6 +140,15 @@ Im Ordner `netex-ch-explorer`:
 
 Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist (beim ersten Start rund eine Minute), startet den Server auf `http://127.0.0.1:8765/` und öffnet den Browser. Beenden mit **Ctrl+C**. Optionen: `--port 9000`, `--no-browser`.
 
+Nach dem Start lädt das Tool im Hintergrund die XSD des Guides (rund 17 Sekunden) und prüft die Beispiele; die Guide-Status-Box zeigt „XSD wird geladen …", solange das läuft. Danach zeigt die Beispielliste den Status jedes Beispiels (XML-Syntax, XSD, Guide-Regeln, Kernregeln, Referenzen).
+
+### Eigene Dateien öffnen und prüfen
+
+1. In der linken Spalte **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
+2. Unter **Geöffnete Dateien** steht je Datei die erkannte Version mit Begründung (Namensraum, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur). Nur Dateien, die als CH-Profil 2.0 erkannt sind, werden geprüft; andere (z. B. NeTEx 1.10) bleiben im Explorer ansehbar.
+3. **Prüfen** startet XSD-Prüfung, die Regeln von `general_rules.sch` und die Kernregeln. Befunde erscheinen unter **Diagnosen**, getrennt nach Art, mit Schweregrad, Stelle (Klick markiert sie im XML) und Link auf das Guide-Kapitel im geprüften Commit.
+4. Abgewiesene Dateien (falscher Typ, zu gross, unsichere ZIP-Einträge …) erscheinen als Diagnosen der Art „Datei“. Die Grenzwerte stehen in `config/settings.json` (`zipLimits`).
+
 ### 6. Funktion prüfen (optional)
 
 ```bash
@@ -196,7 +205,7 @@ Für den ersten Test an einem Windows-PC (Windows gilt bis dahin als „nicht ge
 
 ## Bekannte Grenzen
 
-- Phase 3: keine eigenen Dateien (nur die Beispiele des Guides); geprüft werden XML-Syntax, Referenzen und die Plausibilität der Fahrtansicht, nicht XSD und Profilregeln (die Hilfeseite listet die übrigen Prüfungen als „nicht durchgeführt“).
+- Phase 4: Geprüft werden XML-Syntax, Referenzen, XSD, `general_rules.sch` und 30 Schweizer Kernregeln für den Fahrplan; die übrigen rund 330 Profilregeln sind noch nicht eingebunden (die Hilfeseite listet sie als „nicht durchgeführt“). Erklärungen und Korrekturvorschläge zu den Befunden folgen später. Grosse Lieferungen (12 GB) sind nicht Ziel dieser Stufe (Grenzwerte: 200 MB gesamt, 50 MB je Datei).
 - Fahrtansicht: Nicht dargestellt sind Zieländerungen (`DestinationDisplay`), Formation, Flügelung, Durchbindung, Bedarfsverkehr und Takt; sie bleiben im Objekt-Explorer einsehbar. Die Angaben der Beispiele des Guides enthalten Widersprüche ([docs/assumptions.md](docs/assumptions.md)); das Tool zeigt sie, korrigiert sie aber nicht.
 - Nur Dateien in UTF-8 (oder ASCII); Dateien mit `DOCTYPE` werden aus Sicherheitsgründen nicht gelesen.
 - Kein Commit-Datum des Guides (bewusst, siehe `docs/decisions.md`).

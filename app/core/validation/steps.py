@@ -44,14 +44,20 @@ CHECK_STEPS: Final = (
             for name in ("ServiceJourney.xml", "TimeDemandType.xml", "JourneyPart.xml")
         ),
     ),
-    CheckStep("xsd", CheckStatus.NOT_IMPLEMENTED, (str(XSD_MAIN_FILE),)),
-    CheckStep("general_rules", CheckStatus.NOT_IMPLEMENTED, (str(GENERAL_RULES_FILE),)),
+    CheckStep("xsd", CheckStatus.PERFORMED, (str(XSD_MAIN_FILE),)),
+    CheckStep("general_rules", CheckStatus.PERFORMED, (str(GENERAL_RULES_FILE),)),
     CheckStep(
         "ch_core_rules",
-        CheckStatus.NOT_IMPLEMENTED,
+        CheckStatus.PERFORMED,
         tuple(
             f"{TEMPLATES_DIR}/{name}"
-            for name in ("ServiceJourney.xml", "ServiceJourneyPattern.xml", "TimeDemandType.xml")
+            for name in (
+                "ServiceJourney.xml",
+                "ServiceJourneyPattern.xml",
+                "TimeDemandType.xml",
+                "TimingLink.xml",
+                "JourneyPart.xml",
+            )
         ),
     ),
     CheckStep("ch_profile_rules", CheckStatus.DEFERRED, (str(TEMPLATES_DIR),)),

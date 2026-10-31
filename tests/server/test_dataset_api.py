@@ -23,7 +23,9 @@ def client(synthetic_guide: Path, tmp_path: Path) -> TestClient:
     config = load_config(PROJECT_ROOT)
     config = replace(config, settings=replace(config.settings, guide_path=synthetic_guide))
     runtime = Runtime(
-        config=config, guide=inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS)
+        config=config,
+        guide=inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS),
+        work_dir=tmp_path / "work",
     )
     return TestClient(create_app(runtime, None), base_url=BASE_URL)
 
@@ -60,10 +62,14 @@ def test_open_example(client: TestClient) -> None:
             "size": (FIXTURES_DIR / "ch20_three_stops.xml").stat().st_size,
             "sha256": data["files"][0]["sha256"],
             "readable": True,
-            "elements": 113,
-            "objects": 33,
+            "elements": 121,
+            "objects": 35,
+            "detection": data["files"][0]["detection"],
         }
     ]
+    assert data["files"][0]["detection"]["status"] == "detected"
+    assert data["files"][0]["detection"]["profile"] == "ch_2_0"
+    assert data["validation"] is None
     assert data["diagnosticCounts"] == {"error": 0, "warning": 0, "info": 0}
     assert {"name": "Quay", "count": 3} in data["objectTypes"]
     assert data == client.get(f"/api/datasets/{data['id']}").json()
@@ -199,7 +205,9 @@ def test_xml_offsets_for_browser_with_crlf(tmp_path: Path, synthetic_guide: Path
     config = load_config(PROJECT_ROOT)
     config = replace(config, settings=replace(config.settings, guide_path=synthetic_guide))
     runtime = Runtime(
-        config=config, guide=inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS)
+        config=config,
+        guide=inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS),
+        work_dir=tmp_path / "work",
     )
     client = TestClient(create_app(runtime, None), base_url=BASE_URL)
     dataset_id = open_example(client)["id"]
@@ -360,7 +368,9 @@ def test_journey_view_with_offers_and_notices(synthetic_guide: Path, tmp_path: P
     config = load_config(PROJECT_ROOT)
     config = replace(config, settings=replace(config.settings, guide_path=synthetic_guide))
     guide = inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS)
-    client = TestClient(create_app(Runtime(config, guide), None), base_url=BASE_URL)
+    client = TestClient(
+        create_app(Runtime(config, guide, tmp_path / "work"), None), base_url=BASE_URL
+    )
     view = journey_view(client, "ch20_offers.xml")
     [category, _] = view["categories"]
     assert category["shortName"]["text"] == "SYN"

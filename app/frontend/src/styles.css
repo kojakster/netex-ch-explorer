@@ -821,3 +821,35 @@ select:focus-visible {
     max-height: none;
   }
 }
+
+/* Eigene Dateien, Versionserkennung und Prüfergebnis */
+.open-files button,
+.dataset-panel > button {
+  margin-top: 0.25rem;
+}
+
+.dataset-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dataset-files li {
+  margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.detection ul,
+.validation-result ul {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+
+.validation-result {
+  margin-top: 0.5rem;
+}
+
+.diagnostic-category h3 {
+  font-size: 1rem;
+  margin: 0.75rem 0 0.25rem;
+}

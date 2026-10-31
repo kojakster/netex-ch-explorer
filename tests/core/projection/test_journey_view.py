@@ -32,7 +32,8 @@ def test_header_of_three_stops() -> None:
         ("journey", "rail", LookupStatus.ABSENT),
         ("line", "rail", LookupStatus.ABSENT),
     ]
-    assert view.categories == []
+    [category] = view.categories
+    assert category.role == "journey"
     [validity] = view.validities
     assert validity.days is not None
     assert validity.days.valid_count == 5

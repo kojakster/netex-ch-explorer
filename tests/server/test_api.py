@@ -33,7 +33,7 @@ def runtime(tmp_path: Path) -> Runtime:
             Issue(Severity.INFO, MessageKey.GUIDE_TESTED_DIFFERS, {"testedCommit": "bbbbbbb"}),
         ),
     )
-    return Runtime(config=load_config(tmp_path), guide=guide)
+    return Runtime(config=load_config(tmp_path), guide=guide, work_dir=tmp_path / "work")
 
 
 @pytest.fixture
@@ -55,6 +55,8 @@ def test_guide_endpoint(client: TestClient, tmp_path: Path) -> None:
         "testedCommit": SHA_B,
         "mappingSheets": [{"name": "StopUse", "headerRow": 3, "rows": 1}],
         "examples": [],
+        "examplesReady": True,
+        "xsdLoaded": False,
         "issues": [
             {
                 "severity": "info",
@@ -80,7 +82,7 @@ def test_app_endpoint(client: TestClient) -> None:
     assert data["severities"] == ["error", "warning", "info"]
     assert {
         "id": "xsd",
-        "status": "not_implemented",
+        "status": "performed",
         "sources": ["xsd/xsd/NeTEx_publication.xsd"],
     } in data["checks"]
     # Leerer Projektordner: alle vier Einstellungsdateien fehlen.

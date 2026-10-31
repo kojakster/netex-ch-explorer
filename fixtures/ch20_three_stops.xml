@@ -9,6 +9,17 @@
 		<CompositeFrame id="ch:1:CompositeFrame:SYN" version="1">
 			<frames>
 				<ResourceFrame id="ch:1:ResourceFrame:SYN" version="1">
+					<typesOfValue>
+						<ValueSet id="ch:1:ValueSet:TypeOfProductCategory" version="1" nameOfClass="TypeOfProductCategory">
+							<Name>ProductCategories</Name>
+							<values>
+								<TypeOfProductCategory id="ch:1:TypeOfProductCategory:SYN" version="1">
+									<Name>Synthetischer Zug</Name>
+									<ShortName>SYN</ShortName>
+								</TypeOfProductCategory>
+							</values>
+						</ValueSet>
+					</typesOfValue>
 					<organisations>
 						<Operator id="ch:1:sboid:SYN1" version="1">
 							<Name>Synthetische Bahn</Name>
@@ -152,6 +163,7 @@
 								<AvailabilityConditionRef ref="ch:1:AvailabilityCondition:SYN1" version="1"/>
 							</validityConditions>
 							<TransportMode>rail</TransportMode>
+							<TypeOfProductCategoryRef ref="ch:1:TypeOfProductCategory:SYN" version="1"/>
 							<ServiceAlteration>planned</ServiceAlteration>
 							<DepartureTime>08:00:00</DepartureTime>
 							<DepartureDayOffset>0</DepartureDayOffset>

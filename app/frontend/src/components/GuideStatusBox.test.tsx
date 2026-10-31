@@ -51,4 +51,20 @@ describe("GuideStatusBox", () => {
     expect(screen.queryByText("next")).toBeNull();
     expect(screen.getByText(/Kein Guide-Klon unter \/x/)).toBeTruthy();
   });
+
+  it("zeigt, dass die XSD geladen wird und die Beispiele geprüft werden", () => {
+    const { rerender } = render(
+      <GuideStatusBox guide={{ ...GUIDE, examplesReady: false, xsdLoaded: false }} />,
+    );
+    expect(screen.getByText("XSD wird geladen …")).toBeTruthy();
+    rerender(<GuideStatusBox guide={{ ...GUIDE, examplesReady: false, xsdLoaded: true }} />);
+    expect(screen.getByText("Beispiele werden geprüft …")).toBeTruthy();
+    rerender(<GuideStatusBox guide={GUIDE} />);
+    expect(screen.getByText("bereit")).toBeTruthy();
+  });
+
+  it("zeigt keine Prüfung, wenn die XSD fehlt", () => {
+    render(<GuideStatusBox guide={{ ...GUIDE, xsdPresent: false }} />);
+    expect(screen.queryByText("bereit")).toBeNull();
+  });
 });

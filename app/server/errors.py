@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.status import HTTP_413_CONTENT_TOO_LARGE
 
 from app.server.security import NO_STORE, SECURITY_HEADERS
 
@@ -22,6 +23,7 @@ class ErrorKey(StrEnum):
     NOT_FOUND = "error.not_found"
     METHOD_NOT_ALLOWED = "error.method_not_allowed"
     INVALID_REQUEST = "error.invalid_request"
+    PAYLOAD_TOO_LARGE = "error.payload_too_large"
     HTTP = "error.http"
     INTERNAL = "error.internal"
 
@@ -29,6 +31,7 @@ class ErrorKey(StrEnum):
 _KEYS_BY_STATUS: dict[int, ErrorKey] = {
     HTTPStatus.NOT_FOUND: ErrorKey.NOT_FOUND,
     HTTPStatus.METHOD_NOT_ALLOWED: ErrorKey.METHOD_NOT_ALLOWED,
+    HTTP_413_CONTENT_TOO_LARGE: ErrorKey.PAYLOAD_TOO_LARGE,
 }
 
 

@@ -1,7 +1,14 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { App } from "./App";
 import { ApiError } from "./api";
-import { APP_INFO, DATASET, fakeSource as source, TARGET_OBJECT } from "./testData";
+import {
+  APP_INFO,
+  DATASET,
+  GUIDE,
+  fakeSource as source,
+  TARGET_OBJECT,
+  VALIDATED_DATASET,
+} from "./testData";
 import type { DatasetInfo } from "./types";
 
 describe("App", () => {
@@ -300,5 +307,147 @@ describe("App mit Fahrtansicht", () => {
       getJourney: () => Promise.reject(new ApiError("error.not_found")),
     }).catch(() => undefined);
     expect((await screen.findByRole("alert")).textContent).toContain("Nicht gefunden");
+  });
+});
+
+describe("App mit eigenen Dateien und Prüfung", () => {
+  const files = [new File(["<a/>"], "eigene.xml")];
+
+  async function chooseFiles(dataSource = source()) {
+    render(<App dataSource={dataSource} />);
+    const input = (await screen.findByLabelText("Dateien auswählen")) as HTMLInputElement;
+    fireEvent.change(input, { target: { files } });
+  }
+
+  it("öffnet eigene Dateien über den Dialog und zeigt die Versionserkennung", async () => {
+    const openFiles = vi.fn(source().openFiles);
+    await chooseFiles(source({ openFiles }));
+    expect(await screen.findByText("Erkannt: CH-Profil 2.0 (Entwurf)")).toBeTruthy();
+    expect(openFiles).toHaveBeenCalledWith(files);
+    expect(await screen.findByText("Synthetische Linie")).toBeTruthy();
+  });
+
+  it("startet die Prüfung und lädt die Diagnosen neu", async () => {
+    const getDiagnostics = vi
+      .fn<ReturnType<typeof source>["getDiagnostics"]>()
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([
+        {
+          category: "profile_rule",
+          severity: "error",
+          key: "core.forbidden_present",
+          params: {
+            rule: "CH-SJ-13",
+            element: "ServiceJourney",
+            id: "ch:1:sjyid:SYN:1",
+            path: "calls",
+            source: "templates/ServiceJourney.xml Z. 145-153",
+          },
+          fileId: 1,
+          fileName: "ch20_calls.xml",
+          line: 164,
+          column: 8,
+          guideLink:
+            "https://github.com/openTdataCH/netexRealisationGuideSwitzerland/blob/b7ac158/src/02_files.md",
+        },
+      ]);
+    const validate = vi.fn(() => Promise.resolve(VALIDATED_DATASET));
+    await chooseFiles(source({ getDiagnostics, validate }));
+    fireEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
+    expect(await screen.findByText("Geprüft gegen Entwurf b7ac158")).toBeTruthy();
+    expect(validate).toHaveBeenCalledWith(DATASET.id);
+    expect(
+      await screen.findByText(/CH-SJ-13: ServiceJourney ch:1:sjyid:SYN:1 darf calls/),
+    ).toBeTruthy();
+    const link = screen.getByRole("link", { name: "Guide-Kapitel" });
+    expect(link.getAttribute("href")).toContain("/blob/b7ac158/src/02_files.md");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(screen.getByRole("heading", { name: "Profilregel" })).toBeTruthy();
+  });
+
+  it("meldet einen Fehler der Prüfung", async () => {
+    const validate = () => Promise.reject(new ApiError("error.internal"));
+    await chooseFiles(source({ validate }));
+    fireEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Interner Fehler");
+  });
+
+  it("schliesst den bisherigen Datensatz beim Öffnen eines neuen", async () => {
+    const closeDataset = vi.fn(() => Promise.resolve());
+    const openFiles = vi.fn(() => Promise.resolve({ ...DATASET, id: "SYNTHETICDATASET02" }));
+    render(<App dataSource={source({ closeDataset, openFiles })} />);
+    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
+    await screen.findByText("Synthetische Linie");
+    fireEvent.change(screen.getByLabelText("Dateien auswählen"), { target: { files } });
+    await vi.waitFor(() => expect(openFiles).toHaveBeenCalled());
+    expect(closeDataset).toHaveBeenCalledWith(DATASET.id);
+  });
+
+  it("schliesst einen Datensatz, dessen Öffnung überholt wurde", async () => {
+    let resolveFirst: (value: DatasetInfo) => void = () => undefined;
+    const first = new Promise<DatasetInfo>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const closeDataset = vi.fn(() => Promise.resolve());
+    const openExample = vi
+      .fn<(name: string) => Promise<DatasetInfo>>()
+      .mockReturnValueOnce(first)
+      .mockResolvedValue({ ...DATASET, id: "SYNTHETICDATASET02" });
+    render(<App dataSource={source({ openExample, closeDataset })} />);
+    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
+    fireEvent.click(screen.getByText("broken_xml.xml"));
+    await screen.findByText("Synthetische Linie");
+    await act(async () => {
+      resolveFirst({ ...DATASET, id: "SYNTHETICDATASET01" });
+    });
+    expect(closeDataset).toHaveBeenCalledWith("SYNTHETICDATASET01");
+  });
+
+  it("meldet einen Fehler beim Öffnen eigener Dateien", async () => {
+    const openFiles = () => Promise.reject(new ApiError("error.payload_too_large"));
+    await chooseFiles(source({ openFiles }));
+    expect((await screen.findByRole("alert")).textContent).toContain("grösser als erlaubt");
+  });
+});
+
+describe("App während die XSD geladen wird", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("fragt den Guide-Stand nach, bis die Beispiele geprüft sind", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const pending = {
+      ...GUIDE,
+      examplesReady: false,
+      xsdLoaded: false,
+      examples: GUIDE.examples.map((example) => ({ ...example, result: null })),
+    };
+    const getGuide = vi.fn().mockResolvedValueOnce(pending).mockResolvedValue(GUIDE);
+    render(<App dataSource={source({ getGuide })} />);
+    expect(await screen.findByText("XSD wird geladen …")).toBeTruthy();
+    expect(screen.getAllByText(/wird geprüft …/).length).toBe(2);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+    expect(await screen.findByText("bereit")).toBeTruthy();
+    expect(screen.getByText("ohne Meldungen")).toBeTruthy();
+    expect(getGuide).toHaveBeenCalledTimes(2);
+  });
+
+  it("zeigt einen Fehler der Nachfrage", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const pending = { ...GUIDE, examplesReady: false, xsdLoaded: false };
+    const getGuide = vi
+      .fn()
+      .mockResolvedValueOnce(pending)
+      .mockRejectedValue(new ApiError("error.internal"));
+    render(<App dataSource={source({ getGuide })} />);
+    await screen.findByText("XSD wird geladen …");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+    expect((await screen.findByRole("alert")).textContent).toContain("Interner Fehler");
   });
 });

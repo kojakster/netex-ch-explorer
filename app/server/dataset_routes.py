@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import Annotated, Final
 
-from fastapi import APIRouter, HTTPException, Query
-from starlette.status import HTTP_404_NOT_FOUND
+from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
+from starlette.status import (
+    HTTP_204_NO_CONTENT,
+    HTTP_404_NOT_FOUND,
+    HTTP_413_CONTENT_TOO_LARGE,
+)
 
-from app.core.dataset import Dataset, SourceFile, open_dataset
+from app.core.dataset import Dataset, FileNote, SourceFile, open_dataset
 from app.core.diagnostics import DiagnosticCategory
 from app.core.explorer import element_xml_window, object_detail, position_xml_window
 from app.core.guide.examples import Example, read_example
+from app.core.intake import Upload, receive
 from app.core.messages import Severity
 from app.core.projection.journey_view import build_journey_view, is_journey
 from app.core.projection.journeys import list_journeys
@@ -61,6 +67,66 @@ class _Lookup:
         return dataset_id, self.dataset(dataset_id), element_id
 
 
+def _converter(runtime: Runtime, dataset_id: str, dataset: Dataset) -> Converter:
+    return Converter(dataset_id, dataset, runtime.links, runtime.guide.revision.commit)
+
+
+def lifecycle_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
+    """Router für eigene Dateien: hochladen, validieren, schliessen."""
+    router = APIRouter(prefix="/api")
+    lookup = _Lookup(registry)
+    not_relevant = runtime.config.not_relevant_elements
+    ref_targets = runtime.config.ref_targets
+
+    @router.post("/datasets/upload")
+    def upload_files(files: Annotated[list[UploadFile], File()]) -> DatasetOut:
+        """Öffnet eigene Dateien aus dem Dialog „Datei öffnen“: XML-Dateien oder ZIP (multipart).
+
+        Die Dateien landen nur in `work/` und werden beim Schliessen des Datensatzes gelöscht.
+        Abgewiesene Dateien erscheinen als Diagnosen der Art `file`.
+        """
+        limits = runtime.config.settings.zip_limits
+        if len(files) > limits.max_files:
+            raise HTTPException(status_code=HTTP_413_CONTENT_TOO_LARGE)
+        uploads = [
+            Upload(item.filename or "", item.file.read(limits.max_total_bytes + 1))
+            for item in files
+        ]
+        session = runtime.workspace.new_session()
+        dataset: Dataset | None = None
+        try:
+            received = receive(uploads, session, limits)
+            notes = [FileNote(n.file_name, n.severity, n.key, n.params) for n in received.notes]
+            dataset = open_dataset(
+                received.sources,
+                not_relevant,
+                ref_targets,
+                notes,
+                partial(runtime.workspace.remove_session, session),
+            )
+        finally:
+            if dataset is None:
+                runtime.workspace.remove_session(session)
+        dataset_id = registry.add(dataset)
+        return _converter(runtime, dataset_id, dataset).dataset()
+
+    @router.delete("/datasets/{dataset_id}", status_code=HTTP_204_NO_CONTENT)
+    def close_dataset(dataset_id: str) -> Response:
+        """Schliesst den Datensatz und löscht seine Dateien in `work/`."""
+        if not registry.remove(dataset_id):
+            raise _not_found()
+        return Response(status_code=HTTP_204_NO_CONTENT)
+
+    @router.post("/datasets/{dataset_id}/validate")
+    def validate_dataset(dataset_id: str) -> DatasetOut:
+        """Startet die Validierung (nur als CH 2.0 erkannte Dateien) und liefert das Ergebnis."""
+        dataset = lookup.dataset(dataset_id)
+        runtime.engine.validate(dataset)
+        return _converter(runtime, dataset_id, dataset).dataset()
+
+    return router
+
+
 def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
     """Router für Datensätze: öffnen, Übersicht, Fahrten, Objektsuche, Diagnosen, XML an Stelle."""
     router = APIRouter(prefix="/api")
@@ -68,6 +134,9 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
     not_relevant = runtime.config.not_relevant_elements
     ref_targets = runtime.config.ref_targets
     lookup = _Lookup(registry)
+
+    def converter(dataset_id: str, dataset: Dataset) -> Converter:
+        return _converter(runtime, dataset_id, dataset)
 
     @router.post("/datasets")
     def open_example(request: OpenDatasetIn) -> DatasetOut:
@@ -77,19 +146,19 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
             raise _not_found()
         dataset = open_dataset([SourceFile(request.example, data)], not_relevant, ref_targets)
         dataset_id = registry.add(dataset)
-        return Converter(dataset_id, dataset).dataset()
+        return converter(dataset_id, dataset).dataset()
 
     @router.get("/datasets/{dataset_id}")
     def get_dataset(dataset_id: str) -> DatasetOut:
         """Übersicht über einen geöffneten Datensatz."""
-        return Converter(dataset_id, lookup.dataset(dataset_id)).dataset()
+        return converter(dataset_id, lookup.dataset(dataset_id)).dataset()
 
     @router.get("/datasets/{dataset_id}/journeys")
     def get_journeys(dataset_id: str) -> list[JourneyOut]:
         """Liste der Fahrten."""
         dataset = lookup.dataset(dataset_id)
-        converter = Converter(dataset_id, dataset)
-        return [converter.journey(journey) for journey in list_journeys(dataset.index)]
+        journeys = converter(dataset_id, dataset)
+        return [journeys.journey(journey) for journey in list_journeys(dataset.index)]
 
     @router.get("/datasets/{dataset_id}/objects")
     def search_objects(
@@ -101,9 +170,9 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
     ) -> ObjectSearchOut:
         """Einfache Objektsuche nach Typ und Teiltext in ID oder Name, seitenweise."""
         dataset = lookup.dataset(dataset_id)
-        converter = Converter(dataset_id, dataset)
+        objects = converter(dataset_id, dataset)
         total, rows = dataset.index.search_objects(object_type, q, limit, offset)
-        return ObjectSearchOut(total=total, items=[converter.object(row) for row in rows])
+        return ObjectSearchOut(total=total, items=[objects.object(row) for row in rows])
 
     @router.get("/datasets/{dataset_id}/diagnostics")
     def get_diagnostics(
@@ -112,8 +181,10 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
         severity: Severity | None = None,
     ) -> list[DiagnosticOut]:
         """Diagnosen, optional gefiltert nach Art und Schweregrad."""
-        index = lookup.dataset(dataset_id).index
-        return [Converter.diagnostic(item) for item in index.diagnostics(category, severity)]
+        dataset = lookup.dataset(dataset_id)
+        diagnostics = converter(dataset_id, dataset)
+        items = dataset.index.diagnostics(category, severity)
+        return [diagnostics.diagnostic(item) for item in items]
 
     @router.get("/datasets/{dataset_id}/xml")
     def get_xml_at(
@@ -127,7 +198,7 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
         window = position_xml_window(dataset.index, file, line, column)
         if window is None:
             raise _not_found()
-        return Converter(dataset_id, dataset).xml_window(window)
+        return converter(dataset_id, dataset).xml_window(window)
 
     return router
 

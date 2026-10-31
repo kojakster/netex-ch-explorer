@@ -5,6 +5,8 @@ import type { DiagnosticInfo } from "../types";
 
 interface DiagnosticListProps {
   datasetId: string;
+  /** Ändert sich nach einer Validierung, damit die Liste neu geladen wird. */
+  refreshKey?: string;
   onShow: (diagnostic: DiagnosticInfo) => void;
 }
 
@@ -29,6 +31,14 @@ export function DiagnosticItems({ diagnostics, onShow }: DiagnosticItemsProps) {
           </span>{" "}
           <span className="badge">{t(`diagnostics.category.${diagnostic.category}`)}</span>{" "}
           <span className="issue-text">{t(diagnostic.key, diagnostic.params)}</span>
+          {diagnostic.guideLink !== null && (
+            <>
+              {" "}
+              <a href={diagnostic.guideLink} target="_blank" rel="noopener noreferrer">
+                {t("diagnostics.guideLink")}
+              </a>
+            </>
+          )}
           {diagnostic.line !== null && (
             <>
               {" "}
@@ -48,10 +58,14 @@ export function DiagnosticItems({ diagnostics, onShow }: DiagnosticItemsProps) {
 }
 
 /** Diagnosen des Datensatzes; Klick zeigt die Stelle im XML. */
-export function DiagnosticList({ datasetId, onShow }: DiagnosticListProps) {
+export function DiagnosticList({ datasetId, refreshKey = "", onShow }: DiagnosticListProps) {
   const { t } = useI18n();
   const source = useDataSource();
-  const { data, errorKey } = useLoad(datasetId, () => source.getDiagnostics(datasetId));
+  const { data, errorKey } = useLoad(`${datasetId}|${refreshKey}`, () =>
+    source.getDiagnostics(datasetId),
+  );
+  // Die Arten werden nie vermischt: je Art ein eigener Abschnitt, in der Reihenfolge des Auftretens.
+  const categories = data === null ? [] : [...new Set(data.map((item) => item.category))];
   return (
     <section className="diagnostics" aria-label={t("diagnostics.title")}>
       <h2>{t("diagnostics.title")}</h2>
@@ -61,7 +75,15 @@ export function DiagnosticList({ datasetId, onShow }: DiagnosticListProps) {
           <span aria-hidden="true">{OK_SYMBOL}</span> {t("diagnostics.none")}
         </p>
       )}
-      {data !== null && data.length > 0 && <DiagnosticItems diagnostics={data} onShow={onShow} />}
+      {categories.map((category) => (
+        <div key={category} className="diagnostic-category">
+          <h3>{t(`diagnostics.category.${category}`)}</h3>
+          <DiagnosticItems
+            diagnostics={(data ?? []).filter((item) => item.category === category)}
+            onShow={onShow}
+          />
+        </div>
+      ))}
     </section>
   );
 }

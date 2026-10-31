@@ -67,6 +67,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     runtime = load_runtime(PROJECT_ROOT)
     app = create_app(runtime, PROJECT_ROOT / FRONTEND_DIST)
+    # XSD laden und Beispiele prüfen (rund 20 Sekunden); die Oberfläche zeigt den Stand an.
+    runtime.start_background()
     port: int = args.port or runtime.config.settings.port
     url = f"http://{LOCAL_HOST}:{port}/"
     logger.info("NeTEx CH Explorer läuft unter %s (beenden mit Ctrl+C)", url)

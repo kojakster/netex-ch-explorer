@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
 from app.core.dataset import SourceFile, open_dataset
-from app.core.guide.examples import ExampleResult, example_result, list_examples, read_example
+from app.core.guide.examples import (
+    Example,
+    ExampleResult,
+    example_result,
+    list_examples,
+    read_example,
+)
 from app.core.guide.git import GitHead, GitReadError, find_git_dir, read_head
 from app.core.guide.guide_tested import (
     TEST_COMMAND,
@@ -25,6 +31,7 @@ from app.core.guide.layout import (
 )
 from app.core.guide.mapping import MappingTable, read_mapping_table
 from app.core.messages import Issue, MessageKey, Severity
+from app.core.validation.engine import ValidationEngine
 
 SHORT_COMMIT_LENGTH: Final = 7
 
@@ -50,12 +57,16 @@ class ExampleChange(StrEnum):
 
 @dataclass(frozen=True)
 class ExampleStatus:
-    """Ein Beispiel mit Ergebnis beim Laden und Stand gegenüber dem Testnachweis."""
+    """Ein Beispiel mit Ergebnis beim Laden und Stand gegenüber dem Testnachweis.
+
+    `result` ist `None`, solange die Beispiele noch geprüft werden
+    (`GuideStatus.examples_ready`).
+    """
 
     name: str
     title: str | None
     sha256: str | None
-    result: ExampleResult
+    result: ExampleResult | None
     counts: dict[Severity, int]
     change: ExampleChange
 
@@ -83,6 +94,8 @@ class GuideStatus:
     mapping: MappingTable
     examples: tuple[ExampleStatus, ...] = ()
     issues: tuple[Issue, ...] = field(default=())
+    examples_ready: bool = True
+    """`False`, solange die Beispiele noch geprüft werden (die Liste enthält nur Namen)."""
 
 
 def read_guide_revision(guide_path: Path) -> GuideRevision:
@@ -103,10 +116,16 @@ def inspect_guide(
     guide_path: Path,
     test_record_path: Path,
     ref_targets: Mapping[str, tuple[str, ...]],
+    engine: ValidationEngine | None = None,
+    *,
+    defer_examples: bool = False,
 ) -> GuideStatus:
     """Untersucht den Guide-Klon und vergleicht ihn mit dem Testnachweis.
 
     `ref_targets` (config/ref-targets.json) bestimmt, wie Referenzen der Beispiele aufgelöst werden.
+    Mit `engine` zählen auch XSD, `general_rules.sch` und Kernregeln im Beispielstatus. Mit
+    `defer_examples` enthält die Liste nur Namen und Titel; `complete_examples` prüft sie später
+    (die XSD braucht rund 17 s zum Laden).
 
     Bricht nie ab: Jedes Problem wird zu einer Meldung.
     """
@@ -136,6 +155,11 @@ def inspect_guide(
     test_state, tested_commit = _compare_with_test_record(revision, record, record_valid, issues)
     mapping = read_mapping_table(guide_path.joinpath(*MAPPING_TABLE_FILE.parts))
     issues.extend(mapping.issues)
+    record_for_examples = record if record_valid else None
+    if defer_examples:
+        examples = tuple(_pending_example(example) for example in list_examples(guide_path))
+    else:
+        examples = tuple(analyze_examples(guide_path, record_for_examples, ref_targets, engine))
     return GuideStatus(
         path=guide_path,
         found=True,
@@ -144,9 +168,31 @@ def inspect_guide(
         test_state=test_state,
         tested_commit=tested_commit,
         mapping=mapping,
-        examples=tuple(analyze_examples(guide_path, record if record_valid else None, ref_targets)),
+        examples=examples,
         issues=tuple(issues),
+        examples_ready=not defer_examples,
     )
+
+
+def complete_examples(
+    status: GuideStatus,
+    test_record_path: Path,
+    ref_targets: Mapping[str, tuple[str, ...]],
+    engine: ValidationEngine,
+) -> GuideStatus:
+    """Prüft die Beispiele eines Status mit `defer_examples` und gibt den vollständigen zurück."""
+    if status.examples_ready or not status.found:
+        return status
+    try:
+        record = read_test_record(test_record_path)
+    except GuideTestRecordError:
+        record = None
+    examples = tuple(analyze_examples(status.path, record, ref_targets, engine))
+    return replace(status, examples=examples, examples_ready=True)
+
+
+def _pending_example(example: Example) -> ExampleStatus:
+    return ExampleStatus(example.name, example.title, None, None, {}, ExampleChange.UNTESTED)
 
 
 def _read_git_head(
@@ -216,10 +262,13 @@ def analyze_examples(
     guide_path: Path,
     record: GuideTestRecord | None,
     ref_targets: Mapping[str, tuple[str, ...]],
+    engine: ValidationEngine | None = None,
 ) -> list[ExampleStatus]:
     """Lädt jedes Beispiel einzeln und vergleicht es mit dem Testnachweis.
 
-    Ein fehlerhaftes Beispiel beeinträchtigt die anderen nicht.
+    Mit `engine` wird jedes Beispiel auch validiert (XSD, `general_rules.sch`, Kernregeln); die
+    Befunde zählen im Status. Die Befunde der Fahrtansicht zählen nicht (Entscheid „Kernregeln
+    Phase 4“ (6)). Ein fehlerhaftes Beispiel beeinträchtigt die anderen nicht.
     """
     examples = list_examples(guide_path)
     statuses = []
@@ -239,6 +288,8 @@ def analyze_examples(
             continue
         dataset = open_dataset([SourceFile(example.name, data)], (), ref_targets)
         try:
+            if engine is not None:
+                engine.validate(dataset)
             sha256 = dataset.index.files()[0].sha256
             counts: dict[Severity, int] = {}
             for item in dataset.index.diagnostics():

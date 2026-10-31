@@ -27,7 +27,7 @@ describe("HelpPage", () => {
   it("zeigt alle Schweregrade mit Symbol", () => {
     render(<HelpPage appInfo={APP_INFO} guide={GUIDE} onBack={() => undefined} />);
     for (const symbol of ["⚠", "△", "ℹ"]) {
-      expect(screen.getByText(symbol)).toBeTruthy();
+      expect(screen.getAllByText(symbol).length).toBeGreaterThan(0);
     }
   });
 
@@ -47,5 +47,21 @@ describe("HelpPage", () => {
     render(<HelpPage appInfo={APP_INFO} guide={GUIDE} onBack={onBack} />);
     fireEvent.click(screen.getByText("Zurück"));
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it("listet die Kernregeln mit Kennung, Schweregrad, Wortlaut und Quelle", () => {
+    render(<HelpPage appInfo={APP_INFO} guide={GUIDE} onBack={() => undefined} />);
+    const rules = screen.getByText("Schweizer Kernregeln für den Fahrplan").closest("section");
+    expect(rules).not.toBeNull();
+    const section = within(rules as HTMLElement);
+    expect(section.getByText(/CH-SJ-13/)).toBeTruthy();
+    expect(section.getByText(/ServiceJourney darf calls nicht enthalten\./)).toBeTruthy();
+    expect(
+      section.getByText(
+        /ServiceAlteration in ServiceJourney muss einen dieser Werte haben: planned\./,
+      ),
+    ).toBeTruthy();
+    expect(section.getByText("templates/ServiceJourney.xml Z. 145-153")).toBeTruthy();
+    expect(section.queryByText(/CH-SJP-08/)).toBeNull();
   });
 });

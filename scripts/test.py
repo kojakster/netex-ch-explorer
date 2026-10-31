@@ -23,6 +23,7 @@ from app.core.guide.guide_tested import (
     write_test_record,
 )
 from app.core.guide.status import analyze_examples, read_guide_revision
+from app.core.validation.engine import ValidationEngine
 
 PROJECT_ROOT: Final = Path(__file__).resolve().parent.parent
 REQUIRE_GUIDE_ENV: Final = "NETEX_REQUIRE_GUIDE"
@@ -53,10 +54,13 @@ def main(argv: list[str] | None = None) -> int:
     if revision.commit is None:
         logger.error("Guide-Commit nicht bestimmbar; %s bleibt unverändert.", TEST_RECORD_FILE)
         return 1
+    # Mit der Prüfmaschine: XSD, general_rules.sch und Kernregeln zählen im Ergebnis.
+    engine = ValidationEngine(config.settings.guide_path, revision.commit)
+    engine.preload()
     examples = {
         status.name: ExampleRecord(status.sha256, status.result)
-        for status in analyze_examples(config.settings.guide_path, None, config.ref_targets)
-        if status.sha256 is not None
+        for status in analyze_examples(config.settings.guide_path, None, config.ref_targets, engine)
+        if status.sha256 is not None and status.result is not None
     }
     record = GuideTestRecord(revision.commit, revision.xsd_commit, examples)
     write_test_record(PROJECT_ROOT / TEST_RECORD_FILE, record)

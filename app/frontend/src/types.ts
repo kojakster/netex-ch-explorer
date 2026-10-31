@@ -27,6 +27,9 @@ export interface GuideInfo {
   testedCommit: string | null;
   mappingSheets: MappingSheet[];
   examples: ExampleInfo[];
+  /** `false`, solange die Beispiele noch geprüft werden (die XSD wird geladen). */
+  examplesReady: boolean;
+  xsdLoaded: boolean;
   issues: Issue[];
 }
 
@@ -42,6 +45,18 @@ export interface CheckStep {
   sources: string[];
 }
 
+export type RuleKind = "required" | "exactly_one" | "forbidden" | "value" | "expected";
+
+export interface CoreRule {
+  id: string;
+  kind: RuleKind;
+  severity: Severity;
+  context: string;
+  targets: string[];
+  source: string;
+  allowed: string[];
+}
+
 export interface AppInfo {
   language: string;
   languages: string[];
@@ -49,6 +64,7 @@ export interface AppInfo {
   notRelevantElements: string[];
   features: string[];
   checks: CheckStep[];
+  coreRules: CoreRule[];
   severities: Severity[];
   issues: Issue[];
 }
@@ -59,9 +75,26 @@ export type ExampleChange = "unchanged" | "changed" | "new" | "untested";
 export interface ExampleInfo {
   name: string;
   title: string | null;
-  result: ExampleResult;
+  /** `null`, solange die Beispiele noch geprüft werden. */
+  result: ExampleResult | null;
   counts: Partial<Record<Severity, number>>;
   change: ExampleChange;
+}
+
+export type DetectionStatus = "detected" | "ambiguous" | "unknown";
+export type ProfileVersion = "ch_2_0" | "netex_1_10";
+export type Evidence = "ch_2_0" | "netex_1_10" | "neutral";
+
+export interface DetectionReason {
+  evidence: Evidence;
+  key: string;
+  params: Record<string, string | number>;
+}
+
+export interface Detection {
+  status: DetectionStatus;
+  profile: ProfileVersion | null;
+  reasons: DetectionReason[];
 }
 
 export interface FileInfo {
@@ -72,6 +105,26 @@ export interface FileInfo {
   readable: boolean;
   elements: number;
   objects: number;
+  detection: Detection | null;
+}
+
+export interface ValidationStep {
+  id: string;
+  performed: boolean;
+  reason: Issue | null;
+}
+
+export interface ValidationFile {
+  fileId: number;
+  checked: boolean;
+  reason: Issue | null;
+}
+
+/** Ergebnis einer Validierung: „geprüft gegen Entwurf <Commit>“, nie „gültig“. */
+export interface ValidationInfo {
+  guideCommit: string | null;
+  steps: ValidationStep[];
+  files: ValidationFile[];
 }
 
 export interface FrameRef {
@@ -100,6 +153,7 @@ export interface DatasetInfo {
   objectTypes: { name: string; count: number }[];
   frames: ObjectInfo[];
   diagnosticCounts: Record<Severity, number>;
+  validation: ValidationInfo | null;
 }
 
 export interface ObjectSearchResult {
@@ -187,6 +241,7 @@ export interface DiagnosticInfo {
   fileName: string;
   line: number | null;
   column: number | null;
+  guideLink: string | null;
 }
 
 export interface FrameBand {

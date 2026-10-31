@@ -32,3 +32,6 @@ class Feature(StrEnum):
     OFFERS = "offers"
     NOTICES = "notices"
     MASTER_DATA = "master_data"
+    OPEN_FILES = "open_files"
+    VERSION_DETECTION = "version_detection"
+    VALIDATION = "validation"

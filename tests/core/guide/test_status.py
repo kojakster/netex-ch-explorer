@@ -8,8 +8,16 @@ from app.core.guide.examples import ExampleResult
 from app.core.guide.guide_tested import ExampleRecord, GuideTestRecord, write_test_record
 from app.core.guide.layout import MAPPING_TABLE_FILE, XSD_MAIN_FILE
 from app.core.guide.mapping import SHEET_SPECS
-from app.core.guide.status import ExampleChange, GuideTestState, inspect_guide, read_guide_revision
+from app.core.guide.status import (
+    ExampleChange,
+    GuideStatus,
+    GuideTestState,
+    complete_examples,
+    inspect_guide,
+    read_guide_revision,
+)
 from app.core.messages import MessageKey, Severity
+from app.core.validation.engine import ValidationEngine
 from tests.support import REF_TARGETS, SHA_A, SHA_B
 
 
@@ -166,7 +174,7 @@ def test_example_status_uses_the_reference_target_list(guide: Path, tmp_path: Pa
     )
     record = tmp_path / "guide-tested.json"
 
-    def result(targets: dict[str, tuple[str, ...]]) -> ExampleResult:
+    def result(targets: dict[str, tuple[str, ...]]) -> ExampleResult | None:
         examples = inspect_guide(guide, record, targets).examples
         return {example.name: example.result for example in examples}["zz_role.xml"]
 
@@ -174,3 +182,55 @@ def test_example_status_uses_the_reference_target_list(guide: Path, tmp_path: Pa
     assert result({}) is ExampleResult.NOTES
     assert result({"ResponsibleOrganisationRef": ("Operator",)}) is ExampleResult.CLEAN
     assert result(REF_TARGETS) is ExampleResult.CLEAN
+
+
+def results(status: GuideStatus) -> dict[str, ExampleResult | None]:
+    return {example.name: example.result for example in status.examples}
+
+
+def test_validation_counts_in_the_example_status(guide: Path, tmp_path: Path) -> None:
+    """Mit Prüfmaschine zählen die Kernregeln: `ch20_midnight.xml` hat keine Produktkategorie."""
+    record = tmp_path / "guide-tested.json"
+    plain = inspect_guide(guide, record, REF_TARGETS)
+    assert results(plain)["ch20_midnight.xml"] is ExampleResult.CLEAN
+    engine = ValidationEngine(guide, SHA_A)
+    checked = inspect_guide(guide, record, REF_TARGETS, engine)
+    assert results(checked)["ch20_midnight.xml"] is ExampleResult.ERRORS
+    assert results(checked)["ch20_three_stops.xml"] is ExampleResult.CLEAN
+    by_name = {example.name: example for example in checked.examples}
+    assert by_name["ch20_midnight.xml"].counts == {Severity.ERROR: 2}
+
+
+def test_deferred_examples_have_no_result_until_completed(guide: Path, tmp_path: Path) -> None:
+    record = tmp_path / "guide-tested.json"
+    engine = ValidationEngine(guide, SHA_A)
+    pending = inspect_guide(guide, record, REF_TARGETS, engine, defer_examples=True)
+    assert not pending.examples_ready
+    assert [e.name for e in pending.examples] == [
+        "broken_xml.xml",
+        "ch20_midnight.xml",
+        "ch20_three_stops.xml",
+    ]
+    assert set(results(pending).values()) == {None}
+    assert pending.examples[2].title == "Synthetische Fahrt"
+    done = complete_examples(pending, record, REF_TARGETS, engine)
+    assert done.examples_ready
+    assert results(done)["broken_xml.xml"] is ExampleResult.UNREADABLE
+    assert results(done)["ch20_midnight.xml"] is ExampleResult.ERRORS
+    assert complete_examples(done, record, REF_TARGETS, engine) is done
+
+
+def test_completing_with_an_invalid_record_still_works(guide: Path, tmp_path: Path) -> None:
+    record = tmp_path / "guide-tested.json"
+    record.write_text("kein json", encoding="utf-8")
+    engine = ValidationEngine(guide, SHA_A)
+    pending = inspect_guide(guide, record, REF_TARGETS, engine, defer_examples=True)
+    done = complete_examples(pending, record, REF_TARGETS, engine)
+    assert done.examples_ready
+    assert {example.change for example in done.examples} == {ExampleChange.UNTESTED}
+
+
+def test_completing_a_missing_guide_changes_nothing(tmp_path: Path) -> None:
+    engine = ValidationEngine(tmp_path / "fehlt", None)
+    missing = inspect_guide(tmp_path / "fehlt", tmp_path / "t.json", REF_TARGETS, engine)
+    assert complete_examples(missing, tmp_path / "t.json", REF_TARGETS, engine) is missing

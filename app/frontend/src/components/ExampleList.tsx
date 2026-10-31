@@ -14,6 +14,8 @@ function messageCount(example: ExampleInfo): number {
 
 function statusSymbol(example: ExampleInfo): string {
   switch (example.result) {
+    case null:
+      return "";
     case "clean":
       return OK_SYMBOL;
     case "notes":
@@ -47,7 +49,9 @@ export function ExampleList({ examples, selected, onOpen }: ExampleListProps) {
                 {example.title !== null && <span className="example-title">{example.title}</span>}
                 <span className="example-status">
                   <span aria-hidden="true">{statusSymbol(example)}</span>{" "}
-                  {t(`examples.result.${example.result}`, { count })}
+                  {example.result === null
+                    ? t("examples.pending")
+                    : t(`examples.result.${example.result}`, { count })}
                   {(example.change === "changed" || example.change === "new") && (
                     <>
                       {" · "}

@@ -31,6 +31,26 @@ export const APP_INFO: AppInfo = {
     { id: "xsd", status: "performed", sources: ["xsd/xsd/NeTEx_publication.xsd"] },
     { id: "ch_profile_rules", status: "deferred", sources: [] },
   ],
+  coreRules: [
+    {
+      id: "CH-SJ-13",
+      kind: "forbidden",
+      severity: "error",
+      context: "ServiceJourney",
+      targets: ["calls"],
+      source: "templates/ServiceJourney.xml Z. 145-153",
+      allowed: [],
+    },
+    {
+      id: "CH-SJ-03",
+      kind: "value",
+      severity: "error",
+      context: "ServiceJourney",
+      targets: ["ServiceAlteration"],
+      source: "templates/ServiceJourney.xml Z. 89-91",
+      allowed: ["planned"],
+    },
+  ],
   severities: ["error", "warning", "info"],
   issues: [],
 };
@@ -61,6 +81,8 @@ export const GUIDE: GuideInfo = {
       change: "new",
     },
   ],
+  examplesReady: true,
+  xsdLoaded: true,
   issues: [],
 };
 
@@ -138,11 +160,39 @@ export const DATASET: DatasetInfo = {
       readable: true,
       elements: 113,
       objects: 30,
+      detection: {
+        status: "detected",
+        profile: "ch_2_0",
+        reasons: [
+          {
+            evidence: "ch_2_0",
+            key: "version.attribute_20",
+            params: { version: "2.1" },
+          },
+          { evidence: "ch_2_0", key: "version.structure_pattern", params: {} },
+        ],
+      },
     },
   ],
   objectTypes: [{ name: "ServiceJourney", count: 1 }],
   frames: [],
   diagnosticCounts: { error: 0, warning: 0, info: 0 },
+  validation: null,
+};
+
+/** Ergebnis einer Validierung des Beispiel-Datensatzes. */
+export const VALIDATED_DATASET: DatasetInfo = {
+  ...DATASET,
+  diagnosticCounts: { error: 1, warning: 0, info: 0 },
+  validation: {
+    guideCommit: GUIDE.commit,
+    steps: [
+      { id: "xsd", performed: true, reason: null },
+      { id: "general_rules", performed: true, reason: null },
+      { id: "ch_core_rules", performed: true, reason: null },
+    ],
+    files: [{ fileId: 1, checked: true, reason: null }],
+  },
 };
 
 export const JOURNEYS: JourneyInfo[] = [
@@ -529,6 +579,7 @@ export const JOURNEY_VIEW: JourneyViewInfo = {
       fileName: "ch20_three_stops.xml",
       line: 121,
       column: 8,
+      guideLink: null,
     },
   ],
 };
@@ -539,6 +590,9 @@ export function fakeSource(overrides: Partial<DataSource> = {}): DataSource {
     getAppInfo: () => Promise.resolve(APP_INFO),
     getGuide: () => Promise.resolve(GUIDE),
     openExample: () => Promise.resolve(DATASET),
+    openFiles: () => Promise.resolve(DATASET),
+    validate: () => Promise.resolve(VALIDATED_DATASET),
+    closeDataset: () => Promise.resolve(),
     getJourneys: () => Promise.resolve(JOURNEYS),
     getJourney: () => Promise.resolve(JOURNEY_VIEW),
     searchObjects: () => Promise.resolve({ total: 1, items: [JOURNEY_OBJECT] }),
