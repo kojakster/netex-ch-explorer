@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!--Profile: SBBSplitted-->
+<!-- SYNTHETISCHE TESTDATEN des Projekts netex-ch-explorer, keine echten Fahrplandaten.
+     Nachbildung des Aufbaus der Lieferung 2027 (NeTEx 1.10): UTF-8-BOM, version="1.10",
+     schemaLocation 1.10, version="any", Fahrt mit calls/Call und order, LineRef in der Fahrt.
+     Soll als 1.10 erkannt und nicht gegen das CH-Profil 2.0 geprüft werden. -->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.10" xsi:schemaLocation="http://www.netex.org.uk/netex http://netex.uk/netex/schema/1.10/xsd/NeTEx_publication.xsd">
+	<PublicationTimestamp>2026-10-31T09:00:00</PublicationTimestamp>
+	<ParticipantRef>SYNTHETIC</ParticipantRef>
+	<Description>Synthetischer Export im Stil NeTEx 1.10</Description>
+	<dataObjects>
+		<CompositeFrame id="ch:1:CompositeFrame:SYN110" version="any">
+			<frames>
+				<TimetableFrame id="ch:1:TimetableFrame:SYN110" version="any">
+					<vehicleJourneys>
+						<ServiceJourney id="ch:1:ServiceJourney:SYN110-1" version="any">
+							<validityConditions>
+								<AvailabilityConditionRef ref="ch:1:AvailabilityCondition:SYN110" versionRef="any"/>
+							</validityConditions>
+							<TransportMode>bus</TransportMode>
+							<LineRef ref="ch:1:slnid:SYN110" versionRef="any"/>
+							<OperatorRef ref="ch:1:sboid:SYN110" version="any"/>
+							<calls>
+								<Call id="ch:1:Call:SYN110-1-1" version="any" order="1">
+									<ScheduledStopPointRef ref="ch:2:ScheduledStopPoint:SYN1-0-Gen" versionRef="any"/>
+									<Departure>
+										<Time>07:00:00</Time>
+										<ForBoarding>true</ForBoarding>
+									</Departure>
+								</Call>
+								<Call id="ch:1:Call:SYN110-1-2" version="any" order="2">
+									<ScheduledStopPointRef ref="ch:2:ScheduledStopPoint:SYN2-0-Gen" versionRef="any"/>
+									<Arrival>
+										<Time>07:20:00</Time>
+										<ForAlighting>true</ForAlighting>
+									</Arrival>
+								</Call>
+							</calls>
+						</ServiceJourney>
+					</vehicleJourneys>
+				</TimetableFrame>
+			</frames>
+		</CompositeFrame>
+	</dataObjects>
+</PublicationDelivery>

@@ -1,0 +1,84 @@
+[project]
+name = "netex-ch-explorer"
+version = "0.1.0"
+description = "Lokales Werkzeug, um Schweizer NeTEx-Dateien visuell und selbsterklärend zu verstehen."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "defusedxml>=0.7.1",
+    "fastapi>=0.162.0",
+    "openpyxl>=3.1.5",
+    "uvicorn>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "mypy>=2.4.1",
+    "pip-audit>=2.10.1",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.3",
+    "types-openpyxl>=3.1.5.20261017",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.14,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "app"
+module-root = ""
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["app/frontend"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF",
+    "S",    # Sicherheit (bandit)
+    "BLE",  # kein pauschales except Exception
+    "T20",  # kein print
+    "FIX",  # keine TODO/FIXME
+    "PTH",  # pathlib statt os.path
+    "D",    # Docstrings
+    "ANN",  # Typangaben
+    "PL",   # pylint-Regeln
+]
+# Ausnahmen sind in docs/decisions.md festgehalten („Umsetzung Phase 0“, Punkt 7).
+ignore = [
+    "D105",  # Docstring für magische Methoden nicht nötig
+    "D107",  # __init__ wird im Klassen-Docstring beschrieben
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests: assert ist das Prüfmittel von pytest; Docstrings und Magic Values sind dort nicht nötig.
+"tests/**" = ["S101", "D", "PLR2004"]
+# Skripte rufen bewusst npm/uv als Unterprozess auf (feste Argumentlisten, kein Shell).
+"scripts/**" = ["S603", "S607"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["app", "scripts", "tests"]
+plugins = ["pydantic.mypy"]
+exclude = ["app/frontend/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "guide: Test benötigt den Guide-Klon (wird übersprungen, wenn er fehlt)",
+]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

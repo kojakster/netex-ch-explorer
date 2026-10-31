@@ -9,6 +9,7 @@ netex-files/
 *.sqlite
 *.sqlite3
 *.db
+.coverage
 
 # Python
 __pycache__/

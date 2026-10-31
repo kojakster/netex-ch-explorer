@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETISCHE TESTDATEN des Projekts netex-ch-explorer, keine echten Fahrplandaten.
+     Nur SiteFrame (SITE_OFFER) mit den Haltestellen Synthetisch A, B und C; Gegenstück zu
+     ch20_network_offer.xml. -->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="2.1">
+	<PublicationTimestamp>2026-10-31T09:00:00</PublicationTimestamp>
+	<ParticipantRef>SYNTHETIC</ParticipantRef>
+	<dataObjects>
+		<CompositeFrame id="ch:1:CompositeFrame:SYN" version="1">
+			<frames>
+				<SiteFrame id="ch:1:SiteFrame:SYN" version="1">
+					<stopPlaces>
+						<StopPlace id="ch:1:sloid:SYN1" version="1">
+							<Name>Synthetisch A</Name>
+							<quays>
+								<Quay id="ch:1:sloid:SYN1:0:1" version="1">
+									<PublicCode>1</PublicCode>
+								</Quay>
+							</quays>
+						</StopPlace>
+						<StopPlace id="ch:1:sloid:SYN2" version="1">
+							<Name>Synthetisch B</Name>
+							<quays>
+								<Quay id="ch:1:sloid:SYN2:0:1" version="1">
+									<PublicCode>2</PublicCode>
+								</Quay>
+							</quays>
+						</StopPlace>
+						<StopPlace id="ch:1:sloid:SYN3" version="1">
+							<Name>Synthetisch C</Name>
+							<quays>
+								<Quay id="ch:1:sloid:SYN3:0:1" version="1">
+									<PublicCode>3</PublicCode>
+								</Quay>
+							</quays>
+						</StopPlace>
+					</stopPlaces>
+				</SiteFrame>
+			</frames>
+		</CompositeFrame>
+	</dataObjects>
+</PublicationDelivery>

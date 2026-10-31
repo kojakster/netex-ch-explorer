@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SICHERHEITSTEST des Projekts netex-ch-explorer, keine NeTEx-Daten.
+     DOCTYPE mit externer Entität (XXE). Das Tool muss die Datei abweisen und darf den Inhalt von
+     xxe_secret.txt nie lesen oder anzeigen. -->
+<!DOCTYPE PublicationDelivery [
+  <!ENTITY secret SYSTEM "xxe_secret.txt">
+]>
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="2.1">
+	<PublicationTimestamp>2026-10-31T09:00:00</PublicationTimestamp>
+	<ParticipantRef>&secret;</ParticipantRef>
+</PublicationDelivery>

@@ -6,6 +6,8 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 
 1. **Unklare Kernregeln** und **unklare Grau-Einordnungen**, falls bei der Umsetzung welche auftauchen.
 2. **Glossar Englisch/Deutsch:** Benutzer reicht nach; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
+3. **Vor Phase 3: Welcher `TimingLink` gilt für die Fahrzeit?** `08_timetable.md` Z. 96 nennt `StopPointInJourneyPattern/OnwardTimingLinkRef`; Beispiel 01 hat keines, dort führt nur `TimingLink/FromPointRef`/`ToPointRef` zum Ziel (siehe [mapping.md](mapping.md), Regel Z4).
+4. **Phase 4: Dateien mit `DOCTYPE` vor lxml abweisen.** lxml stürzt bei der Schema-Prüfung von `fixtures/security_xxe.xml` mit „Internal error“ ab (geprüft 31.10.2026). Die Regel steht bereits in den Qualitätsregeln; der Testfall ist vorhanden.
 
 ## Zurückgestellt
 

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Prüfbefehl vor jedem Commit (docs/engineering-guidelines.md). --no-verify ist verboten.
+exec uv run python scripts/check.py --hook

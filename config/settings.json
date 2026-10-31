@@ -1,0 +1,12 @@
+{
+  "guidePath": "../netexRealisationGuideSwitzerland",
+  "netexFilesPath": "../netex-files",
+  "language": "de-CH",
+  "port": 8765,
+  "zipLimits": {
+    "maxTotalBytes": 209715200,
+    "maxFileBytes": 52428800,
+    "maxFiles": 500,
+    "maxCompressionRatio": 100
+  }
+}

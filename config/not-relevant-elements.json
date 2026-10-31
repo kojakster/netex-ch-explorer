@@ -1,0 +1,29 @@
+{
+  "elements": [
+    "SiteFacilitySet",
+    "siteFacilitySets",
+    "SiteFacilitySetRef",
+    "PlaceEquipment",
+    "placeEquipments",
+    "EquipmentPlace",
+    "equipmentPlaces",
+    "LiftEquipmentRef",
+    "SiteNavigationPath",
+    "navigationPaths",
+    "Access",
+    "accesses",
+    "AccessSpace",
+    "accessSpaces",
+    "entrances",
+    "PointOfInterestClassification",
+    "pointOfInterestClassifications",
+    "PointOfInterestClassificationHierarchy",
+    "pointOfInterestClassificationHierarchies",
+    "PostalAddress",
+    "addresses",
+    "AssistanceServiceRef",
+    "localServices",
+    "TariffZone",
+    "tariffZones"
+  ]
+}
