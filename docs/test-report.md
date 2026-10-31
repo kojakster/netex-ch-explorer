@@ -249,3 +249,70 @@ Acht Funde des Reviews, alle behoben; der Entscheid zu den Phase-3-Festlegungen 
 - Die Fahrtansicht baut sich bei jedem Abruf neu auf (je Halt mehrere Abfragen an den Index) und begrenzt die Zahl der Halte nicht; für die Guide-Beispiele (grösste Fahrt 64 Halte) unkritisch, für grosse Lieferungen später anzupassen (offener Punkt 7).
 - Die Zeitumstellung wird nur für Betriebstage mit auflistbaren `ValidDayBits` geprüft (bei 15 von 22 Beispielen weicht deren Länge ab).
 - Der Build meldet weiter ein Skriptpaket über 500 kB (CodeMirror). Windows: nicht getestet.
+
+## Phase 4: Eigene Dateien und Validierung (31.10.2026)
+
+Umgesetzt in `ae093b3` (Entscheide) und `e6706f5` (Umsetzung) sowie dem Abschluss-Commit mit diesem Bericht. Abweichungen vom Plan und technische Festlegungen: [decisions.md](decisions.md) „Umsetzung Phase 4“.
+
+### Prüfbefehl
+
+`uv run python scripts/check.py` grün (Lockfile, ruff, ruff format, mypy --strict, pytest mit Abdeckung, npm ci, TypeScript, Biome, Vitest, Build, pip-audit, npm audit, Git-Hook). `uv run python scripts/test.py` bestanden; `guide-tested.json` neu geschrieben (Guide `b7ac158`, XSD `73b337e`, 22 Beispiele: 12 ohne Meldungen, 1 mit Hinweisen (17), 9 mit Fehlern (`order`)). Neue Abhängigkeiten: `lxml` 6.1.3 (geplant), `python-multipart` 0.0.33 (FastAPI-Formulare).
+
+### Tests und Abdeckung
+
+- pytest: **763 Tests bestanden** (vorher 513), Abdeckung `app/core` **98,4 %** (Mindestwert 90 %); neue Module: `intake.py` 95 %, `validation/*` und `guide/links.py` 96–100 %.
+- Vitest: **147 Tests bestanden** (vorher 119).
+- Neue Testdateien: `tests/core/test_intake.py` (Namen, ZIP, Grenzwerte, Arbeitsverzeichnis), `tests/core/validation/` (`test_detection.py`, `test_core_rules.py` mit je einem verletzenden und einhaltenden Fall zu jeder der 30 Regeln aus den Regeldaten, `test_lxml_checks.py`, `test_engine.py` mit echter XSD), `tests/core/guide/test_links.py`, `tests/core/test_dataset.py`, `tests/server/test_upload_api.py`, `tests/server/test_runtime.py`; Frontend: `OpenFiles`, `DatasetPanel`, `DiagnosticList`, App-Abläufe (Öffnen, Prüfen, Schliessen, Nachfragen während des Ladens), `api.test.ts`.
+- Die echte XSD (rund 17 s) wird einmal je Testlauf geladen (Fixture `guide_engine`); ohne Guide-Klon werden diese Tests übersprungen, unter `scripts/test.py` schlagen sie fehl.
+
+### Abnahme
+
+| Kriterium | Ergebnis |
+|---|---|
+| Eigene 2.0-Datei wird geprüft: `fixtures/ch20_three_stops.xml` hochladen, XSD gültig, keine Kernregel-Verstösse | erfüllt: Browser (Chrome, Playwright, `setInputFiles` am Dialog „Datei öffnen“): erkannt als „CH-Profil 2.0 (Entwurf)“ mit drei Begründungen; „Prüfen“: „Geprüft gegen Entwurf b7ac158“, drei Schritte durchgeführt, „keine Diagnosen“. Test `test_three_stops_is_valid_and_has_no_core_rule_violation`. Dazu wurde die Fixture um eine `TypeOfProductCategory` ergänzt (Kernregel CH-SJ-07). |
+| 1.10-Datei (`fixtures/netex110_like.xml`) wird erkannt und nicht irreführend geprüft | erfüllt: „Erkannt: NeTEx 1.10“ (Begründung: `version="1.10"`, `schemaLocation` 1.10, Kommentar `Profile: SBBSplitted`, `calls`); „Prüfen“ gesperrt, Hinweis „Keine Datei ist als CH 2.0 erkannt“; über die Schnittstelle: Datei „nicht geprüft“ mit Grund, keine Diagnosen der Arten `xsd`/`profile_rule`; Objekt-Explorer und Fahrten bleiben nutzbar. Alle 22 Guide-Beispiele (auch 01 und 20 mit `version="1.09"`, 08 ohne Attribut) werden als CH 2.0 erkannt (Test `test_every_guide_example_is_ch20`). |
+| `order`-Verstösse der Beispiele mit Stelle und Link zum Guide-Kapitel | erfüllt: 121 Verstösse (Beispiel 22: 66) mit Zeile und Spalte (Klick markiert die Stelle im XML); Link `…/blob/b7ac15860369818a8fb53c64ed6f71318f019380/src/03_xml_modelling.md` (Kapitel zu Versionen und Reihenfolge). Abweichung: **9** Beispiele, nicht 11 ([open-points.md](open-points.md) 18). Alle 22 Beispiele sind XSD-gültig (Test). |
+| `fixtures/ch20_calls.xml` verletzt die Kernregel (calls verboten) mit Quellenangabe | erfüllt: `CH-SJ-13: ServiceJourney ch:1:sjyid:SYN:1 darf calls nicht enthalten (Quelle: templates/ServiceJourney.xml Z. 145-153)`, ⚠ Fehler, Stelle Zeile 164, Link auf `08_timetable.md` im geprüften Commit; dazu CH-SJ-07 (Fixture hat keine Produktkategorie). |
+| `fixtures/ch20_duplicate_id.xml` ergibt XSD-Fehler | erfüllt: Art „XSD“, `Duplicate key-sequence ['ch:1:sloid:SYN2:0:1', '1'] in key identity-constraint …` (Originalwortlaut), Zeile 61; getrennt von Art „Referenz“ (mehrdeutig). |
+| Sicherheitstests: XXE/DOCTYPE | erfüllt: `security_xxe.xml` wird vom Einleser abgewiesen (`xml.doctype_forbidden`), lxml sieht die Datei nie; „Prüfen“ stürzt nicht ab; der Inhalt von `xxe_secret.txt` erscheint in keiner Antwort (Test `test_xxe_and_doctype_are_rejected_without_leaking`); `parse_safely` weist DOCTYPE zusätzlich ab (offener Punkt 4 erledigt). |
+| Zip-Slip | erfüllt: `../x.xml`, `a/../../x.xml`, `/abs/x.xml`, `\x.xml`, `C:/x.xml`, zu tiefe Pfade werden abgewiesen (`zip.unsafe_path`), nichts ausserhalb von `work/` entsteht (Tests in `test_intake.py`, `test_upload_api.py`; Browser: `evil.zip`). |
+| ZIP-Grenzwerte (Gesamt, Einzeldatei, Anzahl, Kompressionsrate) | erfüllt: je ein Test mit kleinen Grenzwerten über `receive` und über die Schnittstelle; zusätzlich Abbruch beim Entpacken, wenn ein Eintrag oder alle zusammen mehr Bytes liefern als der Kopf angibt. |
+| Symlink im ZIP, unzulässige Dateinamen | erfüllt: `zip.symlink`; Namen mit `..`, Ordnerteilen, `\`, Steuerzeichen, Gerätenamen (`CON`) werden bereinigt und gemeldet (`file.name_changed`). |
+| HTML in XML-Werten | erfüllt: Der Wert erscheint als Text (Schnittstelle liefert JSON mit `nosniff`; Browser: `<img onerror>`/`<script>` im `Name` laufen nicht, `window.__xss` bleibt unbelegt, keine Dialoge); Vitest: Diagnosen-Text ohne HTML-Element, nur `https`-Links. |
+| Zu grosser Upload | erfüllt: 413 `error.payload_too_large` vor dem Lesen des Rumpfs (zu grosse `Content-Length`, ohne `Content-Length`, zu viele Dateien); einzelne zu grosse Datei als Diagnose `file.too_large`. |
+| ZIP-Testdateien zur Laufzeit erzeugt | erfüllt: alle ZIP-Dateien entstehen in den Tests aus den Fixtures (`*.zip` bleibt ausgeschlossen). |
+| Aufräumen von `work/` | erfüllt: `DELETE /api/datasets/{id}`, Herausfallen aus den 10 offenen Datensätzen, Start (nur Ordner mit unseren Namen, keine Links verfolgt); Tests. |
+| Beispielstatus mit den neuen Prüfungen; `scripts/test.py` schreibt sie | erfüllt: XML-Syntax, XSD, `general_rules.sch`, Kernregeln, Referenzen; Befunde der Fahrtansicht zählen nicht ([decisions.md](decisions.md) „Kernregeln Phase 4“ (6)). Die Beispiele werden im Hintergrund geprüft; die Guide-Status-Box zeigt „XSD wird geladen …“, dann „Beispiele werden geprüft …“, dann „bereit“ (Browser, Vitest). |
+| Hilfeseite, Sprachdateien, README nachgeführt | erfüllt: drei Funktionen (Datei öffnen, Versionserkennung, Prüfen), die Schritte `xsd`, `general_rules`, `ch_core_rules` als „durchgeführt“, Abschnitt „Schweizer Kernregeln für den Fahrplan“ (30 Regeln aus den Daten, mit Quelle) in `de-CH.json` und `en.json`; Test `tests/test_help_texts.py`. |
+| Browser-Konsole | leer (Playwright, alle Abläufe: Öffnen, Prüfen, 1.10, ZIP, böse ZIP, XXE, XSS, Hilfeseite). |
+
+### Wichtigste Befunde der Phase
+
+1. Die Messung der `order`-Verstösse bestätigt 121 und Beispiel 22 mit 66, aber in **9 statt 11** Beispielen.
+2. Alle 22 Guide-Beispiele sind XSD-gültig; mit den Kernregeln gibt es nur 3 Hinweise „Rumpf-Fahrt“ (Beispiel 17) und 3 △ Warnungen CH-JP-01 (Beispiel 21, `DirectCarriage`).
+3. Der Index `A5_annex_index.md` kennt nicht jedes Element (z. B. `StopPointInJourneyPattern`) und nennt für `ServiceJourney` als erstes Kapitel `02_files`; deshalb nennen Kernregeln und Schematron-Regeln ihr Kapitel selbst, der Index dient für XSD-Befunde ([open-points.md](open-points.md) 20).
+4. Mit den Kernregeln verletzen die meisten `ch20_*`-Fixtures CH-SJ-07 (keine Produktkategorie); nur `ch20_three_stops.xml` wurde ergänzt ([open-points.md](open-points.md) 21).
+
+### Selbstkontrolle (Code-Review und Sicherheits-Review über `ae093b3..e6706f5`)
+
+Eigene Durchsicht gegen `CLAUDE.md` und `docs/engineering-guidelines.md`; Funde, alle behoben:
+
+1. **ZIP-Beiwerk:** `._x.xml` wurde am bereinigten Namen geprüft (der führende Punkt war schon entfernt) und als Fahrplan gelesen; jetzt wird der rohe Eintragsname geprüft (Test `test_zip_skips_os_noise` fand es).
+2. **Totes Stück Code:** Die Gesamtgrenze nach dem Schreiben eines Eintrags konnte nie anschlagen (die Schreibgrenze war schon der Rest); ersetzt durch `_TotalExceededError` mit eigener Meldung `zip.total_too_large` (Test mit lügenden Kopfzeilen).
+3. **Link zum Guide-Kapitel:** Für `order`-Verstösse fehlte der Link (Element nicht im Index), für Kernregeln wäre das erste Kapitel unpassend gewesen: Regeln nennen ihr Kapitel (`chapter`), XSD-Befunde nutzen den Index; der Server prüft den Kapitelpfad (`^src/[A-Za-z0-9_]+\.md$`), das Frontend zeigt nur `https`-Links.
+4. **Archiv als „nicht lesbar“:** Ein ZIP mit nur Hinweisen erschien in der Dateiliste als „✖ nicht lesbar“; jetzt „keine XML-Datei (siehe Diagnosen)“.
+5. **Überholte Öffnung:** Antwortet eine ältere Öffnung nach einer neueren, schliesst die Oberfläche den überholten Datensatz auf dem Server (sonst Rest in `work/` bis zum Herausfallen).
+6. **Typen:** `lxml-stubs` sind unvollständig; lxml gilt als untypisiert (mit Begründung in `pyproject.toml` und `decisions.md`), die Aufrufer sind typisiert (`ParsedDocument`). Keine `noqa`/`type: ignore`/`biome-ignore` im Code.
+7. **Fixture:** Die Abnahme „keine Kernregel-Verstösse“ verlangte eine Produktkategorie in `ch20_three_stops.xml`; Tests der Fahrtansicht angepasst (eine Kategorie statt keiner).
+
+Sicherheit (Upload, ZIP, lxml, Pfade, IDs, XSS) geprüft, keine offenen Funde: Dateinamen bereinigt (kein Ordnerteil, `:` und Steuerzeichen ersetzt, Gerätenamen, Länge); ZIP-Einträge einzeln geprüft (Pfad, Symlink, Rate, Grösse) und mit exklusivem Anlegen (`xb`) in einen frischen Ordner mit zufälligem Namen geschrieben, `resolve()` und `is_relative_to` als zweite Sperre; Entpacken mit Obergrenze unabhängig von den Kopfzeilen; Aufräumen folgt keinen Links; Upload nur mit `Content-Length`; die API nimmt keine Pfade; IDs vom bekannten Format; lxml nur mit gehärtetem Parser, DOCTYPE doppelt abgewiesen, ohne Netzzugriff, ohne `huge_tree`; Werte aus Dateien nur als Text; Links nur `https` mit geprüftem Kapitelpfad und geprüftem Commit.
+
+### Lücken und Hinweise
+
+- Offen und dem Benutzer vorgelegt: [open-points.md](open-points.md) 18–21 (9 statt 11 Beispiele, Dateien mit mehrdeutiger Version nicht prüfbar, Wahl des Guide-Kapitels, Fixtures ohne Produktkategorie).
+- Nicht umgesetzt (Entscheide vom 31.10.2026): CH-SJP-08, CH-SJ-16. Nicht eingebunden: übrige ~330 Profilregeln, Erklärungen und Korrekturvorschläge der XSD-Meldungen (Originalwortlaut).
+- Wird ein Datensatz geschlossen, während eine Anfrage ihn noch benutzt, kann diese Anfrage mit 500 enden (der Index ist geschlossen); die Oberfläche schliesst nur ersetzte Datensätze.
+- Ein Upload liegt bis zu 200 MB im Arbeitsspeicher (zusätzlich der Index); für die erste Ausbaustufe unkritisch, grosse Lieferungen sind zurückgestellt.
+- Eine Validierung vor Ende des XSD-Ladens wartet bis zu 17 s.
+- Die Prüfung der Beispiele im Hintergrund schlägt ohne XSD (Submodul nicht geholt) nicht fehl: der Schritt `xsd` ist dann „nicht durchgeführt“.
+- Die Tests lassen einige SQLite-Datensätze ungeschlossen (`ResourceWarning`, harmlos). Windows: nicht getestet.

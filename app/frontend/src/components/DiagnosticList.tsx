@@ -10,6 +10,11 @@ interface DiagnosticListProps {
   onShow: (diagnostic: DiagnosticInfo) => void;
 }
 
+/** Nur https-Adressen werden als Link angezeigt (nie `javascript:` o. Ä.), auch wenn der Server irrt. */
+export function isSafeLink(link: string | null): boolean {
+  return link?.startsWith("https://") === true;
+}
+
 interface DiagnosticItemsProps {
   diagnostics: readonly DiagnosticInfo[];
   onShow: (diagnostic: DiagnosticInfo) => void;
@@ -31,10 +36,10 @@ export function DiagnosticItems({ diagnostics, onShow }: DiagnosticItemsProps) {
           </span>{" "}
           <span className="badge">{t(`diagnostics.category.${diagnostic.category}`)}</span>{" "}
           <span className="issue-text">{t(diagnostic.key, diagnostic.params)}</span>
-          {diagnostic.guideLink !== null && (
+          {isSafeLink(diagnostic.guideLink) && (
             <>
               {" "}
-              <a href={diagnostic.guideLink} target="_blank" rel="noopener noreferrer">
+              <a href={diagnostic.guideLink ?? undefined} target="_blank" rel="noopener noreferrer">
                 {t("diagnostics.guideLink")}
               </a>
             </>
