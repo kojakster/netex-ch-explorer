@@ -100,7 +100,21 @@ def _attribute_key(qualified: str) -> str:
     return local if namespace is None else f"{{{namespace}}}{local}"
 
 
+_WIDE_ENCODING_STARTS: Final = (
+    (b"\x00\x00\xfe\xff", "utf-32"),
+    (b"\xff\xfe\x00\x00", "utf-32"),
+    (b"\xfe\xff", "utf-16"),
+    (b"\xff\xfe", "utf-16"),
+    (b"\x00<", "utf-16"),
+    (b"<\x00", "utf-16"),
+)
+
+
 def _declared_encoding(data: bytes) -> str | None:
+    """Kodierung aus BOM bzw. Byte-Muster (UTF-16/32) oder aus der XML-Deklaration."""
+    for start, encoding in _WIDE_ENCODING_STARTS:
+        if data.startswith(start):
+            return encoding
     match = _XML_DECLARATION.match(data.removeprefix(UTF8_BOM)[:200])
     return match.group(1).decode("ascii").lower() if match else None
 

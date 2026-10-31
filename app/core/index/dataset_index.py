@@ -52,6 +52,8 @@ CREATE TABLE elements (
     xml_id TEXT,
     version TEXT,
     label TEXT,
+    search_id TEXT,
+    search_label TEXT,
     start_byte INTEGER NOT NULL,
     start_char INTEGER NOT NULL,
     start_line INTEGER NOT NULL,
@@ -190,6 +192,7 @@ class DatasetIndex:
         self._db.executescript(_SCHEMA)
         self._not_relevant = frozenset(not_relevant)
         self._next_element_id = 1
+        self._line_starts: dict[int, list[int]] = {}
         for file_id, parsed in enumerate(files, start=1):
             self._add_file(file_id, parsed)
         self._db.commit()
@@ -237,6 +240,7 @@ class DatasetIndex:
             sibling_key = (parent, record.name)
             sibling_counts[sibling_key] = sibling_counts.get(sibling_key, 0) + 1
             xml_id = record.attributes.get("id")
+            label = _label(parsed, children, record.index) if xml_id else None
             end = record.end
             rows.append(
                 (
@@ -250,7 +254,9 @@ class DatasetIndex:
                     record.text,
                     xml_id,
                     record.attributes.get("version"),
-                    _label(parsed, children, record.index) if xml_id else None,
+                    label,
+                    None if xml_id is None else xml_id.casefold(),
+                    None if label is None else label.casefold(),
                     record.start.byte,
                     record.start.char,
                     record.start.line,
@@ -267,7 +273,7 @@ class DatasetIndex:
                 )
             )
         self._db.executemany(
-            "INSERT INTO elements VALUES (" + ", ".join(["?"] * 24) + ")",
+            "INSERT INTO elements VALUES (" + ", ".join(["?"] * 26) + ")",
             rows,
         )
         self._next_element_id = offset + len(parsed.elements)
@@ -303,6 +309,29 @@ class DatasetIndex:
             ).fetchall()
         return [FileSummary(r[0], r[1], r[2], r[3], bool(r[4]), r[5], r[6]) for r in rows]
 
+    def file_name(self, file_id: int) -> str | None:
+        """Name einer Datei."""
+        with self._lock:
+            row = self._db.execute("SELECT name FROM files WHERE id = ?", (file_id,)).fetchone()
+        return None if row is None else str(row[0])
+
+    def line_starts(self, file_id: int) -> list[int] | None:
+        """Zeichen-Offsets der Zeilenanfänge (einmal berechnet, dann zwischengespeichert)."""
+        cached = self._line_starts.get(file_id)
+        if cached is not None:
+            return cached
+        text = self.file_text(file_id)
+        if text is None:
+            return None
+        starts = [0]
+        position = text.find("\n")
+        while position >= 0:
+            starts.append(position + 1)
+            position = text.find("\n", position + 1)
+        with self._lock:
+            self._line_starts[file_id] = starts
+        return starts
+
     def file_text(self, file_id: int) -> str | None:
         """Text einer Datei (ohne BOM)."""
         with self._lock:
@@ -328,13 +357,10 @@ class DatasetIndex:
             conditions.append("e.name = ?")
             params.append(object_type)
         if query:
-            pattern = (
-                "%" + query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
-            )
-            conditions.append(
-                "(e.xml_id LIKE ? ESCAPE '\\' OR COALESCE(e.label, '') LIKE ? ESCAPE '\\')"
-            )
-            params.extend([pattern, pattern])
+            # instr statt LIKE: keine Platzhalterzeichen; Gross-/Kleinschreibung über casefold
+            # (SQLite-LIKE gleicht nur ASCII an).
+            conditions.append("(instr(e.search_id, ?) > 0 OR instr(e.search_label, ?) > 0)")
+            params.extend([query.casefold(), query.casefold()])
         where = " WHERE " + " AND ".join(conditions)
         with self._lock:
             total = int(
@@ -364,15 +390,25 @@ class DatasetIndex:
         return [_row_to_element(row) for row in rows]
 
     def descendants(self, element_id: int, limit: int) -> list[ElementRow]:
-        """Alle Nachfahren in Dokumentreihenfolge, höchstens `limit`."""
+        """Alle Nachfahren in Dokumentreihenfolge, höchstens `limit`.
+
+        Nachfahren sind die direkt folgenden Elemente mit grösserer Tiefe; das gilt auch für
+        Elemente ohne Ende (Datei mit Syntaxfehler).
+        """
         element = self.element(element_id)
-        if element is None or element.end is None:
+        if element is None:
             return []
         with self._lock:
+            boundary = self._db.execute(
+                "SELECT MIN(id) FROM elements WHERE file_id = ? AND id > ? AND depth <= ?",
+                (element.file_id, element.id, element.depth),
+            ).fetchone()[0]
             rows = self._db.execute(
                 _ELEMENT_SELECT
-                + " WHERE e.file_id = ? AND e.id > ? AND e.start_byte < ? ORDER BY e.id LIMIT ?",
-                (element.file_id, element.id, element.end.byte, limit),
+                + " WHERE e.file_id = ? AND e.id > ?"
+                + ("" if boundary is None else " AND e.id < ?")
+                + " ORDER BY e.id LIMIT ?",
+                (element.file_id, element.id, *(() if boundary is None else (boundary,)), limit),
             ).fetchall()
         return [_row_to_element(row) for row in rows]
 

@@ -160,5 +160,7 @@
   "feature.xml_view.title": "XML-Ansicht",
   "feature.xml_view.description": "Ausschnitt der Datei mit exakter Markierung der gewählten Angabe und farbigen Frame-Bereichen am Rand.",
   "feature.diagnostics_list.title": "Diagnosen",
-  "feature.diagnostics_list.description": "Probleme der Datei mit Schweregrad, Art und Stelle; ein Klick zeigt die Stelle im XML."
+  "feature.diagnostics_list.description": "Probleme der Datei mit Schweregrad, Art und Stelle; ein Klick zeigt die Stelle im XML.",
+  "journeys.journey": "Fahrt",
+  "journeys.dayOffset": "(DepartureDayOffset {offset})"
 }

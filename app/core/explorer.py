@@ -91,21 +91,15 @@ def object_detail(index: DatasetIndex, element_id: int) -> ObjectDetail | None:
     return ObjectDetail(element, frame, element_path(index, element), roots, truncated)
 
 
-def _line_starts(text: str) -> list[int]:
-    starts = [0]
-    starts.extend(offset + 1 for offset, char in enumerate(text) if char == "\n")
-    return starts
-
-
 def xml_window(
     index: DatasetIndex, file_id: int, focus: tuple[int, int], focus_lines: tuple[int, int]
 ) -> XmlWindow | None:
     """Ausschnitt um einen Bereich (Zeichen-Offsets `focus`, Zeilen `focus_lines`)."""
     text = index.file_text(file_id)
-    files = {summary.id: summary.name for summary in index.files()}
-    if text is None or file_id not in files:
+    file_name = index.file_name(file_id)
+    starts = index.line_starts(file_id)
+    if text is None or file_name is None or starts is None:
         return None
-    starts = _line_starts(text)
     last_line = len(starts)
     first = max(1, min(focus_lines[0], last_line) - CONTEXT_LINES)
     last = min(last_line, max(focus_lines[1], focus_lines[0]) + CONTEXT_LINES)
@@ -122,9 +116,7 @@ def xml_window(
         frame_last = frame.end.line if frame.end is not None else last_line
         if frame.start.line <= last and frame_last >= first:
             bands.append(FrameBand(frame, max(frame.start.line, first), min(frame_last, last)))
-    return XmlWindow(
-        file_id, files[file_id], first, snippet, focus_from, focus_to, bands, truncated
-    )
+    return XmlWindow(file_id, file_name, first, snippet, focus_from, focus_to, bands, truncated)
 
 
 def element_xml_window(index: DatasetIndex, element_id: int) -> XmlWindow | None:
@@ -143,10 +135,31 @@ def position_xml_window(
 ) -> XmlWindow | None:
     """Ausschnitt um eine Stelle (Zeile, Spalte ab 1), z. B. einer Diagnose."""
     text = index.file_text(file_id)
-    if text is None:
+    starts = index.line_starts(file_id)
+    if text is None or starts is None:
         return None
-    starts = _line_starts(text)
     line = min(max(line, 1), len(starts))
     line_end = starts[line] - 1 if line < len(starts) else len(text)
     char = min(starts[line - 1] + max(column, 1) - 1, line_end)
     return xml_window(index, file_id, (char, char + 1), (line, line))
+
+
+def _normalize_line_breaks(text: str) -> str:
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _utf16_length(text: str) -> int:
+    return len(text.encode("utf-16-le")) // 2
+
+
+def editor_text(window: XmlWindow) -> tuple[str, int, int]:
+    """Text und Markierung für einen Editor im Browser (CodeMirror).
+
+    CodeMirror speichert jeden Zeilenumbruch als ein Zeichen (LF) und zählt in UTF-16-Einheiten;
+    Python zählt Code-Points und behält CR LF. Ohne Umrechnung sässe die Markierung in Dateien mit
+    CR LF oder mit Zeichen ausserhalb der Basisebene an der falschen Stelle.
+    """
+    text = window.text
+    start = _utf16_length(_normalize_line_breaks(text[: window.focus_from]))
+    end = _utf16_length(_normalize_line_breaks(text[: window.focus_to]))
+    return _normalize_line_breaks(text), start, end

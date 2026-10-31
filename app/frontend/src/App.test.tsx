@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { App } from "./App";
 import { ApiError } from "./api";
-import { APP_INFO, fakeSource as source } from "./testData";
+import { APP_INFO, DATASET, fakeSource as source } from "./testData";
+import type { DatasetInfo } from "./types";
 
 describe("App", () => {
   it("zeigt nach dem Laden Guide-Status und Legende", async () => {
@@ -64,11 +65,43 @@ describe("App mit Datensatz", () => {
     fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
     expect(await screen.findByText("Synthetische Linie")).toBeTruthy();
     expect(screen.getByText(/ch:1:sloid:SYN9:0:1: nicht in dieser Datei aufgelöst/)).toBeTruthy();
-    fireEvent.click(screen.getAllByText("1")[0] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "ServiceJourney" }));
     expect(await screen.findByText(/TimetableFrame\/vehicleJourneys/)).toBeTruthy();
     expect(getObjectXml).toHaveBeenCalledWith("SYNTHETICDATASET01.100");
     fireEvent.click(screen.getByRole("button", { name: /DepartureTime/ }));
     expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.104");
+  });
+
+  it("zeigt Zugnummer und DepartureDayOffset mit Herkunft", async () => {
+    const getObjectXml = vi.fn(source().getObjectXml);
+    render(<App dataSource={source({ getObjectXml })} />);
+    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
+    fireEvent.click(await screen.findByRole("button", { name: "(DepartureDayOffset 0)" }));
+    expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.105");
+    fireEvent.click(screen.getByRole("button", { name: "1" }));
+    expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.110");
+  });
+
+  it("verwirft die Antwort einer älteren Öffnung", async () => {
+    let resolveFirst: (value: DatasetInfo) => void = () => undefined;
+    const first = new Promise<DatasetInfo>((resolve) => {
+      resolveFirst = resolve;
+    });
+    const second = { ...DATASET, id: "SYNTHETICDATASET02" };
+    const openExample = vi
+      .fn<(name: string) => Promise<DatasetInfo>>()
+      .mockReturnValueOnce(first)
+      .mockResolvedValueOnce(second);
+    const getJourneys = vi.fn(source().getJourneys);
+    render(<App dataSource={source({ openExample, getJourneys })} />);
+    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
+    fireEvent.click(screen.getByText("broken_xml.xml"));
+    await screen.findByText("Synthetische Linie");
+    await act(async () => {
+      resolveFirst(DATASET);
+    });
+    expect(getJourneys).toHaveBeenCalledTimes(1);
+    expect(getJourneys).toHaveBeenCalledWith("SYNTHETICDATASET02");
   });
 
   it("zeigt den Status pro Beispiel", async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type DataSource } from "./api";
 import { DiagnosticList } from "./components/DiagnosticList";
 import { ExampleList } from "./components/ExampleList";
@@ -37,6 +37,8 @@ export function App({ dataSource }: AppProps) {
   const [objectId, setObjectId] = useState<string | null>(null);
   const [selectedElement, setSelectedElement] = useState<string | null>(null);
   const [xmlTarget, setXmlTarget] = useState<XmlTarget | null>(null);
+  // Nur die Antwort der zuletzt gestarteten Öffnung zählt (schnelles Umschalten).
+  const openRequest = useRef(0);
 
   useEffect(() => {
     let active = true;
@@ -79,10 +81,20 @@ export function App({ dataSource }: AppProps) {
     setObjectId(null);
     setSelectedElement(null);
     setXmlTarget(null);
+    openRequest.current += 1;
+    const request = openRequest.current;
     dataSource
       .openExample(name)
-      .then(setDataset)
-      .catch((error: unknown) => setDatasetErrorKey(errorKeyOf(error)));
+      .then((opened) => {
+        if (request === openRequest.current) {
+          setDataset(opened);
+        }
+      })
+      .catch((error: unknown) => {
+        if (request === openRequest.current) {
+          setDatasetErrorKey(errorKeyOf(error));
+        }
+      });
   };
 
   const selectObject = (id: string) => {

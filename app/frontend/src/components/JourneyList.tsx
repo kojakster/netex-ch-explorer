@@ -21,6 +21,7 @@ export function JourneyList({ datasetId, onSelect }: JourneyListProps) {
         <table className="journey-table">
           <thead>
             <tr>
+              <th>{t("journeys.journey")}</th>
               <th>{t("journeys.trainNumber")}</th>
               <th>{t("journeys.line")}</th>
               <th>{t("journeys.departure")}</th>
@@ -38,16 +39,40 @@ export function JourneyList({ datasetId, onSelect }: JourneyListProps) {
                     title={journey.object.xmlId ?? undefined}
                     onClick={() => onSelect(journey.object.id)}
                   >
-                    {journey.trainNumbers.length > 0
-                      ? journey.trainNumbers.map((number) => number.text ?? "").join(", ")
-                      : journey.object.name}
+                    {journey.object.name}
                   </button>
+                </td>
+                <td>
+                  {journey.trainNumbers.length === 0 ? (
+                    <span className="lookup-missing">{t("lookup.absent")}</span>
+                  ) : (
+                    journey.trainNumbers.map((number, position) => (
+                      <span key={`${number.status}|${number.objectId}`}>
+                        {position > 0 && ", "}
+                        <LookupValue lookup={number} onSelect={onSelect} />
+                      </span>
+                    ))
+                  )}
                 </td>
                 <td>
                   <LookupValue lookup={journey.line} onSelect={onSelect} />
                 </td>
                 <td>
                   <LookupValue lookup={journey.departureTime} onSelect={onSelect} />
+                  {journey.departureDayOffset.status === "found" && (
+                    <>
+                      {" "}
+                      <LookupValue
+                        lookup={{
+                          ...journey.departureDayOffset,
+                          text: t("journeys.dayOffset", {
+                            offset: journey.departureDayOffset.text ?? "",
+                          }),
+                        }}
+                        onSelect={onSelect}
+                      />
+                    </>
+                  )}
                 </td>
                 <td>
                   <LookupValue lookup={journey.firstStop} onSelect={onSelect} />

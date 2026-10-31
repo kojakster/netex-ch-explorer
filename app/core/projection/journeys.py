@@ -98,8 +98,12 @@ def _train_numbers(index: DatasetIndex, journey: ElementRow) -> list[Lookup]:
         target, problem = _follow(index, ref)
         if target is None:
             numbers.append(problem or _ABSENT)
-        else:
-            numbers.append(_text(_child(index, target, "ForAdvertisement")))
+            continue
+        advertised = _text(_child(index, target, "ForAdvertisement"))
+        # Ohne ForAdvertisement bleibt die TrainNumber als Herkunft der fehlenden Angabe.
+        numbers.append(
+            advertised if advertised.element else Lookup(LookupStatus.ABSENT, None, target)
+        )
     return numbers
 
 

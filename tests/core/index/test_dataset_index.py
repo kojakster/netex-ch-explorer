@@ -107,12 +107,31 @@ def test_children_descendants_and_siblings() -> None:
     assert index.descendants(99999, 10) == []
 
 
-def test_elements_without_end_have_no_descendants() -> None:
-    index = load("broken_xml.xml").index
-    open_root = index.element(1)
-    assert open_root is not None
-    assert open_root.end is None
-    assert index.descendants(open_root.id, 10) == []
+def test_elements_without_end_keep_their_descendants() -> None:
+    index = open_dataset([SourceFile("t.xml", b"<r><a><b>x</b>")], ()).index
+    root, a, b = (index.element(n) for n in (1, 2, 3))
+    assert root is not None and a is not None and b is not None
+    assert root.end is None and a.end is None
+    assert [d.name for d in index.descendants(root.id, 10)] == ["a", "b"]
+    assert [d.name for d in index.descendants(a.id, 10)] == ["b"]
+    assert index.descendants(b.id, 10) == []
+
+
+def test_search_ignores_case_beyond_ascii() -> None:
+    data = "<r><X id='a'><Name>ZÜRICH HB</Name></X><X id='b'><Name>Genève</Name></X></r>"
+    index = open_dataset([SourceFile("t.xml", data.encode())], ()).index
+    assert [row.xml_id for row in index.search_objects(None, "zürich", 10, 0)[1]] == ["a"]
+    assert [row.xml_id for row in index.search_objects(None, "GENÈVE", 10, 0)[1]] == ["b"]
+    assert index.search_objects(None, "a\nZ", 10, 0)[0] == 0
+
+
+def test_line_starts_and_file_name() -> None:
+    index = open_dataset([SourceFile("t.xml", b"<a>\n<b/>\n</a>")], ()).index
+    assert index.line_starts(1) == [0, 4, 9]
+    assert index.line_starts(1) is index.line_starts(1)
+    assert index.line_starts(2) is None
+    assert index.file_name(1) == "t.xml"
+    assert index.file_name(2) is None
 
 
 def test_elements_by_name() -> None:

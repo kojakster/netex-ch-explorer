@@ -21,7 +21,11 @@ _OBJECT_ID = re.compile(r"^([A-Za-z0-9_-]{16,64})\.([1-9][0-9]{0,9})$")
 
 
 class DatasetRegistry:
-    """Hält die zuletzt geöffneten Datensätze; der älteste wird bei Überlauf geschlossen."""
+    """Hält die zuletzt geöffneten Datensätze; der älteste fällt bei Überlauf heraus.
+
+    Ein herausgefallener Datensatz wird nicht ausdrücklich geschlossen: Eine laufende Anfrage kann
+    ihn noch benutzen. Sein Speicher wird frei, sobald niemand mehr auf ihn verweist.
+    """
 
     def __init__(self, max_open: int = MAX_OPEN_DATASETS) -> None:
         self._lock = threading.Lock()
@@ -34,8 +38,7 @@ class DatasetRegistry:
         with self._lock:
             self._datasets[dataset_id] = dataset
             while len(self._datasets) > self._max_open:
-                _, oldest = self._datasets.popitem(last=False)
-                oldest.close()
+                self._datasets.popitem(last=False)
         return dataset_id
 
     def get(self, dataset_id: str) -> Dataset | None:

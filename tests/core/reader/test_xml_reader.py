@@ -118,6 +118,23 @@ def test_unsupported_encoding(encoding: str) -> None:
     assert diagnostic.params == {"encoding": encoding.lower()}
 
 
+@pytest.mark.parametrize(
+    ("data", "encoding"),
+    [
+        ("<r><a/></r>".encode("utf-16"), "utf-16"),
+        ("<r/>".encode("utf-16-le"), "utf-16"),
+        ("<r/>".encode("utf-16-be"), "utf-16"),
+        ("<r/>".encode("utf-32"), "utf-32"),
+    ],
+)
+def test_wide_encodings_are_rejected(data: bytes, encoding: str) -> None:
+    parsed = read_xml("t.xml", data)
+    assert not parsed.readable
+    assert [(d.key, d.params) for d in parsed.diagnostics] == [
+        (MessageKey.XML_ENCODING_UNSUPPORTED, {"encoding": encoding})
+    ]
+
+
 def test_empty_file_is_unreadable() -> None:
     parsed = read_xml("leer.xml", b"")
     assert not parsed.readable

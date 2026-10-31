@@ -29,6 +29,8 @@ from app.server.runtime import Runtime
 MAX_SEARCH_LIMIT: Final = 200
 DEFAULT_SEARCH_LIMIT: Final = 50
 MAX_QUERY_LENGTH: Final = 200
+# Obergrenzen, damit sehr grosse Zahlen eine Eingabefehler-Antwort ergeben (SQLite: 64 Bit).
+MAX_NUMBER: Final = 1_000_000_000
 
 
 def _not_found() -> HTTPException:
@@ -90,7 +92,7 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
         object_type: Annotated[str | None, Query(alias="type", max_length=MAX_QUERY_LENGTH)] = None,
         q: Annotated[str | None, Query(max_length=MAX_QUERY_LENGTH)] = None,
         limit: Annotated[int, Query(ge=1, le=MAX_SEARCH_LIMIT)] = DEFAULT_SEARCH_LIMIT,
-        offset: Annotated[int, Query(ge=0)] = 0,
+        offset: Annotated[int, Query(ge=0, le=MAX_NUMBER)] = 0,
     ) -> ObjectSearchOut:
         """Einfache Objektsuche nach Typ und Teiltext in ID oder Name, seitenweise."""
         dataset = lookup.dataset(dataset_id)
@@ -111,9 +113,9 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
     @router.get("/datasets/{dataset_id}/xml")
     def get_xml_at(
         dataset_id: str,
-        file: Annotated[int, Query(ge=1)],
-        line: Annotated[int, Query(ge=1)],
-        column: Annotated[int, Query(ge=1)] = 1,
+        file: Annotated[int, Query(ge=1, le=MAX_NUMBER)],
+        line: Annotated[int, Query(ge=1, le=MAX_NUMBER)],
+        column: Annotated[int, Query(ge=1, le=MAX_NUMBER)] = 1,
     ) -> XmlWindowOut:
         """XML-Ausschnitt um eine Stelle (z. B. einer Diagnose)."""
         dataset = lookup.dataset(dataset_id)

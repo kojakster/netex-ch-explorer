@@ -76,5 +76,6 @@ def test_missing_parts_are_marked() -> None:
     assert journeys["j3"].first_stop.element is not None
     assert journeys["t1"].element.name == "TemplateServiceJourney"
     assert journeys["t1"].train_numbers[0].status is LookupStatus.ABSENT
+    assert journeys["t1"].train_numbers[0].element is not None
     assert journeys["j4"].line.text == "Linie vier"
     assert journeys["j4"].first_stop.status is LookupStatus.ABSENT

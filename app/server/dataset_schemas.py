@@ -6,7 +6,7 @@ from pydantic import Field
 
 from app.core.dataset import Dataset
 from app.core.diagnostics import DiagnosticCategory
-from app.core.explorer import ObjectDetail, PropertyNode, XmlWindow
+from app.core.explorer import ObjectDetail, PropertyNode, XmlWindow, editor_text
 from app.core.frames import color_key
 from app.core.index.dataset_index import ElementRow, IndexedDiagnostic
 from app.core.messages import MessageKey, Severity
@@ -148,7 +148,11 @@ class FrameBandOut(ApiModel):
 
 
 class XmlWindowOut(ApiModel):
-    """XML-Ausschnitt mit markiertem Bereich (Zeichen-Offsets relativ zu `text`)."""
+    """XML-Ausschnitt mit markiertem Bereich.
+
+    `text` hat nur LF als Zeilenumbruch; `focus_from`/`focus_to` zählen UTF-16-Einheiten
+    (wie im Browser).
+    """
 
     file_name: str
     first_line: int
@@ -271,12 +275,13 @@ class Converter:
 
     def xml_window(self, window: XmlWindow) -> XmlWindowOut:
         """XML-Ausschnitt mit Frame-Bereichen."""
+        text, focus_from, focus_to = editor_text(window)
         return XmlWindowOut(
             file_name=window.file_name,
             first_line=window.first_line,
-            text=window.text,
-            focus_from=window.focus_from,
-            focus_to=window.focus_to,
+            text=text,
+            focus_from=focus_from,
+            focus_to=focus_to,
             frames=[
                 FrameBandOut(
                     object_id=object_id(self.dataset_id, band.frame.id),

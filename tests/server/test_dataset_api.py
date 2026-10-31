@@ -121,6 +121,9 @@ def test_search_limits(client: TestClient) -> None:
     assert client.get(url, params={"limit": 201}).status_code == 422
     assert client.get(url, params={"offset": -1}).status_code == 422
     assert client.get(url, params={"q": "x" * 201}).status_code == 422
+    assert client.get(url, params={"offset": 10**20}).status_code == 422
+    xml_url = f"/api/datasets/{dataset_id}/xml"
+    assert client.get(xml_url, params={"file": 10**20, "line": 1}).status_code == 422
     page = client.get(url, params={"limit": 5, "offset": 5}).json()
     assert len(page["items"]) == 5
 
@@ -170,8 +173,11 @@ def test_unknown_element_in_known_dataset(client: TestClient) -> None:
 def test_registry_evicts_oldest() -> None:
     registry = DatasetRegistry(max_open=2)
     data = (FIXTURES_DIR / "ch20_site_offer.xml").read_bytes()
-    ids = [registry.add(open_dataset([SourceFile("s.xml", data)], ())) for _ in range(3)]
+    datasets = [open_dataset([SourceFile("s.xml", data)], ()) for _ in range(3)]
+    ids = [registry.add(dataset) for dataset in datasets]
     assert registry.get(ids[0]) is None
+    # Wer den verdrängten Datensatz noch hält, kann ihn weiter benutzen.
+    assert datasets[0].index.files()[0].name == "s.xml"
     assert registry.get(ids[1]) is not None
     assert registry.get("../etc") is None
     registry.close_all()
@@ -182,3 +188,22 @@ def test_object_ids() -> None:
     assert parse_object_id(object_id("A" * 22, 17)) == ("A" * 22, 17)
     for value in ("A" * 22, "A" * 22 + ".0", "A" * 22 + ".x", "kurz.1", "A" * 22 + ".1.2"):
         assert parse_object_id(value) is None
+
+
+def test_xml_offsets_for_browser_with_crlf(tmp_path: Path, synthetic_guide: Path) -> None:
+    crlf = (FIXTURES_DIR / "ch20_three_stops.xml").read_text(encoding="utf-8").replace("\n", "\r\n")
+    crlf = crlf.replace("Synthetisch A", "Synthetisch \U0001f686 A")
+    (synthetic_guide / "src" / "examples" / "ch20_three_stops.xml").write_bytes(crlf.encode())
+    config = load_config(PROJECT_ROOT)
+    config = replace(config, settings=replace(config.settings, guide_path=synthetic_guide))
+    runtime = Runtime(config=config, guide=inspect_guide(synthetic_guide, tmp_path / "t.json"))
+    client = TestClient(create_app(runtime, None), base_url=BASE_URL)
+    dataset_id = open_example(client)["id"]
+    [quay] = client.get(
+        f"/api/datasets/{dataset_id}/objects", params={"type": "Quay", "q": "SYN3"}
+    ).json()["items"]
+    window = client.get(f"/api/objects/{quay['id']}/xml").json()
+    assert "\r" not in window["text"]
+    utf16 = window["text"].encode("utf-16-le")
+    marked = utf16[2 * window["focusFrom"] : 2 * window["focusTo"]].decode("utf-16-le")
+    assert marked.startswith("<Quay") and marked.endswith("</Quay>")

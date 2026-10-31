@@ -160,5 +160,7 @@
   "feature.xml_view.title": "XML view",
   "feature.xml_view.description": "Excerpt of the file with exact highlighting of the selected value and coloured frame areas in the margin.",
   "feature.diagnostics_list.title": "Diagnostics",
-  "feature.diagnostics_list.description": "Problems in the file with severity, category and location; a click shows the location in the XML."
+  "feature.diagnostics_list.description": "Problems in the file with severity, category and location; a click shows the location in the XML.",
+  "journeys.journey": "Journey",
+  "journeys.dayOffset": "(DepartureDayOffset {offset})"
 }
