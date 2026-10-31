@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { configDefaults } from "vitest/config";
 
 const DEFAULT_PORT = 8765;
 
@@ -37,6 +38,8 @@ export default defineConfig({
   },
   build: { sourcemap: false },
   test: {
+    // Die E2E-Tests (Playwright) laufen mit `npm run e2e`, nicht unter Vitest.
+    exclude: [...configDefaults.exclude, "e2e/**"],
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/setupTests.ts"],

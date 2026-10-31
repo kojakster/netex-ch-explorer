@@ -64,4 +64,65 @@ describe("HelpPage", () => {
     expect(section.getByText("templates/ServiceJourney.xml Z. 145-153")).toBeTruthy();
     expect(section.queryByText(/CH-SJP-08/)).toBeNull();
   });
+
+  it("zeigt jede Frame-Farbe und jede Grau-Element der Daten, nicht mehr und nicht weniger", () => {
+    const appInfo = {
+      ...APP_INFO,
+      frameColors: [
+        { key: "TimetableFrame", background: "#123456", text: "#FFFFFF" },
+        { key: "frame-neu", background: "#654321", text: "#000000" },
+      ],
+      notRelevantElements: ["NeuesElement"],
+    };
+    render(<HelpPage appInfo={appInfo} guide={GUIDE} onBack={() => undefined} />);
+    expect(screen.getByText("#123456")).toBeTruthy();
+    expect(screen.getByText("#654321")).toBeTruthy();
+    expect(screen.queryByText("#0057B8")).toBeNull();
+    expect(screen.getByText("NeuesElement")).toBeTruthy();
+    expect(screen.queryByText("SiteFacilitySet")).toBeNull();
+  });
+
+  it("ordnet jede Prüfung der Daten genau einer der beiden Listen zu und nennt Quellen", () => {
+    const appInfo = {
+      ...APP_INFO,
+      checks: [
+        { id: "xsd", status: "performed" as const, sources: ["xsd/xsd/NeTEx_publication.xsd"] },
+        { id: "ch_profile_rules", status: "deferred" as const, sources: ["src/templates"] },
+        { id: "references", status: "not_implemented" as const, sources: [] },
+      ],
+    };
+    render(<HelpPage appInfo={appInfo} guide={GUIDE} onBack={() => undefined} />);
+    const performed = screen.getByText("Durchgeführte Prüfungen").nextElementSibling as HTMLElement;
+    const notPerformed = screen.getByText("Nicht durchgeführte Prüfungen")
+      .nextElementSibling as HTMLElement;
+    expect(within(performed).getByText("XSD-Prüfung")).toBeTruthy();
+    expect(within(performed).getByText("xsd/xsd/NeTEx_publication.xsd")).toBeTruthy();
+    expect(within(performed).queryByText("Referenzen")).toBeNull();
+    expect(within(notPerformed).getByText("Übrige Schweizer Profilregeln")).toBeTruthy();
+    expect(within(notPerformed).getByText("Referenzen")).toBeTruthy();
+    expect(within(notPerformed).getByText("src/templates")).toBeTruthy();
+    expect(
+      within(notPerformed).getByText(/später \(nicht in der ersten Ausbaustufe\)/),
+    ).toBeTruthy();
+    expect(
+      within(notPerformed).getByText(/noch nicht umgesetzt \(geplant in der ersten Ausbaustufe\)/),
+    ).toBeTruthy();
+  });
+
+  it("zeigt den Guide-Stand mit Branch, Commit, XSD und Teststand", () => {
+    render(<HelpPage appInfo={APP_INFO} guide={GUIDE} onBack={() => undefined} />);
+    const guide = screen.getByText("Guide-Stand", { selector: "h2" }).closest("section");
+    const section = within(guide as HTMLElement);
+    expect(section.getByText("next")).toBeTruthy();
+    expect(section.getByText("b7ac15860369818a8fb53c64ed6f71318f019380")).toBeTruthy();
+    expect(section.getByText("73b337e22ceed7905a1be14e4e506f1afa359b54")).toBeTruthy();
+    expect(section.getByText("mit diesem Stand getestet")).toBeTruthy();
+  });
+
+  it("zeigt ohne gefundenen Guide keinen Stand", () => {
+    render(
+      <HelpPage appInfo={APP_INFO} guide={{ ...GUIDE, found: false }} onBack={() => undefined} />,
+    );
+    expect(screen.queryByText("b7ac15860369818a8fb53c64ed6f71318f019380")).toBeNull();
+  });
 });

@@ -112,10 +112,27 @@ export function HelpPage({ appInfo, guide, onBack }: HelpPageProps) {
       <section>
         <h2>{t("help.guide")}</h2>
         <p>{t("help.guideText")}</p>
-        {guide?.commit != null && (
-          <p>
-            {t("guide.commit")} <code>{guide.commit}</code>
-          </p>
+        {guide?.found === true && (
+          <dl className="help-guide">
+            <dt>{t("guide.branch")}</dt>
+            <dd>{guide.branch ?? t("guide.unknown")}</dd>
+            <dt>{t("guide.commit")}</dt>
+            <dd>
+              <code>{guide.commit ?? t("guide.unknown")}</code>
+            </dd>
+            <dt>{t("guide.xsd")}</dt>
+            <dd>
+              {guide.xsdPresent ? t("guide.xsdPresent") : t("guide.xsdMissing")}
+              {guide.xsdCommit !== null && (
+                <>
+                  {" "}
+                  <code>{guide.xsdCommit}</code>
+                </>
+              )}
+            </dd>
+            <dt>{t("guide.test")}</dt>
+            <dd>{t(`guide.testState.${guide.testState}`)}</dd>
+          </dl>
         )}
       </section>
     </article>

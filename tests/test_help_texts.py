@@ -7,6 +7,7 @@ Meldungsschlüssel in einer Sprachdatei fehlt (Regel „Hilfeseite immer nachfü
 from __future__ import annotations
 
 import json
+import re
 from itertools import combinations
 from pathlib import Path
 
@@ -24,7 +25,7 @@ from app.core.validation.core_rules import RuleKind
 from app.core.validation.detection import DetectionStatus, Evidence, ProfileVersion
 from app.core.validation.steps import CHECK_STEPS, CheckStatus
 from app.server.errors import ErrorKey
-from tests.support import LOCALES_DIR
+from tests.support import LOCALES_DIR, PROJECT_ROOT
 
 
 def load_messages(language: str) -> dict[str, str]:
@@ -129,3 +130,78 @@ def test_default_colors_are_distinct() -> None:
         lab_a, lab_b = _lab(first.background), _lab(second.background)
         distance = sum((a - b) ** 2 for a, b in zip(lab_a, lab_b, strict=True)) ** 0.5
         assert distance >= 33
+
+
+# Quelltext, in dem Übersetzungsschlüssel vorkommen können: Kern, Server und Oberfläche ohne Tests.
+_FRONTEND_SOURCE = PROJECT_ROOT / "app" / "frontend" / "src"
+_TEMPLATE_KEY = re.compile(r"`([a-z][A-Za-z]*\.[^`]*\$\{[^`]*)`")
+_PLACEHOLDER = re.compile(r"\$\{[^}]*\}")
+
+
+def _source_texts() -> list[str]:
+    files = list((PROJECT_ROOT / "app").rglob("*.py"))
+    files += [
+        path
+        for pattern in ("*.ts", "*.tsx")
+        for path in _FRONTEND_SOURCE.rglob(pattern)
+        if ".test." not in path.name
+    ]
+    return [path.read_text(encoding="utf-8") for path in files]
+
+
+def _key_patterns(texts: list[str]) -> list[re.Pattern[str]]:
+    """Zusammengesetzte Schlüssel der Oberfläche (`feature.${id}.title`) als Muster."""
+    templates = {match for text in texts for match in _TEMPLATE_KEY.findall(text)}
+    return [
+        re.compile(
+            "".join(
+                r"[\w-]+" if part is None else re.escape(part)
+                for part in _split_placeholders(template)
+            )
+            + "$"
+        )
+        for template in templates
+    ]
+
+
+def _split_placeholders(template: str) -> list[str | None]:
+    parts: list[str | None] = []
+    position = 0
+    for match in _PLACEHOLDER.finditer(template):
+        parts.append(template[position : match.start()])
+        parts.append(None)
+        position = match.end()
+    parts.append(template[position:])
+    return parts
+
+
+def test_no_unused_texts() -> None:
+    """Jeder Schlüssel der Sprachdateien wird gebraucht: im Code als Text, als Schlüssel einer
+    Aufzählung bzw. Liste (Hilfeseiten-Test) oder über einen zusammengesetzten Schlüssel."""
+    texts = _source_texts()
+    patterns = _key_patterns(texts)
+    required = required_keys()
+    unused = sorted(
+        key
+        for key in load_messages(SUPPORTED_LANGUAGES[0])
+        if key not in required
+        and not any(f'"{key}"' in text for text in texts)
+        and not any(pattern.match(key) for pattern in patterns)
+    )
+    assert unused == []
+
+
+def test_unused_texts_are_detected() -> None:
+    """Der Test darf nicht leer laufen: ein erfundener Schlüssel wird nicht als benutzt erkannt."""
+    texts = _source_texts()
+    patterns = _key_patterns(texts)
+    assert patterns
+    assert not any(pattern.match("nirgends.verwendet") for pattern in patterns)
+    assert not any('"nirgends.verwendet"' in text for text in texts)
+
+
+def test_every_composed_key_pattern_matches_a_text() -> None:
+    """Auch zusammengesetzte Schlüssel (`feature.${id}.title`) müssen Texte finden."""
+    keys = load_messages(SUPPORTED_LANGUAGES[0]).keys()
+    patterns = _key_patterns(_source_texts())
+    assert [pattern.pattern for pattern in patterns if not any(map(pattern.match, keys))] == []

@@ -2,7 +2,7 @@
 
 Lokales Werkzeug, um Schweizer NeTEx-Dateien visuell und selbsterklärend zu verstehen: Fahrt als Fahrplan, Herkunft jeder Angabe bis zur Stelle im XML, Frame-Farben, Objekte und Verweise, Fehler mit Guide-Verweis.
 
-> **Stand:** Phase 4 (Eigene Dateien und Validierung) des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte, zeigt jedes Objekt mit Frame, Stelle, Verweisen vor und zurück und exakter Markierung im XML, und zeigt jede Fahrt als Fahrplan: Halte in XML-Reihenfolge, berechnete Zeiten mit Rechenkette, Tageswechsel, Betriebstage, Angebote, Teilstrecken und Hinweise, jede Angabe mit Herkunft. Eigene Dateien (XML, mehrere XML oder ZIP) öffnet der Dialog „Datei öffnen“; das Tool erkennt ihre Version und prüft CH-2.0-Dateien mit XSD, den allgemeinen Guide-Regeln und den Schweizer Kernregeln für den Fahrplan (Ergebnis „geprüft gegen Entwurf <Commit>“). Unter Windows noch **nicht getestet**.
+> **Stand:** Erste Ausbaustufe (Phasen 0–5 des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md)) abgeschlossen; Nachweis und Gesamtübersicht der Grenzen in [docs/test-report.md](docs/test-report.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte, zeigt jedes Objekt mit Frame, Stelle, Verweisen vor und zurück und exakter Markierung im XML, und zeigt jede Fahrt als Fahrplan: Halte in XML-Reihenfolge, berechnete Zeiten mit Rechenkette, Tageswechsel, Betriebstage, Angebote, Teilstrecken und Hinweise, jede Angabe mit Herkunft. Eigene Dateien (XML, mehrere XML oder ZIP) öffnet der Dialog „Datei öffnen“; das Tool erkennt ihre Version und prüft CH-2.0-Dateien mit XSD, den allgemeinen Guide-Regeln und den Schweizer Kernregeln für den Fahrplan (Ergebnis „geprüft gegen Entwurf <Commit>“). Unter Windows noch **nicht getestet**. Was nicht geht: [Bekannte Grenzen](#bekannte-grenzen).
 
 ## Ordnerstruktur
 
@@ -128,7 +128,7 @@ git config core.hooksPath .githooks
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-### 5. Starten
+### 5. Starten und beenden
 
 Im Ordner `netex-ch-explorer`:
 
@@ -138,17 +138,11 @@ Im Ordner `netex-ch-explorer`:
 | Windows (PowerShell) | `.\start.ps1` |
 | beide | `uv run python scripts/start.py` |
 
-Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist (beim ersten Start rund eine Minute), startet den Server auf `http://127.0.0.1:8765/` und öffnet den Browser. Beenden mit **Ctrl+C**. Optionen: `--port 9000`, `--no-browser`.
+Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist (beim ersten Start rund eine Minute; es installiert dabei die Pakete der Oberfläche mit `npm ci`), startet den Server auf `http://127.0.0.1:8765/` und öffnet den Browser. Optionen: `--port 9000` (anderer Port; der Server prüft die Herkunft der Anfragen gegen genau diesen Port), `--no-browser` (Browser nicht öffnen).
+
+**Beenden:** im Terminal-Fenster, in dem der Server läuft, **Ctrl+C** drücken. Danach ist der Port wieder frei; Dateien im Ordner `work/` werden beim nächsten Start gelöscht. Das Schliessen des Browser-Tabs beendet den Server nicht.
 
 Nach dem Start lädt das Tool im Hintergrund die XSD des Guides (rund 17 Sekunden) und prüft die Beispiele; die Guide-Status-Box zeigt „XSD wird geladen …", solange das läuft. Danach zeigt die Beispielliste den Status jedes Beispiels (XML-Syntax, XSD, Guide-Regeln, Kernregeln, Referenzen).
-
-### Eigene Dateien öffnen und prüfen
-
-1. In der linken Spalte **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
-2. Unter **Geöffnete Dateien** steht je Datei die erkannte Version mit Begründung (Namensraum, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur). Nur Dateien, die als CH-Profil 2.0 erkannt sind, werden geprüft; andere (z. B. NeTEx 1.10) bleiben im Explorer ansehbar.
-3. **Prüfen** startet XSD-Prüfung, die Regeln von `general_rules.sch` und die Kernregeln. Befunde erscheinen unter **Diagnosen**, getrennt nach Art, mit Schweregrad, Stelle (Klick markiert sie im XML) und Link auf das Guide-Kapitel im geprüften Commit.
-   Ist die Version einer Datei mehrdeutig oder unbekannt, wird sie nicht geprüft; der Knopf **Trotzdem als CH 2.0 prüfen** erzwingt die Prüfung auf ausdrücklichen Wunsch, das Ergebnis vermerkt „als CH 2.0 geprüft auf Wunsch, Version nicht erkannt“. Eine erkannte andere Version (z. B. 1.10) wird nie so geprüft.
-4. Abgewiesene Dateien (falscher Typ, zu gross, unsichere ZIP-Einträge …) erscheinen als Diagnosen der Art „Datei“. Die Grenzwerte stehen in `config/settings.json` (`zipLimits`).
 
 ### 6. Funktion prüfen (optional)
 
@@ -174,6 +168,26 @@ Danach die Anwendung neu starten. Die Guide-Status-Box meldet „weicht vom zule
 
 In VS Code **Datei → Arbeitsbereich aus Datei öffnen…** wählen und `netex-ch-explorer/netex-ch-explorer.code-workspace` öffnen. Projekt und Guide erscheinen nebeneinander. `netex-files/` ist bewusst nicht enthalten (sehr gross).
 
+## Bedienung
+
+Kurzanleitung für den ersten Test (die Hilfeseite der Anwendung erklärt alle Funktionen, Farben und Prüfungen ausführlicher):
+
+1. **Beispiel wählen.** Nach dem Start steht links die Liste „Beispiele des Guides“. Beispiel `01_NeTEx_Spiez_Interlaken_Ost.xml` anklicken. Jedes Beispiel zeigt seinen Prüfstatus (✔ ohne Meldungen, ℹ/⚠ mit Hinweisen oder Fehlern, ✖ nicht lesbar). Solange die Guide-Status-Box „XSD wird geladen …“ zeigt (rund 17 Sekunden), fehlen die Status der Beispiele; das Öffnen funktioniert trotzdem.
+2. **Fahrt öffnen.** Unter „Fahrten“ die Fahrt (`ServiceJourney`) anklicken. Die Mitte zeigt sie als Fahrplan: Kopf mit Zugnummer, Linie, Verkehrsmittel und Betriebstagen, darunter die Halte mit Ein-/Aussteigen, Ankunft, Abfahrt und Angeboten. Zeiten, die nicht in der Datei stehen, sind als „berechnet“ gekennzeichnet; ein Klick auf die Zeit zeigt die Rechenkette.
+3. **Halt anklicken.** Ein Klick auf einen Halt (z. B. „Interlaken West“) wählt die Angabe. **Rechts** erscheint die **Herkunftskette** als farbige Kästchen (z. B. `ServiceFrame` → `ScheduledStopPoint` → `Name`); jedes Kästchen ist anklickbar. Darunter steht der **XML-Ausschnitt** mit der exakt markierten Stelle (hier `<Name lang="de">Interlaken West</Name>`) und, am Rand, dem Frame mit seiner Farbe.
+4. **Objekt ansehen.** Oben in der Mitte zwischen „Fahrt“ und „Objekt“ umschalten. „Objekt“ zeigt Typ, ID, Frame, Datei mit Zeile und Spalte, Inhalt und die Verweise vor und zurück (farbig nach dem Frame des Ziels, jeder anklickbar). Mit der **Objektsuche** (Typ, Teil der ID oder des Namens) lässt sich jedes Objekt der Datei finden. „Zurück im Verlauf“ und „Vor im Verlauf“ führen zu früheren Auswahlen.
+5. **Farben.** Jeder Frame hat eine feste Farbe (Legende links, immer mit Frame-Name); Grau heisst „für den Fahrplan nicht relevant“. Die Farben stehen in `config/frame-colors.json` und lassen sich ohne Codeänderung anpassen.
+6. **Eigene Datei öffnen und prüfen:** siehe unten.
+7. **Hilfe.** Oben rechts öffnet „Hilfe“ die Hilfeseite: Funktionen, Frame-Farben und Grau-Liste, durchgeführte und nicht durchgeführte Prüfungen (mit Quelle bzw. Stand), die Schweizer Kernregeln, Schweregrade (⚠ Fehler, △ Warnung, ℹ Hinweis) und der Guide-Stand. Oben rechts lässt sich die Sprache (Deutsch/English) umschalten.
+
+### Eigene Dateien öffnen und prüfen
+
+1. In der linken Spalte **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
+2. Unter **Geöffnete Dateien** steht je Datei die erkannte Version mit Begründung (Namensraum, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur). Nur Dateien, die als CH-Profil 2.0 erkannt sind, werden geprüft; andere (z. B. NeTEx 1.10) bleiben im Explorer ansehbar.
+3. **Prüfen** startet XSD-Prüfung, die Regeln von `general_rules.sch` und die Kernregeln. Befunde erscheinen unter **Diagnosen**, getrennt nach Art, mit Schweregrad, Stelle (Klick markiert sie im XML) und Link auf das Guide-Kapitel im geprüften Commit.
+   Ist die Version einer Datei mehrdeutig oder unbekannt, wird sie nicht geprüft; der Knopf **Trotzdem als CH 2.0 prüfen** erzwingt die Prüfung auf ausdrücklichen Wunsch, das Ergebnis vermerkt „als CH 2.0 geprüft auf Wunsch, Version nicht erkannt“. Eine erkannte andere Version (z. B. 1.10) wird nie so geprüft.
+4. Abgewiesene Dateien (falscher Typ, zu gross, unsichere ZIP-Einträge …) erscheinen als Diagnosen der Art „Datei“. Die Grenzwerte stehen in `config/settings.json` (`zipLimits`).
+
 ## Einstellungen
 
 Im Ordner `config/` (JSON, UTF-8). Fehlt eine Datei oder ist ein Eintrag ungültig, gilt der Standardwert; die Oberfläche zeigt dann unter „Einstellungen“ einen Hinweis.
@@ -191,7 +205,11 @@ Im Ordner `config/` (JSON, UTF-8). Fehlt eine Datei oder ist ein Eintrag ungült
 | `uv run python scripts/test.py` | Alle Python-Tests, auch gegen den Guide-Klon (dort Pflicht). Bei Erfolg schreibt das Skript `guide-tested.json` mit dem getesteten Guide- und XSD-Commit. Mit eigenen pytest-Argumenten (z. B. `-k`) gilt der Lauf als Teillauf und schreibt nichts. |
 | `uv run python scripts/check.py` | Prüfbefehl: Lockfile, ruff, mypy --strict, pytest mit Abdeckung ≥ 90 % für `app/core`, TypeScript, Biome, Vitest, Build, pip-audit, npm audit, Git-Hook aktiv. Läuft vor jedem Commit über den Git-Hook (rund 15 s); der Hook verlangt zusätzlich, dass alle Änderungen vorgemerkt sind (`git add`), damit genau der Commit-Inhalt geprüft wird. `pip-audit` und `npm audit` brauchen eine Internetverbindung. |
 | `uv run pytest` | Nur die Python-Tests (ohne Testnachweis). |
-| `npm run test` (in `app/frontend`) | Nur die Frontend-Tests. |
+| `npm run test` (in `app/frontend`) | Nur die Frontend-Tests (Vitest). |
+| `npm run e2e:install` (in `app/frontend`, einmalig) | Lädt den Browser (Chromium) für den E2E-Test herunter (rund 150 MB, braucht Internet). |
+| `npm run e2e` (in `app/frontend`) | E2E-Test mit Playwright: startet den Server selbst (Testport 8766, anderer Port mit `E2E_PORT`), öffnet Beispiel 01, die Fahrt und einen Halt und prüft XML-Stelle und Frame; beendet den Server danach. Ohne Guide-Klon wird der Test übersprungen (mit `NETEX_REQUIRE_GUIDE=1` schlägt er stattdessen fehl). Statt des heruntergeladenen Browsers lässt sich der installierte Chrome nutzen: `E2E_BROWSER_CHANNEL=chrome npm run e2e` (macOS/Linux) bzw. `$env:E2E_BROWSER_CHANNEL="chrome"; npm run e2e` (PowerShell). |
+
+Der E2E-Test gehört bewusst **nicht** zum Prüfbefehl (Begründung in [docs/decisions.md](docs/decisions.md)): Er braucht einen Browser, den Guide-Klon und einen Serverstart, und der Prüfbefehl läuft vor jedem Commit. Vor einer Übergabe oder einer Änderung an der Oberfläche gehört er dazu.
 
 `git commit --no-verify` ist verboten (Projektregel).
 
@@ -200,15 +218,41 @@ Im Ordner `config/` (JSON, UTF-8). Fehlt eine Datei oder ist ein Eintrag ungült
 Für den ersten Test an einem Windows-PC (Windows gilt bis dahin als „nicht getestet“):
 
 1. [Installation](#installation) Schritte 1–4 für Windows ausführen.
-2. `.\start.ps1` ausführen. Prüfen: Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar; Beispiel 01 anklicken, in der Fahrtenliste „ServiceJourney“ anklicken (Fahrtansicht mit drei Halten, Ankunft in Interlaken Ost 10:54 als „berechnet“; ein Klick auf die Zeit zeigt die Rechenkette), oben „Objekt“ wählen und im Inhalt `DepartureTime` anklicken: rechts ist `<DepartureTime>10:35:00</DepartureTime>` markiert; „Hilfe“ öffnet die Hilfeseite; Sprache auf English umschalten.
-3. `uv run python scripts/test.py` und `uv run python scripts/check.py` ausführen; beide müssen grün enden.
-4. Ergebnis (inkl. Fehlermeldungen) im Testbericht `docs/test-report.md` festhalten.
+2. `.\start.ps1` ausführen. Prüfen: Der Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar.
+3. Beispiel 01 anklicken, unter „Fahrten“ die `ServiceJourney` anklicken: Die Fahrtansicht zeigt drei Halte; die Ankunft in Interlaken Ost 10:54 ist als „berechnet“ gekennzeichnet, ein Klick auf die Zeit zeigt die Rechenkette. Auf den Halt „Interlaken West“ klicken: rechts ist in der Herkunftskette `ServiceFrame` → `ScheduledStopPoint` → `Name` zu sehen, im XML ist `<Name lang="de">Interlaken West</Name>` markiert. Oben „Objekt“ wählen und im Inhalt `DepartureTime` anklicken: rechts ist `<DepartureTime>10:35:00</DepartureTime>` markiert.
+4. **Datei öffnen:** „Datei öffnen …“ wählen und eine Beispieldatei aus `..\netexRealisationGuideSwitzerland\src\examples\` (z. B. `02_NeTEx_CH_PAG_11929.xml`) auswählen: unter „Geöffnete Dateien“ steht „CH-Profil 2.0“ mit Begründung. **Prüfen** wählen: Unter „Diagnosen“ erscheinen Befunde mit Stelle (Klick markiert sie im XML) und Guide-Link.
+5. „Hilfe“ öffnen (Farben, Prüfungen, Guide-Stand sichtbar); Sprache auf English umschalten.
+6. Server mit **Ctrl+C** beenden (prüfen: danach ist der Port frei und `work\` leer).
+7. `uv run python scripts/test.py` und `uv run python scripts/check.py` ausführen; beide müssen grün enden. Optional: `cd app\frontend; npm run e2e:install; npm run e2e` (E2E-Test; ungetestet unter Windows, besonders das Beenden des Servers).
+8. Ergebnis (inkl. Fehlermeldungen) im Testbericht `docs/test-report.md` festhalten.
 
 ## Bekannte Grenzen
 
-- Phase 4: Geprüft werden XML-Syntax, Referenzen, XSD, `general_rules.sch` und 30 Schweizer Kernregeln für den Fahrplan; die übrigen rund 330 Profilregeln sind noch nicht eingebunden (die Hilfeseite listet sie als „nicht durchgeführt“). Erklärungen und Korrekturvorschläge zu den Befunden folgen später. Grosse Lieferungen (12 GB) sind nicht Ziel dieser Stufe (Grenzwerte: 200 MB gesamt, 50 MB je Datei).
-- Fahrtansicht: Nicht dargestellt sind Zieländerungen (`DestinationDisplay`), Formation, Flügelung, Durchbindung, Bedarfsverkehr und Takt; sie bleiben im Objekt-Explorer einsehbar. Die Angaben der Beispiele des Guides enthalten Widersprüche ([docs/assumptions.md](docs/assumptions.md)); das Tool zeigt sie, korrigiert sie aber nicht.
-- Nur Dateien in UTF-8 (oder ASCII); Dateien mit `DOCTYPE` werden aus Sicherheitsgründen nicht gelesen.
-- Kein Commit-Datum des Guides (bewusst, siehe `docs/decisions.md`).
-- Der Guide-Status wird beim Start ermittelt; nach einem Guide-Update neu starten.
-- Windows: noch nicht getestet.
+Vollständige Übersicht mit Herkunft: [docs/test-report.md](docs/test-report.md) („Phase 5 / Übergabe“); offene Punkte: [docs/open-points.md](docs/open-points.md); Entscheide: [docs/decisions.md](docs/decisions.md).
+
+**Prüfung**
+
+- Geprüft werden XML-Syntax, Referenzen, XSD, `general_rules.sch` und 30 Schweizer Kernregeln für den Fahrplan. Die übrigen rund 330 Profilregeln sind nicht eingebunden (die Hilfeseite listet sie als „nicht durchgeführt“); auch CH-SJP-08 und CH-SJ-16 sind bewusst nicht umgesetzt. Erklärungen und Korrekturvorschläge zu den XSD-Befunden fehlen (nur der Originalwortlaut).
+- Nur als CH 2.0 erkannte Dateien werden geprüft; andere Versionen (z. B. NeTEx 1.10) nur auf ausdrücklichen Wunsch bei mehrdeutiger oder unbekannter Version, eine erkannte andere Version nie. Das Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“.
+- Die Beispiele des Guides enthalten Widersprüche und Verstösse (z. B. 121 Verstösse gegen „kein `order`-Attribut“ in 9 Beispielen, Kommentar von Beispiel 01 mit 10:53 statt 10:54); das Tool zeigt sie, korrigiert sie aber nicht ([docs/assumptions.md](docs/assumptions.md)).
+- Eine Prüfung vor Ende des XSD-Ladens wartet bis zu 17 Sekunden. Ohne XSD (Submodul nicht geholt) ist die XSD-Prüfung „nicht durchgeführt“.
+
+**Fahrtansicht**
+
+- Nicht dargestellt (aber im Objekt-Explorer einsehbar): Zieländerungen (`DestinationDisplay`), Takt, Formation, Flügelung, Durchbindung, Bedarfsverkehr, Elternfahrt der Kurswagen. Die Betriebstage von Kurswagen und Elternfahrt werden nicht automatisch geprüft. Ausstattung von Haltestellen hat keine eigene Darstellung (grau).
+- Die Zeitumstellung wird nur für Betriebstage mit auflistbaren `ValidDayBits` geprüft (bei 15 von 22 Beispielen weicht deren Länge ab).
+- Verweise in Dateien, die nicht mit geöffnet sind, bleiben „extern oder nicht geladen“ (Hinweis, kein Fehler).
+
+**Umfang und Leistung**
+
+- Grosse Lieferungen (z. B. die 12-GB-Lieferung 2027 in NeTEx 1.10) sind nicht Ziel dieser Stufe: Grenzwerte 200 MB gesamt, 50 MB je Datei, 500 Dateien, Kompressionsrate 100:1; ein Upload liegt beim Annehmen bis zu 200 MB im Arbeitsspeicher; Index nur im Arbeitsspeicher; die Fahrtansicht baut sich bei jedem Abruf neu auf. Datei-Import aus einem Ordner, Index auf Festplatte und Hintergrundprozess sind zurückgestellt.
+- Nur Dateien in UTF-8 (oder ASCII); Dateien mit `DOCTYPE` werden aus Sicherheitsgründen nicht gelesen; Dateien mit nur CR als Zeilenumbruch haben falsche Zeilennummern.
+- Höchstens 10 Datensätze gleichzeitig offen (der älteste wird geschlossen).
+- Eine Webversion (Pyodide, statische Seite) gibt es noch nicht; Veröffentlichung und Lizenz der Guide-Dateien sind offen.
+
+**Betrieb**
+
+- Der Guide-Status wird beim Start ermittelt; nach einem Guide-Update neu starten. Ändert ein `git pull` eine Datei bei geöffnetem Datensatz, stimmen Stellen von Befunden nicht mehr; Server neu starten.
+- Kein Commit-Datum des Guides (bewusst, siehe `docs/decisions.md`). Nur ein Guide-Stand gleichzeitig; keine Einstellungsseite für Farben (Datei `config/frame-colors.json`); die Sprachdateien enthalten vorläufige Fachbegriffe (Glossar offen).
+- Der Prüfbefehl braucht für `pip-audit` und `npm audit` Internet; der Build meldet ein Skriptpaket über 500 kB (CodeMirror, lokal unkritisch).
+- Windows: noch nicht getestet; das gilt auch für den E2E-Test. Eine Prüfung der Einrichtung „von null“ auf einem frischen Rechner steht aus (siehe Testbericht).
