@@ -27,7 +27,7 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 
 1. Lokale Anwendung: Start per Skript, Bedienung im Browser.
 2. Guide als Git-Klon im Nachbarordner (VS-Code-Workspace); das Tool zeigt den Guide-Commit an und meldet, wenn er neuer ist als zuletzt getestet oder die XSD fehlt.
-3. Alle Dateien in `src/examples/` des Guide-Stands einzeln ladbar, auch fehlerhafte.
+3. Alle Dateien in `src/examples/` des Guide-Stands einzeln ladbar, auch fehlerhafte oder noch nicht aktualisierte; Status pro Beispiel in der Auswahlliste.
 4. Nach dem Laden: Liste der Fahrten der Datei (Zugnummer, Linie, erster/letzter Halt) und eine **einfache Objektsuche** nach ID oder Name. Keine weitergehende Suche (Schwerpunkt ist die Fahrplandarstellung mit Herkunft).
 5. Fahrtansicht für eine `ServiceJourney` als Fahrplan: Halte mit Ein-/Aussteige-Eigenschaften, Ankunft/Abfahrt (auch berechnete Zeiten), Mitternacht, Betriebstage, Angebote.
 6. Herkunft jeder angezeigten Angabe bis zur exakten Stelle im XML.
@@ -83,7 +83,8 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 - Das Tool liest den Guide über den konfigurierten Pfad (Standard `../netexRealisationGuideSwitzerland`) und ermittelt den Commit direkt aus dem `.git`-Ordner (ohne Git-Programm); Anzeige in der Oberfläche mit „in Entwicklung“.
 - Daraus genutzt: `src/examples/*.xml` + `README.md` (Titel), `src/templates/` (später für Vorschläge), `src/schematron_rules/general_rules.sch`, `xsd/`, `src/A5_annex_index.md` (Element → Kapitel), `src/media/Mappingtabellen_NeTEx_v2.0.xlsx`.
 - Aktualisieren: `git pull` + `git submodule update --init --depth 1`.
-- **Sicherheitsnetz:** `guide-tested.json` im Projekt hält fest, mit welchem Guide-Commit die Tests zuletzt erfolgreich liefen (wird vom Testlauf geschrieben). Ist der vorhandene Stand neuer: Hinweis „Guide-Stand neuer als zuletzt getestet – Tests ausführen“. Fehlt die XSD: Hinweis mit dem fehlenden Befehl.
+- **Sicherheitsnetz:** `guide-tested.json` im Projekt hält fest, mit welchem Guide-Commit die Tests zuletzt erfolgreich liefen, und **pro Beispiel** Prüfsumme (SHA-256) und Ergebnis (ohne Meldungen / mit Hinweisen / mit Fehlern / nicht lesbar). Wird nur vom Testlauf `scripts/test.py` geschrieben. Ist der vorhandene Stand neuer: Hinweis „Guide-Stand neuer als zuletzt getestet – Tests ausführen“; geänderte oder neue Beispiele werden einzeln erkannt. Fehlt die XSD: Hinweis mit dem fehlenden Befehl.
+- **Teilweise aktualisierte Guides:** Beispiele können in unterschiedlichem Stand sein (heute z. B. 2 Beispiele mit `version="1.09"`, README der Beispiele noch mit altem Zeitmodell). Jede Datei wird für sich geladen und erkannt; ein veraltetes oder fehlerhaftes Beispiel beeinträchtigt die anderen nicht. Die Fahrtansicht zeigt, was sich auflösen lässt, der Rest erscheint als „nicht berechenbar“ mit Grund.
 
 ### Mappingtabelle
 
@@ -187,7 +188,7 @@ Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung m
 
 - Für Desktop ausgelegt; bei schmalerem Fenster bedienbar.
 - **Links oben: Guide-Status-Box** (Sicherheitsnetz, weil der Benutzer den Guide selbst per Git aktualisiert): Profil und „in Entwicklung“, Branch, Commit, Datum; ✔ „getestet“ bzw. ℹ „neuer als zuletzt getestet“ mit Hinweis `scripts/test.py`; ⚠ „XSD fehlt“ mit dem fehlenden Git-Befehl; ⚠ Probleme mit der Mappingtabelle.
-- **Links:** Auswahl der Beispiele bzw. „Datei öffnen“, Versionserkennung, Liste der Fahrten der Datei, einfache Objektsuche, Diagnosen.
+- **Links:** Auswahl der Beispiele mit **Status pro Beispiel** (✔ ohne Meldungen · ℹ/⚠ mit Hinweisen/Fehlern und Anzahl · ✖ nicht lesbar · „geändert seit letztem Test“ / „neu“) bzw. „Datei öffnen“, Versionserkennung, Liste der Fahrten der Datei, einfache Objektsuche, Diagnosen.
 - **Mitte:** umschaltbar „Fahrt“ / „Objekt“.
   - Fahrt: Kopf mit Zugnummer, Linie, Verkehrsmittel, Betriebstagen; Tabelle Halt – Ein-/Aussteigen – Ankunft – Abfahrt – Angebote. **Jede Angabe trägt die Farbmarkierung ihres Frames.**
   - Objekt: Eigenschaften und Referenzen ein-/ausgehend als **farbige Liste** (Farbe des Ziel-Frames), jede anklickbar.
@@ -223,7 +224,7 @@ Nach jeder Phase: Tests ausführen, **Hilfeseite und README nachführen**, Ergeb
 | Phase | Inhalt | Abnahme |
 |---|---|---|
 | **0 Grundgerüst** | Projektstruktur, Abhängigkeiten (uv, npm) mit Lockfiles, `config/`, Workspace-Datei, Guide-Erkennung (Pfad, Commit, XSD vorhanden, `guide-tested.json`), Mappingtabelle lesen, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | `scripts/test.py` läuft und schreibt `guide-tested.json`; mit dem geklonten Guide (`b7ac158`, XSD `73b337e`) startet die App lokal, zeigt den Guide-Commit an und liest die Mappingtabelle; fehlende XSD bzw. neuerer Stand werden gemeldet |
-| **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
+| **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl mit Status pro Beispiel, Prüfsummen in `guide-tested.json` | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
 | **2 Referenzen und Herkunft** | Referenzen inkl. `Extensions`, Auflösung über ID + Typ, Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | Navigation vor/zurück; `Quay` und `ScheduledStopPoint` mit gleicher ID werden korrekt unterschieden; nicht auflösbare Referenzen als Diagnose |
 | **3 Fahrtansicht CH 2.0** | Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
 | **4 Eigene Dateien und Validierung** | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + `general_rules.sch` + Kernregeln, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; `order`-Verstösse der Beispiele erscheinen mit Stelle und Link zum Guide-Kapitel; eine synthetische Fahrt mit `calls` verletzt die Kernregel mit Quellenangabe |
@@ -232,7 +233,8 @@ Nach jeder Phase: Tests ausführen, **Hilfeseite und README nachführen**, Ergeb
 ## 11. Tests
 
 - **Unit:** Guide-Erkennung (Commit aus `.git`, fehlende XSD, neuer als getestet), Namespaces, Positionen (Byte/Zeile/Spalte), Frame-Zuordnung, Pfadberechnung, Referenzauflösung (ID + Typ, doppelte IDs), Zeitberechnung inkl. Mitternacht und fehlender Summanden, `ValidDayBits`, Versionserkennung, Mappingtabelle (fehlende Spalte → Hinweis), Übersetzungsschlüssel vollständig.
-- **Alle Guide-Beispiele:** parametrisierter Test lädt jedes Beispiel des aktiven Guide-Stands; keine Abstürze, Diagnosen erlaubt.
+- **Alle Guide-Beispiele:** parametrisierter Test lädt jedes Beispiel des aktiven Guide-Stands. Zwei Fälle getrennt: (1) **Absturz des Tools** bei einem Beispiel → Test schlägt fehl (Fehler im Tool). (2) **Fehler oder veralteter Stand im Beispiel** → kein Testfehler, sondern Eintrag im Testbericht und Ergebnis in `guide-tested.json`.
+- **Fachliche Tests an bestimmten Beispielen** (01, 08, 15, 21): Hat sich die Prüfsumme des Beispiels seit dem letzten Test geändert und schlägt der Test fehl, meldet der Bericht „Beispiel geändert – Erwartung prüfen“ statt nur „fehlgeschlagen“; Ursache (Guide oder Tool) dem Benutzer vorlegen.
 - **Hilfeseite aktuell:** Test schlägt fehl, wenn ein Prüfschritt, eine Frame-Farbe, ein Schweregrad oder eine Funktion (Liste in `app/core/features.py` bzw. gleichwertig) keinen Hilfetext in **beiden** Sprachdateien hat, oder wenn die Hilfeseite Farben/Prüfungen anders zeigt als `config/` und die Liste der Prüfschritte.
 - **Synthetische Fixtures** (eigene, klein, als synthetisch gekennzeichnet, z. B. `ParticipantRef` `SYNTHETIC`; nie als echte Fahrplandaten ausgeben): Fahrt mit drei Halten, Fahrt über Mitternacht, fehlender Summand, nicht auflösbare Referenz, Referenz über Dateigrenzen, Referenz auf nicht geladene Datei (`external_or_unloaded`), doppelte ID, defektes XML, ZIP mit mehreren Dateien, 1.10-artige Datei, Fahrt mit `calls` (verletzt Kernregel).
 - **Sicherheit:** XXE, Zip-Slip, ZIP-Grenzwerte, unzulässiger Pfad.
@@ -263,3 +265,4 @@ Für eine neue Sitzung, die diesen Plan umsetzt:
 4. Plattformen → Windows bald nötig und wichtiger als die Webversion; Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
 5. Guide-Bezug → Git-Klon durch den Benutzer statt Download-Skript; Workspace-Datei; eigene Dateien nur über den „Datei öffnen“-Dialog.
 6. Hilfeseite → Funktionen, Farben, durchgeführte und nicht durchgeführte Prüfungen, automatisch aus den Daten; wird bei jeder Änderung nachgeführt (Abschnitt 7, 11, 13).
+7. Teilweise aktualisierte Guide-Beispiele → Status pro Beispiel, Prüfsummen in `guide-tested.json`, Tests trennen Tool-Absturz von Beispielfehlern (Abschnitte 4, 7, 11).
