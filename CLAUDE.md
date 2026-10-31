@@ -11,6 +11,7 @@ Sprache der Anwendung und der Dokumentation: Deutsch (de-CH); NeTEx-Bezeichner b
 - [docs/open-points.md](docs/open-points.md): offene und zurückgestellte Punkte.
 - [docs/research/guide-2.0.md](docs/research/guide-2.0.md): CH-Profil 2.0: Artefakte, Lieferstruktur, Datenmodell, Mitternacht, Codes, Prüfergebnisse.
 - [docs/research/delivery-1.10-2027.md](docs/research/delivery-1.10-2027.md): Lieferung 2027 (NeTEx 1.10) in `../netex-files/`, zurückgestellt.
+- [docs/engineering-guidelines.md](docs/engineering-guidelines.md): verbindliche Qualitätsregeln (Sicherheit, Wartbarkeit, Erweiterbarkeit, Tests, Selbstkontrolle).
 - [README.md](README.md): Einrichtung (Guide klonen, Workspace, Start).
 
 ## Umfang in Kürze
@@ -38,6 +39,13 @@ NeTEx-Viewer/                          Sammelordner (nicht versioniert)
 - **Klein und wartbar vor ausgefeilten Funktionen.** Die einfachste Lösung, die die Anforderung erfüllt, hat Vorrang.
 - **Aufwand offenlegen:** Bedeutet eine Anforderung viel Code oder eine komplexe Lösung, sage ich das *vor* der Umsetzung, mit grober Einschätzung und einfacherer Alternative. Das gilt besonders, wenn der Nutzen fraglich ist. Der Benutzer entscheidet.
 - **Unklarheiten und Widersprüche** (im Plan, in Entscheidungen, im Guide oder in den Daten) nicht selbst auflösen, sondern dem Benutzer vorlegen und gemeinsam klären. Danach in `docs/decisions.md` festhalten.
+
+## Codequalität (verbindlich)
+
+- **Keine Sicherheitslücken, wartbar, erweiterbar, Best Practice, keine Abkürzungen.** Details: [docs/engineering-guidelines.md](docs/engineering-guidelines.md). Ich halte mich selbst konsequent daran und kontrolliere es selbst.
+- **`scripts/check.py` muss vor jedem Commit grün sein** (Stil, `mypy --strict`, Tests mit ≥ 90 % Abdeckung im Kern, Frontend-Prüfung, Sicherheitslücken in Abhängigkeiten). Der Git-Hook erzwingt das; **`--no-verify` ist verboten.**
+- **Vor jedem Phasenabschluss** Code-Review und Sicherheits-Review; Funde beheben; Nachweis in `docs/test-report.md`.
+- Ausnahmen von Prüfregeln nur mit Begründung im Code und in `docs/decisions.md`.
 
 ## Arbeitsregeln
 

@@ -19,7 +19,7 @@ Man wählt ein Beispiel aus dem CH-NeTEx-Guide oder öffnet eine eigene Datei. D
 
 Massstab: Der Fahrplan mit nachvollziehbarer Herkunft ist wichtiger als Such- oder Komfortfunktionen.
 
-Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Funktionen; Aufwand offenlegen; Unklarheiten dem Benutzer vorlegen.
+Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Funktionen; Aufwand offenlegen; Unklarheiten dem Benutzer vorlegen. **Codequalität** nach [docs/engineering-guidelines.md](docs/engineering-guidelines.md): keine Sicherheitslücken, wartbar, erweiterbar, keine Abkürzungen; technisch erzwungen und pro Phase nachgewiesen.
 
 ## 2. Umfang
 
@@ -108,7 +108,8 @@ netex-ch-explorer/
 │   │   └── validation/    XSD und Schematron (lxml)
 │   ├── server/     FastAPI, nur dünne Schicht über core; bindet an 127.0.0.1
 │   └── frontend/   React + TypeScript + Vite, CodeMirror 6, Sprachdateien
-├── scripts/        start.py, test.py (schreibt guide-tested.json bei Erfolg); start.sh/start.ps1 als Einzeiler
+├── scripts/        start.py, test.py (schreibt guide-tested.json bei Erfolg), check.py (alle Qualitätsprüfungen); start.sh/start.ps1 als Einzeiler
+├── .githooks/      pre-commit ruft check.py auf (aktiviert mit git config core.hooksPath .githooks)
 ├── netex-ch-explorer.code-workspace   VS-Code-Workspace: Projekt + Guide-Klon
 ├── guide-tested.json                  zuletzt erfolgreich getesteter Guide-Commit
 ├── config/         Einstellungsdateien (Farben, graue Elementtypen, Pfade, Grenzwerte)
@@ -219,11 +220,11 @@ Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung m
 
 ## 10. Phasen und Abnahme
 
-Nach jeder Phase: Tests ausführen, **Hilfeseite und README nachführen**, Ergebnis in `docs/test-report.md`, Commit. Fehler vor der nächsten Phase beheben. Lässt sich eine Phase nicht vollständig umsetzen, wird der funktionierende Teil mit genauer Beschreibung der Lücke geliefert, **kein vorgetäuschter Erfolg**; die Lücke wird dem Benutzer vorgelegt.
+Nach jeder Phase: `scripts/check.py` grün, **Code-Review und Sicherheits-Review** mit behobenen Funden, **Hilfeseite und README nachführen**, Nachweis in `docs/test-report.md` (Prüfbefehl, Abdeckung, Reviews, Lücken), Commit. Fehler vor der nächsten Phase beheben. Lässt sich eine Phase nicht vollständig umsetzen, wird der funktionierende Teil mit genauer Beschreibung der Lücke geliefert, **kein vorgetäuschter Erfolg**; die Lücke wird dem Benutzer vorgelegt.
 
 | Phase | Inhalt | Abnahme |
 |---|---|---|
-| **0 Grundgerüst** | Projektstruktur, Abhängigkeiten (uv, npm) mit Lockfiles, `config/`, Workspace-Datei, Guide-Erkennung (Pfad, Commit, XSD vorhanden, `guide-tested.json`), Mappingtabelle lesen, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | `scripts/test.py` läuft und schreibt `guide-tested.json`; mit dem geklonten Guide (`b7ac158`, XSD `73b337e`) startet die App lokal, zeigt den Guide-Commit an und liest die Mappingtabelle; fehlende XSD bzw. neuerer Stand werden gemeldet |
+| **0 Grundgerüst** | Projektstruktur, Abhängigkeiten (uv, npm) mit Lockfiles, **Qualitätswerkzeuge** (ruff, mypy strict, pytest-cov, Biome, Vitest, pip-audit, npm audit), **`scripts/check.py`** und **Git-Hook** (`.githooks/pre-commit`), `config/`, Workspace-Datei, Guide-Erkennung (Pfad, Commit, XSD vorhanden, `guide-tested.json`), Mappingtabelle lesen, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | `scripts/check.py` ist grün und wird vom Git-Hook vor jedem Commit ausgeführt; `scripts/test.py` läuft und schreibt `guide-tested.json`; mit dem geklonten Guide (`b7ac158`, XSD `73b337e`) startet die App lokal, zeigt den Guide-Commit an und liest die Mappingtabelle; fehlende XSD bzw. neuerer Stand werden gemeldet |
 | **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl mit Status pro Beispiel, Prüfsummen in `guide-tested.json` | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
 | **2 Referenzen und Herkunft** | Referenzen inkl. `Extensions`, Auflösung über ID + Typ, Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | Navigation vor/zurück; `Quay` und `ScheduledStopPoint` mit gleicher ID werden korrekt unterschieden; nicht auflösbare Referenzen als Diagnose |
 | **3 Fahrtansicht CH 2.0** | Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
@@ -249,9 +250,9 @@ Nach jeder Phase: Tests ausführen, **Hilfeseite und README nachführen**, Ergeb
 
 Für eine neue Sitzung, die diesen Plan umsetzt:
 
-1. Zuerst lesen: [CLAUDE.md](CLAUDE.md), [docs/decisions.md](docs/decisions.md), diesen Plan, [docs/research/guide-2.0.md](docs/research/guide-2.0.md), [docs/open-points.md](docs/open-points.md).
+1. Zuerst lesen: [CLAUDE.md](CLAUDE.md), [docs/engineering-guidelines.md](docs/engineering-guidelines.md), [docs/decisions.md](docs/decisions.md), diesen Plan, [docs/research/guide-2.0.md](docs/research/guide-2.0.md), [docs/open-points.md](docs/open-points.md).
 2. Prüfen, ob der Guide-Klon vorhanden ist (`../netexRealisationGuideSwitzerland`, Branch `next`, XSD-Submodul). Fehlt er: Benutzer auf die Befehle im README hinweisen, nicht selbst klonen.
-3. Phasen 0–5 der Reihe nach umsetzen. Nach jeder Phase: Tests, `docs/test-report.md`, Commit, kurze Rückmeldung an den Benutzer (was fertig ist, was offen ist).
+3. Phasen 0–5 der Reihe nach umsetzen. Nach jeder Phase: `scripts/check.py` grün, Code-Review und Sicherheits-Review, Nachweis in `docs/test-report.md`, Commit, kurze Rückmeldung an den Benutzer (was fertig ist, was offen ist). `--no-verify` nie verwenden.
 4. **Anhalten und den Benutzer fragen** bei: Elementen, deren Einordnung in Grau unklar ist, unklaren Kernregeln, jeder Unklarheit oder jedem Widerspruch (Plan, Entscheidungen, Guide, Daten), jeder Anforderung mit unerwartet hohem Aufwand. Fragen einzeln stellen.
 5. **Jede Änderung an Funktionen, Farben oder Prüfungen führt die Hilfeseite im selben Commit nach** (Regel in CLAUDE.md, abgesichert durch Test).
 6. Neue Entscheidungen in `docs/decisions.md`, fachliche Belege in `docs/mapping.md`, Annahmen und Widersprüche im Guide in `docs/assumptions.md`.
@@ -266,3 +267,4 @@ Für eine neue Sitzung, die diesen Plan umsetzt:
 5. Guide-Bezug → Git-Klon durch den Benutzer statt Download-Skript; Workspace-Datei; eigene Dateien nur über den „Datei öffnen“-Dialog.
 6. Hilfeseite → Funktionen, Farben, durchgeführte und nicht durchgeführte Prüfungen, automatisch aus den Daten; wird bei jeder Änderung nachgeführt (Abschnitt 7, 11, 13).
 7. Teilweise aktualisierte Guide-Beispiele → Status pro Beispiel, Prüfsummen in `guide-tested.json`, Tests trennen Tool-Absturz von Beispielfehlern (Abschnitte 4, 7, 11).
+8. Codequalität → verbindliche Regeln in `docs/engineering-guidelines.md`, erzwungen durch `scripts/check.py` und Git-Hook, Reviews vor jedem Phasenabschluss.
