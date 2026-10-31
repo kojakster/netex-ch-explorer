@@ -6,7 +6,7 @@ Sprache der Anwendung und der Dokumentation: Deutsch (de-CH); NeTEx-Bezeichner b
 
 ## Wo was steht
 
-- [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md): Plan für die erste Ausbaustufe, **Entwurf, Freigabe ausstehend**. Abschnitt 13 beschreibt die Arbeitsweise für die Umsetzung. Abgleich mit dem ursprünglichen Plan: [docs/plan-abgleich.md](docs/plan-abgleich.md).
+- [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md): **gültiger, freigegebener Plan** für die erste Ausbaustufe (31.10.2026). Umsetzung mit Phase 0 beginnen, erst wenn der Benutzer dazu auffordert. Abschnitt 13 beschreibt die Arbeitsweise für die Umsetzung. Abgleich mit dem ursprünglichen Plan: [docs/plan-abgleich.md](docs/plan-abgleich.md).
 - [README.md](README.md): Einrichtung (Guide klonen, Workspace).
 - [docs/decisions.md](docs/decisions.md): festgelegte Entscheidungen und unbestätigte Vorschläge. **Geht dem Plan vor.** Vor jeder Umsetzungs- oder Architekturarbeit lesen.
 - [docs/open-points.md](docs/open-points.md): offene und zurückgestellte Punkte.

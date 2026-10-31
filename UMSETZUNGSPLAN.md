@@ -1,6 +1,6 @@
 # NeTEx CH Explorer – Umsetzungsplan, erste Ausbaustufe
 
-**Status:** Entwurf, Freigabe durch den Benutzer ausstehend. Ersetzt den ursprünglichen Plan `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md`.
+**Status:** **Freigegeben** durch den Benutzer am 31.10.2026. Ersetzt den ursprünglichen Plan `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md` (im Git-Verlauf, Commit `4e8e378`). Umsetzung startet in einer neuen Sitzung im VS-Code-Workspace mit Phase 0.
 **Stand:** 31.10.2026
 **Massgebend für Details:** [docs/decisions.md](docs/decisions.md). Bei Abweichungen gilt `decisions.md`; der Widerspruch wird dem Benutzer vorgelegt.
 **Abgleich mit dem ursprünglichen Plan:** [docs/plan-abgleich.md](docs/plan-abgleich.md)
