@@ -5,6 +5,6 @@
   ],
   "settings": {
     "files.exclude": { "**/.DS_Store": true },
-    "search.exclude": { "../netexRealisationGuideSwitzerland/xsd/**": true }
+    "search.exclude": { "xsd/**": true }
   }
 }
