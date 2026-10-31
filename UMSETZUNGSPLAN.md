@@ -26,7 +26,7 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 ### Erste Ausbaustufe (dieser Plan)
 
 1. Lokale Anwendung: Start per Skript, Bedienung im Browser.
-2. `update-guide`: Guide-Stand laden, Bericht über Änderungen, Tests, Lock aktualisieren.
+2. Guide als Git-Klon im Nachbarordner (VS-Code-Workspace); das Tool zeigt den Guide-Commit an und meldet, wenn er neuer ist als zuletzt getestet oder die XSD fehlt.
 3. Alle Dateien in `src/examples/` des Guide-Stands einzeln ladbar, auch fehlerhafte.
 4. Nach dem Laden: Liste der Fahrten der Datei (Zugnummer, Linie, erster/letzter Halt) und eine **einfache Objektsuche** nach ID oder Name. Keine weitergehende Suche (Schwerpunkt ist die Fahrplandarstellung mit Herkunft).
 5. Fahrtansicht für eine `ServiceJourney` als Fahrplan: Halte mit Ein-/Aussteige-Eigenschaften, Ankunft/Abfahrt (auch berechnete Zeiten), Mitternacht, Betriebstage, Angebote.
@@ -77,21 +77,20 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 
 ### Guide-Stand
 
-- Lock-Datei `netexRealisationGuideSwitzerland.lock.json` im Projekt (Liste benannter Stände; zunächst ein Eintrag „2.0 Entwicklung“, Ref `next`, Commit, XSD-Commit, Status „in Entwicklung“).
-- Dateien liegen in `../netexRealisationGuideSwitzerland/<commit>/` (Pfad konfigurierbar): Guide-Repo als Commit-Archiv von GitHub, XSD separat von NeTEx-CEN auf dem im Guide gepinnten Commit.
+- Der Benutzer klont den Guide mit Git nach `../netexRealisationGuideSwitzerland/` (Branch `next`) und holt das XSD-Submodul (`git submodule update --init --depth 1`). Kein eigener Download-Code. Exakte Befehle für macOS und Windows im README.
+- VS-Code-Workspace `netex-ch-explorer.code-workspace` (im Projekt) zeigt Projekt und Guide nebeneinander; `netex-files/` gehört nicht dazu.
+- Das Tool liest den Guide über den konfigurierten Pfad (Standard `../netexRealisationGuideSwitzerland`) und ermittelt den Commit direkt aus dem `.git`-Ordner (ohne Git-Programm); Anzeige in der Oberfläche mit „in Entwicklung“.
 - Daraus genutzt: `src/examples/*.xml` + `README.md` (Titel), `src/templates/` (später für Vorschläge), `src/schematron_rules/general_rules.sch`, `xsd/`, `src/A5_annex_index.md` (Element → Kapitel), `src/media/Mappingtabellen_NeTEx_v2.0.xlsx`.
+- Aktualisieren: `git pull` + `git submodule update --init --depth 1`.
+- **Sicherheitsnetz:** `guide-tested.json` im Projekt hält fest, mit welchem Guide-Commit die Tests zuletzt erfolgreich liefen (wird vom Testlauf geschrieben). Ist der vorhandene Stand neuer: Hinweis „Guide-Stand neuer als zuletzt getestet – Tests ausführen“. Fehlt die XSD: Hinweis mit dem fehlenden Befehl.
 
-### `update-guide` (ein Befehl, `scripts/update-guide.sh` / `.ps1`)
+### Mappingtabelle
 
-1. Neuesten Commit von `next` und den zugehörigen XSD-Commit ermitteln.
-2. Beides nach `../netexRealisationGuideSwitzerland/<commit>/` laden (nur Python-Standardbibliothek, kein Git nötig).
-3. Mappingtabelle auslesen → `mapping.json` beim Stand (Spalten über ihre Namen; fehlt eine, Abbruch mit klarer Meldung; Zellfarben werden ignoriert).
-4. Bericht: neue, geänderte, entfernte Dateien (Beispiele, Templates, Schematron, XSD, Mappingtabelle).
-5. Tests gegen den neuen Stand ausführen; nur bei Erfolg den Lock auf den neuen Commit setzen.
+Wird beim Start aus der Excel-Datei des Guide-Klons gelesen (Spalten über ihre Namen; Zellfarben ignoriert; Zwischenspeicher je Commit erlaubt). Fehlt eine erwartete Spalte: Hinweis in der Oberfläche, betroffene Bedeutungen fehlen, nichts wird geraten.
 
 ### Eigene Dateien
 
-XML, mehrere XML oder ZIP aus dem lokalen Dateisystem bzw. per Dateiauswahl im Browser an das lokale Backend. Zuerst Versionserkennung, dann Prüfung (siehe Abschnitt 8).
+XML, mehrere XML oder ZIP **nur über den „Datei öffnen“-Dialog im Browser**; die Dateien gehen an das lokale Backend. Keine Pfadeingabe (Ordner-Import erst mit grossen Lieferungen). Zuerst Versionserkennung, dann Prüfung (siehe Abschnitt 8).
 
 ## 5. Architektur
 
@@ -107,7 +106,9 @@ netex-ch-explorer/
 │   │   └── validation/    XSD und Schematron (lxml)
 │   ├── server/     FastAPI, nur dünne Schicht über core; bindet an 127.0.0.1
 │   └── frontend/   React + TypeScript + Vite, CodeMirror 6, Sprachdateien
-├── scripts/        update-guide und start als Python; start.sh/start.ps1 als Einzeiler
+├── scripts/        start als Python; start.sh/start.ps1 als Einzeiler
+├── netex-ch-explorer.code-workspace   VS-Code-Workspace: Projekt + Guide-Klon
+├── guide-tested.json                  zuletzt erfolgreich getesteter Guide-Commit
 ├── fixtures/       eigene synthetische Testdateien (keine Guide-Kopien)
 └── docs/
 ```
@@ -213,7 +214,7 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 | Phase | Inhalt | Abnahme |
 |---|---|---|
-| **0 Grundgerüst** | Projektstruktur, Abhängigkeiten mit Lockfiles, `update-guide` inkl. Mappingtabelle und Bericht, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | `update-guide` lädt `b7ac158` + XSD `73b337e`, erzeugt `mapping.json` und Bericht; App startet lokal |
+| **0 Grundgerüst** | Projektstruktur, Abhängigkeiten mit Lockfiles, Workspace-Datei, Guide-Erkennung (Pfad, Commit, XSD vorhanden, `guide-tested.json`), Mappingtabelle lesen, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | Mit dem geklonten Guide (`b7ac158`, XSD `73b337e`) startet die App lokal, zeigt den Guide-Commit an und liest die Mappingtabelle; fehlende XSD bzw. neuerer Stand werden gemeldet |
 | **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
 | **2 Referenzen und Herkunft** | Referenzen inkl. `Extensions`, Auflösung über ID + Typ, Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | Navigation vor/zurück; `Quay` und `ScheduledStopPoint` mit gleicher ID werden korrekt unterschieden; nicht auflösbare Referenzen als Diagnose |
 | **3 Fahrtansicht CH 2.0** | Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
@@ -222,7 +223,7 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 ## 11. Tests
 
-- **Unit:** Namespaces, Positionen (Byte/Zeile/Spalte), Frame-Zuordnung, Pfadberechnung, Referenzauflösung (ID + Typ, doppelte IDs), Zeitberechnung inkl. Mitternacht und fehlender Summanden, `ValidDayBits`, Versionserkennung, Mappingtabelle (fehlende Spalte → Abbruch), Übersetzungsschlüssel vollständig.
+- **Unit:** Guide-Erkennung (Commit aus `.git`, fehlende XSD, neuer als getestet), Namespaces, Positionen (Byte/Zeile/Spalte), Frame-Zuordnung, Pfadberechnung, Referenzauflösung (ID + Typ, doppelte IDs), Zeitberechnung inkl. Mitternacht und fehlender Summanden, `ValidDayBits`, Versionserkennung, Mappingtabelle (fehlende Spalte → Hinweis), Übersetzungsschlüssel vollständig.
 - **Alle Guide-Beispiele:** parametrisierter Test lädt jedes Beispiel des aktiven Guide-Stands; keine Abstürze, Diagnosen erlaubt.
 - **Synthetische Fixtures** (eigene, klein, als synthetisch gekennzeichnet, z. B. `ParticipantRef` `SYNTHETIC`; nie als echte Fahrplandaten ausgeben): Fahrt mit drei Halten, Fahrt über Mitternacht, fehlender Summand, nicht auflösbare Referenz, Referenz über Dateigrenzen, Referenz auf nicht geladene Datei (`external_or_unloaded`), doppelte ID, defektes XML, ZIP mit mehreren Dateien, 1.10-artige Datei.
 - **Sicherheit:** XXE, Zip-Slip, ZIP-Grenzwerte, unzulässiger Pfad.
@@ -231,7 +232,7 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 ## 12. Dokumentation
 
-`README.md` (Installation von null, Start, Bedienung, Tests ausführen, bekannte Grenzen, **Windows-Testanleitung** für den ersten Test am Windows-PC), `fixtures/README.md` (Herkunft der synthetischen Daten, Weitergabe erlaubt), `docs/mapping.md` (jede fachliche Regel mit Guide-Beleg), `docs/api.md`, `docs/assumptions.md` (Annahmen, Widersprüche im Guide), `docs/test-report.md`. Entscheidungen weiterhin in `docs/decisions.md`.
+`README.md` (Installation von null inkl. **exakter Git-Befehle** zum Klonen des Guides und Holen der XSD, Start, Bedienung, Tests ausführen, bekannte Grenzen, **Windows-Testanleitung** für den ersten Test am Windows-PC), `fixtures/README.md` (Herkunft der synthetischen Daten, Weitergabe erlaubt), `docs/mapping.md` (jede fachliche Regel mit Guide-Beleg), `docs/api.md`, `docs/assumptions.md` (Annahmen, Widersprüche im Guide), `docs/test-report.md`. Entscheidungen weiterhin in `docs/decisions.md`.
 
 ## 13. Offene Fragen an den Benutzer (beim Schreiben entstanden)
 

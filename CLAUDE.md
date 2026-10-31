@@ -17,18 +17,18 @@ Sprache der Anwendung und der Dokumentation: Deutsch (de-CH); NeTEx-Bezeichner b
 
 - Nur Schweizer NeTEx-Definitionen; mehrere CH-Versionen über versionierte Adapter plus generischen Explorer.
 - Betriebsformen: lokal **und** statische Webversion, bei der die Verarbeitung im Browser über Pyodide läuft. Der Kern ist deshalb ein reines Python-Paket ohne Server-Abhängigkeiten.
-- Erste Zielversion: **neueste Version des CH-Profils 2.0 (Entwurf, NeTEx 2.1)**. Abgebildet mit den Dateien des Guide-Repos (Branch `next`, fester Commit), die ein Skript von GitHub lädt.
+- Erste Zielversion: **neueste Version des CH-Profils 2.0 (Entwurf, NeTEx 2.1)**. Abgebildet mit den Dateien des Guide-Repos (Branch `next`), die der Benutzer per Git klont.
 
 ## Verzeichnisse
 
 ```text
 NeTEx-Viewer/                          Sammelordner (nicht versioniert)
-├── netexRealisationGuideSwitzerland/  fremder Inhalt: Guide-Dateien + XSD je Commit
+├── netexRealisationGuideSwitzerland/  fremder Inhalt: Git-Klon des Guides (Branch next) + XSD-Submodul
 ├── netex-files/                       Lieferdaten
 └── netex-ch-explorer/                 dieses Projekt (eigenes Git-Repository)
 ```
 
-- In `../netexRealisationGuideSwitzerland/` nie von Hand etwas ändern; nur `scripts/update-guide` schreibt dort. Der gültige Stand steht in `netexRealisationGuideSwitzerland.lock.json`.
+- `../netexRealisationGuideSwitzerland/` ist ein Git-Klon des Benutzers; nur per Git aktualisieren (`git pull`, `git submodule update --init --depth 1`), Dateien nie von Hand ändern. Zuletzt getesteter Guide-Commit: `guide-tested.json`.
 - Eigener Code liegt nur in `netex-ch-explorer/`. Guide-Dateien nie hierher kopieren, auch nicht nach `fixtures/`; `fixtures/` enthält nur selbst erstellte Testdaten.
 - Pfade zu `netexRealisationGuideSwitzerland` und `netex-files` nur über die Konfiguration (Standard `../netexRealisationGuideSwitzerland`, `../netex-files`), nie fest im Code.
 - Der Adapter „CH 2.0“ ist eigener Code. Er belegt jede fachliche Regel in `docs/mapping.md` mit Guide-Datei und Commit.

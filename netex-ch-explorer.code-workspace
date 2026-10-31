@@ -1,0 +1,10 @@
+{
+  "folders": [
+    { "name": "netex-ch-explorer", "path": "." },
+    { "name": "netexRealisationGuideSwitzerland", "path": "../netexRealisationGuideSwitzerland" }
+  ],
+  "settings": {
+    "files.exclude": { "**/.DS_Store": true },
+    "search.exclude": { "../netexRealisationGuideSwitzerland/xsd/**": true }
+  }
+}
