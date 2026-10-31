@@ -214,3 +214,208 @@ export interface SearchParams {
   limit: number;
   offset: number;
 }
+
+// Fahrtansicht (`GET /api/journeys/{id}`)
+
+export interface ValueInfo {
+  status: LookupStatus;
+  text: string | null;
+  element: ObjectInfo | null;
+}
+
+export interface LangTextInfo {
+  lang: string | null;
+  text: string;
+  element: ObjectInfo;
+}
+
+export interface MasterMatchInfo {
+  sheet: string;
+  row: number;
+  texts: { label: string; text: string }[];
+}
+
+export type MasterStatus = "found" | "none" | "unavailable";
+
+export interface MasterInfo {
+  status: MasterStatus;
+  matches: MasterMatchInfo[];
+}
+
+export interface CodeInfo {
+  code: string;
+  element: ObjectInfo;
+  master: MasterInfo | null;
+}
+
+export interface FindingInfo {
+  severity: Severity;
+  key: string;
+  params: Record<string, string | number>;
+  element: ObjectInfo | null;
+}
+
+export type StepKind = "departure_time" | "day_offset" | "run_time" | "wait_time";
+
+export interface StepInfo {
+  kind: StepKind;
+  value: string | null;
+  default: boolean;
+  seconds: number;
+  clock: string;
+  dayOffset: number;
+  element: ObjectInfo | null;
+  related: ObjectInfo[];
+  viaFromTo: boolean;
+}
+
+export type TimeStatus = "explicit" | "computed" | "not_computable";
+export type OffsetOrigin = "explicit" | "default" | "computed";
+
+export interface TimeInfo {
+  id: string;
+  status: TimeStatus;
+  clock: string | null;
+  dayOffset: number;
+  offsetOrigin: OffsetOrigin | null;
+  source: ObjectInfo | null;
+  chain: StepInfo[];
+  reason: FindingInfo | null;
+}
+
+export interface StopInfo {
+  position: number;
+  point: ObjectInfo;
+  stopPoint: ValueInfo;
+  stopPlace: ValueInfo;
+  quay: ValueInfo;
+  assignment: ObjectInfo | null;
+  forBoarding: ValueInfo;
+  forAlighting: ValueInfo;
+  requestStop: ValueInfo;
+  stopUse: CodeInfo | null;
+  arrival: TimeInfo | null;
+  departure: TimeInfo | null;
+  partNumbers: number[];
+}
+
+export interface OperatingDaysInfo {
+  condition: ObjectInfo;
+  fromDate: ObjectInfo | null;
+  toDate: ObjectInfo | null;
+  validDayBits: ObjectInfo | null;
+  firstDay: string | null;
+  lastDay: string | null;
+  periodDays: number | null;
+  validCount: number | null;
+  days: string[];
+  daysListed: boolean;
+  findings: FindingInfo[];
+}
+
+export interface ValidityInfo {
+  ref: ObjectInfo;
+  days: OperatingDaysInfo | null;
+  problem: ValueInfo | null;
+}
+
+export interface FacilityGroupInfo {
+  element: ObjectInfo;
+  codes: CodeInfo[];
+}
+
+export interface FacilitySetInfo {
+  ref: ObjectInfo;
+  facilitySet: ObjectInfo | null;
+  problem: ValueInfo | null;
+  description: LangTextInfo[];
+  groups: FacilityGroupInfo[];
+}
+
+export interface TransportInfo {
+  owner: ObjectInfo;
+  role: string;
+  mode: ValueInfo;
+  submodeType: string | null;
+  submode: ValueInfo;
+}
+
+export interface CategoryInfo {
+  role: string;
+  ref: ObjectInfo;
+  target: ObjectInfo | null;
+  problem: ValueInfo | null;
+  shortName: ValueInfo;
+  names: LangTextInfo[];
+  master: MasterInfo | null;
+}
+
+export interface PartTimeInfo {
+  time: ValueInfo;
+  dayOffset: ValueInfo;
+  clock: string | null;
+  day: number | null;
+}
+
+export interface PartBoundaryInfo {
+  stop: ValueInfo;
+  position: number | null;
+}
+
+export interface PartInfo {
+  number: number;
+  element: ObjectInfo;
+  description: LangTextInfo[];
+  purpose: ValueInfo;
+  trainNumbers: ValueInfo[];
+  parentJourney: ValueInfo;
+  startStop: PartBoundaryInfo;
+  endStop: PartBoundaryInfo;
+  start: PartTimeInfo;
+  end: PartTimeInfo;
+  facilities: FacilitySetInfo[];
+  validity: ValidityInfo[];
+  category: CategoryInfo | null;
+}
+
+export type NoticeScope = "journey" | "pattern" | "journey_ref" | "pattern_ref" | "stop";
+
+export interface NoticeInfo {
+  assignment: ObjectInfo;
+  scope: NoticeScope;
+  ref: ObjectInfo | null;
+  notice: ObjectInfo | null;
+  problem: ValueInfo | null;
+  shortCode: ValueInfo;
+  noticeType: ValueInfo;
+  texts: { text: LangTextInfo; alternativeFor: string | null }[];
+  startRef: ObjectInfo | null;
+  endRef: ObjectInfo | null;
+  startPosition: number | null;
+  endPosition: number | null;
+  validity: ValidityInfo[];
+}
+
+export interface PrivateCodeInfo {
+  codeType: string | null;
+  value: string;
+  element: ObjectInfo;
+}
+
+export interface JourneyViewInfo {
+  journey: ObjectInfo;
+  guideCommit: string | null;
+  pattern: ValueInfo;
+  timeDemandType: ValueInfo;
+  trainNumbers: ValueInfo[];
+  privateCodes: PrivateCodeInfo[];
+  line: ValueInfo;
+  transports: TransportInfo[];
+  categories: CategoryInfo[];
+  validities: ValidityInfo[];
+  stops: StopInfo[];
+  parts: PartInfo[];
+  facilities: FacilitySetInfo[];
+  notices: NoticeInfo[];
+  diagnostics: DiagnosticInfo[];
+}

@@ -1,17 +1,25 @@
-import { useDataSource, useLoad } from "../data";
 import { useI18n } from "../i18n";
+import type { JourneyInfo } from "../types";
 import { LookupValue } from "./Lookup";
 
 interface JourneyListProps {
-  datasetId: string;
+  /** Die Fahrten der Datei; `null`, solange sie geladen werden. */
+  journeys: readonly JourneyInfo[] | null;
+  errorKey: string | null;
+  /** Wählt das Objekt hinter einer Angabe. */
   onSelect: (objectId: string) => void;
+  /** Öffnet die Fahrtansicht der Fahrt. */
+  onOpenJourney: (objectId: string) => void;
 }
 
 /** Liste der Fahrten der Datei: Zugnummer, Linie, Abfahrt, erster und letzter Halt. */
-export function JourneyList({ datasetId, onSelect }: JourneyListProps) {
+export function JourneyList({
+  journeys: data,
+  errorKey,
+  onSelect,
+  onOpenJourney,
+}: JourneyListProps) {
   const { t } = useI18n();
-  const source = useDataSource();
-  const { data, errorKey } = useLoad(datasetId, () => source.getJourneys(datasetId));
   return (
     <section className="journeys" aria-label={t("journeys.title")}>
       <h2>{t("journeys.title")}</h2>
@@ -37,7 +45,7 @@ export function JourneyList({ datasetId, onSelect }: JourneyListProps) {
                     type="button"
                     className="link-button"
                     title={journey.object.xmlId ?? undefined}
-                    onClick={() => onSelect(journey.object.id)}
+                    onClick={() => onOpenJourney(journey.object.id)}
                   >
                     {journey.object.name}
                   </button>

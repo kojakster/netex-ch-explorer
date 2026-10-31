@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type DataSource } from "./api";
+import { CalculationChain } from "./components/CalculationChain";
 import { DiagnosticList } from "./components/DiagnosticList";
 import { ExampleList } from "./components/ExampleList";
 import { FrameLegend } from "./components/FrameLegend";
@@ -7,13 +8,15 @@ import { GuideStatusBox } from "./components/GuideStatusBox";
 import { HelpPage } from "./components/HelpPage";
 import { IssueList } from "./components/IssueList";
 import { JourneyList } from "./components/JourneyList";
+import { JourneyView } from "./components/JourneyView";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { ObjectSearch } from "./components/ObjectSearch";
 import { ObjectView } from "./components/ObjectView";
 import { ProvenanceChain } from "./components/ProvenanceChain";
 import { XmlPanel, type XmlTarget } from "./components/XmlPanel";
-import { DataSourceContext, LOAD_ERROR_KEY } from "./data";
+import { DataSourceContext, LOAD_ERROR_KEY, useLoad } from "./data";
 import {
+  type CenterView,
   canGoBack,
   canGoForward,
   currentSelection,
@@ -23,7 +26,15 @@ import {
   visit,
 } from "./history";
 import { DEFAULT_LANGUAGE, I18nContext, messagesFor, translate } from "./i18n";
-import type { AppInfo, ChainLink, DatasetInfo, DiagnosticInfo, GuideInfo } from "./types";
+import type {
+  AppInfo,
+  ChainLink,
+  DatasetInfo,
+  DiagnosticInfo,
+  GuideInfo,
+  StopInfo,
+  TimeInfo,
+} from "./types";
 
 type View = "main" | "help";
 
@@ -55,6 +66,13 @@ export function App({ dataSource }: AppProps) {
     (selectedElement === null ? null : { kind: "object", objectId: selectedElement });
   // Nur die Antwort der zuletzt gestarteten Öffnung zählt (schnelles Umschalten).
   const openRequest = useRef(0);
+  // Die Fahrten der Datei: Sie bestimmen, ob die Mitte zwischen „Fahrt“ und „Objekt“ umschaltet.
+  const datasetId = dataset?.id ?? null;
+  const journeys = useLoad(datasetId, () => dataSource.getJourneys(datasetId ?? ""));
+  const isJourney = journeys.data?.some((item) => item.object.id === objectId) ?? false;
+  const centerView: CenterView = selection?.view ?? "object";
+  const journeyKey = centerView === "journey" ? objectId : null;
+  const journeyLoad = useLoad(journeyKey, () => dataSource.getJourney(journeyKey ?? ""));
 
   useEffect(() => {
     let active = true;
@@ -112,17 +130,57 @@ export function App({ dataSource }: AppProps) {
       });
   };
 
-  /** Zeigt ein Objekt und markiert darin eine Angabe (Standard: das Objekt selbst). */
-  const navigate = (id: string, elementId: string = id) => {
+  /** Zeigt ein Objekt oder eine Fahrt und markiert darin eine Angabe (Standard: das Objekt selbst). */
+  const navigate = (
+    id: string,
+    elementId: string = id,
+    view: CenterView = "object",
+    timeId: string | null = null,
+  ) => {
     setPositionTarget(null);
-    setHistory((previous) => visit(previous, { objectId: id, elementId }));
+    setHistory((previous) => visit(previous, { objectId: id, elementId, view, timeId }));
   };
 
   const selectObject = (id: string) => navigate(id);
 
+  const openJourney = (id: string) => navigate(id, id, "journey");
+
+  /** Wählt eine Angabe in der Fahrtansicht; die Rechenkette einer Zeit bleibt nicht stehen. */
+  const selectJourneyElement = (elementId: string) => {
+    if (objectId !== null) {
+      navigate(objectId, elementId, "journey");
+    }
+  };
+
+  /** Wählt einen Summanden der Rechenkette; die Rechenkette bleibt stehen. */
+  const selectCalculationElement = (elementId: string) => {
+    if (objectId !== null) {
+      navigate(objectId, elementId, "journey", selection?.timeId ?? null);
+    }
+  };
+
+  /** Wählt eine Zeit der Fahrtansicht: Rechenkette rechts, XML-Markierung auf ihrer Quelle. */
+  const selectTime = (time: TimeInfo, stop: StopInfo) => {
+    if (objectId !== null) {
+      const source = time.source ?? time.reason?.element ?? stop.point;
+      navigate(objectId, source.id, "journey", time.id);
+    }
+  };
+
+  const switchView = (view: CenterView) => {
+    if (objectId !== null) {
+      navigate(objectId, objectId, view);
+    }
+  };
+
   const selectElement = (id: string) => {
     if (objectId !== null) {
-      navigate(objectId, id);
+      navigate(
+        objectId,
+        id,
+        centerView,
+        centerView === "journey" ? (selection?.timeId ?? null) : null,
+      );
     }
   };
 
@@ -197,7 +255,12 @@ export function App({ dataSource }: AppProps) {
                 )}
                 {dataset !== null && (
                   <>
-                    <JourneyList datasetId={dataset.id} onSelect={selectObject} />
+                    <JourneyList
+                      journeys={journeys.data}
+                      errorKey={journeys.errorKey}
+                      onSelect={selectObject}
+                      onOpenJourney={openJourney}
+                    />
                     <ObjectSearch dataset={dataset} onSelect={selectObject} />
                     <DiagnosticList datasetId={dataset.id} onShow={showDiagnostic} />
                   </>
@@ -224,17 +287,65 @@ export function App({ dataSource }: AppProps) {
                         {t("nav.forward")} →
                       </button>
                     </nav>
-                    <ObjectView
-                      objectId={objectId}
-                      colors={appInfo.frameColors}
-                      selectedElement={selectedElement}
-                      onSelectElement={selectElement}
-                      onNavigate={navigate}
-                    />
+                    {isJourney && (
+                      <nav className="view-tabs" aria-label={t("view.title")}>
+                        <button
+                          type="button"
+                          aria-pressed={centerView === "journey"}
+                          onClick={() => switchView("journey")}
+                        >
+                          {t("view.journey")}
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={centerView === "object"}
+                          onClick={() => switchView("object")}
+                        >
+                          {t("view.object")}
+                        </button>
+                      </nav>
+                    )}
+                    {centerView === "journey" && journeyLoad.errorKey !== null && (
+                      <p role="alert">{t(journeyLoad.errorKey)}</p>
+                    )}
+                    {centerView === "journey" &&
+                      journeyLoad.data === null &&
+                      journeyLoad.loading && <p>{t("app.loading")}</p>}
+                    {centerView === "journey" && journeyLoad.data !== null && (
+                      <JourneyView
+                        journey={journeyLoad.data}
+                        colors={appInfo.frameColors}
+                        selected={positionTarget === null ? selectedElement : null}
+                        selectedTime={selection?.timeId ?? null}
+                        onSelect={selectJourneyElement}
+                        onSelectTime={selectTime}
+                        onShowDiagnostic={showDiagnostic}
+                      />
+                    )}
+                    {centerView === "object" && (
+                      <ObjectView
+                        objectId={objectId}
+                        colors={appInfo.frameColors}
+                        selectedElement={selectedElement}
+                        onSelectElement={selectElement}
+                        onNavigate={navigate}
+                      />
+                    )}
                   </>
                 )}
               </main>
               <aside className="xml-column">
+                {positionTarget === null &&
+                  selection?.timeId != null &&
+                  journeyLoad.data !== null && (
+                    <CalculationChain
+                      journey={journeyLoad.data}
+                      timeId={selection.timeId}
+                      colors={appInfo.frameColors}
+                      selected={selectedElement}
+                      onSelect={selectCalculationElement}
+                    />
+                  )}
                 <ProvenanceChain
                   elementId={positionTarget === null ? selectedElement : null}
                   colors={appInfo.frameColors}

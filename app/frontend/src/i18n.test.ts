@@ -71,6 +71,20 @@ describe("Sprachdateien", () => {
       ]),
       ...testStates.map((state) => `guide.testState.${state}`),
       ...languages.map((language) => `language.${language}`),
+      ...["explicit", "default", "computed"].map((origin) => `time.offset.${origin}`),
+      ...["both", "boardingOnly", "alightingOnly", "none", "unknown"].map(
+        (access) => `stop.access.${access}`,
+      ),
+      ...["journey", "pattern", "stop", "journey_ref", "pattern_ref"].map(
+        (scope) => `notice.scope.${scope}`,
+      ),
+      ...["arrival", "departure"].map((kind) => `calc.of.${kind}`),
+      ...["explicit", "computed", "not_computable"].map((status) => `calc.status.${status}`),
+      ...["departure_time", "day_offset", "run_time", "wait_time"].flatMap((step) => [
+        `calc.step.${step}`,
+        `calc.default.${step}`,
+      ]),
+      ...["journey", "line", "part"].map((role) => `journey.role.${role}`),
       "frame.unknown",
       "frame.notRelevant",
       "app.loadError",

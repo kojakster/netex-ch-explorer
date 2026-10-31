@@ -2,7 +2,7 @@
 
 Lokales Werkzeug, um Schweizer NeTEx-Dateien visuell und selbsterklärend zu verstehen: Fahrt als Fahrplan, Herkunft jeder Angabe bis zur Stelle im XML, Frame-Farben, Objekte und Verweise, Fehler mit Guide-Verweis.
 
-> **Stand:** Phase 1 (Einlesen und Objekt-Explorer) des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte und zeigt jedes Objekt mit Frame, Stelle und exakter Markierung im XML. Referenzen, Fahrtansicht, eigene Dateien und Prüfungen folgen in den nächsten Phasen. Unter Windows noch **nicht getestet**.
+> **Stand:** Phase 3 (Fahrtansicht CH 2.0) des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte, zeigt jedes Objekt mit Frame, Stelle, Verweisen vor und zurück und exakter Markierung im XML, und zeigt jede Fahrt als Fahrplan: Halte in XML-Reihenfolge, berechnete Zeiten mit Rechenkette, Tageswechsel, Betriebstage, Angebote, Teilstrecken und Hinweise, jede Angabe mit Herkunft. Eigene Dateien und die Prüfungen (XSD, Profilregeln) folgen in den nächsten Phasen. Unter Windows noch **nicht getestet**.
 
 ## Ordnerstruktur
 
@@ -190,13 +190,14 @@ Im Ordner `config/` (JSON, UTF-8). Fehlt eine Datei oder ist ein Eintrag ungült
 Für den ersten Test an einem Windows-PC (Windows gilt bis dahin als „nicht getestet“):
 
 1. [Installation](#installation) Schritte 1–4 für Windows ausführen.
-2. `.\start.ps1` ausführen. Prüfen: Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar; Beispiel 01 anklicken, in der Fahrtenliste „ServiceJourney“ anklicken, im Inhalt `DepartureTime` anklicken: rechts ist `<DepartureTime>10:35:00</DepartureTime>` markiert; „Hilfe“ öffnet die Hilfeseite; Sprache auf English umschalten.
+2. `.\start.ps1` ausführen. Prüfen: Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar; Beispiel 01 anklicken, in der Fahrtenliste „ServiceJourney“ anklicken (Fahrtansicht mit drei Halten, Ankunft in Interlaken Ost 10:54 als „berechnet“; ein Klick auf die Zeit zeigt die Rechenkette), oben „Objekt“ wählen und im Inhalt `DepartureTime` anklicken: rechts ist `<DepartureTime>10:35:00</DepartureTime>` markiert; „Hilfe“ öffnet die Hilfeseite; Sprache auf English umschalten.
 3. `uv run python scripts/test.py` und `uv run python scripts/check.py` ausführen; beide müssen grün enden.
 4. Ergebnis (inkl. Fehlermeldungen) im Testbericht `docs/test-report.md` festhalten.
 
 ## Bekannte Grenzen
 
-- Phase 1: Referenzen nur als Grundstufe für die Fahrtenliste (keine Rückwärtsreferenzen, keine Referenzdiagnosen), keine Fahrtansicht, keine eigenen Dateien; geprüft wird nur die XML-Syntax (die Hilfeseite listet die übrigen Prüfungen als „nicht durchgeführt“).
+- Phase 3: keine eigenen Dateien (nur die Beispiele des Guides); geprüft werden XML-Syntax, Referenzen und die Plausibilität der Fahrtansicht, nicht XSD und Profilregeln (die Hilfeseite listet die übrigen Prüfungen als „nicht durchgeführt“).
+- Fahrtansicht: Nicht dargestellt sind Zieländerungen (`DestinationDisplay`), Formation, Flügelung, Durchbindung, Bedarfsverkehr und Takt; sie bleiben im Objekt-Explorer einsehbar. Die Angaben der Beispiele des Guides enthalten Widersprüche ([docs/assumptions.md](docs/assumptions.md)); das Tool zeigt sie, korrigiert sie aber nicht.
 - Nur Dateien in UTF-8 (oder ASCII); Dateien mit `DOCTYPE` werden aus Sicherheitsgründen nicht gelesen.
 - Kein Commit-Datum des Guides (bewusst, siehe `docs/decisions.md`).
 - Der Guide-Status wird beim Start ermittelt; nach einem Guide-Update neu starten.

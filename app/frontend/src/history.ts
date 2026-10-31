@@ -1,10 +1,16 @@
 // Verlauf der besuchten Objekte und Angaben (vor/zurück), ohne Abhängigkeit von React.
 
+export type CenterView = "object" | "journey";
+
 export interface Selection {
   /** Das angezeigte Objekt. */
   objectId: string;
   /** Die markierte Angabe: das Objekt selbst oder eines seiner Elemente. */
   elementId: string;
+  /** Ansicht in der Mitte: Fahrtansicht (nur für Fahrten) oder Objektdetail. */
+  view: CenterView;
+  /** Die gewählte Zeit der Fahrtansicht, deren Rechenkette rechts steht. */
+  timeId: string | null;
 }
 
 export interface History {
@@ -32,7 +38,9 @@ export function visit(history: History, selection: Selection): History {
   if (
     current !== null &&
     current.objectId === selection.objectId &&
-    current.elementId === selection.elementId
+    current.elementId === selection.elementId &&
+    current.view === selection.view &&
+    current.timeId === selection.timeId
   ) {
     return history;
   }

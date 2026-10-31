@@ -7,6 +7,7 @@ import type {
   DiagnosticInfo,
   GuideInfo,
   JourneyInfo,
+  JourneyViewInfo,
   ObjectDetail,
   ObjectSearchResult,
   SearchParams,
@@ -18,6 +19,7 @@ export interface DataSource {
   getGuide(): Promise<GuideInfo>;
   openExample(name: string): Promise<DatasetInfo>;
   getJourneys(datasetId: string): Promise<JourneyInfo[]>;
+  getJourney(journeyId: string): Promise<JourneyViewInfo>;
   searchObjects(datasetId: string, params: SearchParams): Promise<ObjectSearchResult>;
   getDiagnostics(datasetId: string): Promise<DiagnosticInfo[]>;
   getObject(objectId: string): Promise<ObjectDetail>;
@@ -100,6 +102,10 @@ export class HttpDataSource implements DataSource {
 
   getJourneys(datasetId: string): Promise<JourneyInfo[]> {
     return requestJson<JourneyInfo[]>(this.fetcher, `api/datasets/${enc(datasetId)}/journeys`);
+  }
+
+  getJourney(journeyId: string): Promise<JourneyViewInfo> {
+    return requestJson<JourneyViewInfo>(this.fetcher, `api/journeys/${enc(journeyId)}`);
   }
 
   searchObjects(datasetId: string, params: SearchParams): Promise<ObjectSearchResult> {

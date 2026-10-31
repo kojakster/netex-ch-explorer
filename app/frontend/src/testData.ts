@@ -7,9 +7,14 @@ import type {
   DatasetInfo,
   GuideInfo,
   JourneyInfo,
+  JourneyViewInfo,
   ObjectDetail,
   ObjectInfo,
   ReferenceInfo,
+  StepInfo,
+  StopInfo,
+  TimeInfo,
+  ValueInfo,
   XmlWindow,
 } from "./types";
 
@@ -231,6 +236,303 @@ export const XML: XmlWindow = {
   truncated: false,
 };
 
+function element(
+  id: number,
+  name: string,
+  colorKey: string,
+  xmlId: string | null = null,
+): ObjectInfo {
+  return {
+    id: `SYNTHETICDATASET01.${id}`,
+    name,
+    xmlId,
+    version: null,
+    label: null,
+    fileName: "ch20_three_stops.xml",
+    line: id,
+    column: 8,
+    frame: { objectId: "SYNTHETICDATASET01.90", name: colorKey, xmlId: `ch:1:${colorKey}:SYN` },
+    colorKey,
+    notRelevant: false,
+  };
+}
+
+function found(source: ObjectInfo, text: string): ValueInfo {
+  return { status: "found", text, element: source };
+}
+
+const ABSENT_VALUE: ValueInfo = { status: "absent", text: null, element: null };
+
+function stopInfo(
+  position: number,
+  name: string,
+  arrival: TimeInfo | null,
+  departure: TimeInfo | null,
+): StopInfo {
+  const base = 200 + position * 10;
+  return {
+    position,
+    point: element(base, "StopPointInJourneyPattern", "ServiceFrame", `spijp${position}`),
+    stopPoint: found(element(base + 1, "Name", "ServiceFrame"), name),
+    stopPlace: found(element(base + 2, "Name", "SiteFrame"), `Haltestelle ${name}`),
+    quay: found(element(base + 3, "PublicCode", "SiteFrame"), String(position)),
+    assignment: element(base + 4, "PassengerStopAssignment", "ServiceFrame", `psa${position}`),
+    forBoarding: found(
+      element(base + 5, "ForBoarding", "ServiceFrame"),
+      position === 3 ? "false" : "true",
+    ),
+    forAlighting: found(
+      element(base + 6, "ForAlighting", "ServiceFrame"),
+      position === 1 ? "false" : "true",
+    ),
+    requestStop: ABSENT_VALUE,
+    stopUse: null,
+    arrival,
+    departure,
+    partNumbers: position === 1 ? [1] : [],
+  };
+}
+
+function timeInfo(
+  id: string,
+  clock: string,
+  status: "explicit" | "computed",
+  chain: StepInfo[],
+): TimeInfo {
+  return {
+    id,
+    status,
+    clock,
+    dayOffset: 0,
+    offsetOrigin: "explicit",
+    source: chain[chain.length - 1]?.element ?? null,
+    chain,
+    reason: null,
+  };
+}
+
+const DEPARTURE_STEP: StepInfo = {
+  kind: "departure_time",
+  value: "08:00:00",
+  default: false,
+  seconds: 28800,
+  clock: "08:00:00",
+  dayOffset: 0,
+  element: element(104, "DepartureTime", "TimetableFrame"),
+  related: [],
+  viaFromTo: false,
+};
+
+const RUN_STEP: StepInfo = {
+  kind: "run_time",
+  value: "PT10M",
+  default: false,
+  seconds: 600,
+  clock: "08:10:00",
+  dayOffset: 0,
+  element: element(130, "RunTime", "ServiceFrame"),
+  related: [element(120, "TimingLink", "ServiceFrame", "tl-1")],
+  viaFromTo: true,
+};
+
+const WAIT_DEFAULT_STEP: StepInfo = {
+  kind: "wait_time",
+  value: null,
+  default: true,
+  seconds: 0,
+  clock: "08:10:00",
+  dayOffset: 0,
+  element: null,
+  related: [],
+  viaFromTo: false,
+};
+
+const NOT_COMPUTABLE: TimeInfo = {
+  id: "arrival-3",
+  status: "not_computable",
+  clock: null,
+  dayOffset: 0,
+  offsetOrigin: null,
+  source: null,
+  chain: [],
+  reason: {
+    severity: "warning",
+    key: "projection.time.run_time_missing",
+    params: { link: "tl-2" },
+    element: element(121, "TimingLink", "ServiceFrame", "tl-2"),
+  },
+};
+
+/** Fahrtansicht der synthetischen Fahrt: zweiter Halt berechnet, dritte Ankunft nicht berechenbar. */
+export const JOURNEY_VIEW: JourneyViewInfo = {
+  journey: JOURNEY_OBJECT,
+  guideCommit: "b7ac15860369818a8fb53c64ed6f71318f019380",
+  pattern: found(
+    element(140, "ServiceJourneyPattern", "ServiceFrame", "ch:1:SJP:SYN"),
+    "ch:1:SJP:SYN",
+  ),
+  timeDemandType: found(element(141, "TimeDemandType", "ServiceFrame", "tdt"), "tdt"),
+  trainNumbers: [found(element(110, "ForAdvertisement", "TimetableFrame"), "1")],
+  privateCodes: [],
+  line: found(element(40, "PublicCode", "ServiceFrame"), "Synthetische Linie"),
+  transports: [
+    {
+      owner: JOURNEY_OBJECT,
+      role: "journey",
+      mode: found(element(107, "TransportMode", "TimetableFrame"), "rail"),
+      submodeType: null,
+      submode: ABSENT_VALUE,
+    },
+  ],
+  categories: [],
+  validities: [
+    {
+      ref: element(108, "AvailabilityConditionRef", "TimetableFrame"),
+      days: {
+        condition: element(150, "AvailabilityCondition", "ServiceCalendarFrame", "ch:1:AC:SYN"),
+        fromDate: element(151, "FromDate", "ServiceCalendarFrame"),
+        toDate: element(152, "ToDate", "ServiceCalendarFrame"),
+        validDayBits: element(153, "ValidDayBits", "ServiceCalendarFrame"),
+        firstDay: "2026-12-13",
+        lastDay: "2026-12-19",
+        periodDays: 7,
+        validCount: 5,
+        days: ["2026-12-14", "2026-12-15"],
+        daysListed: true,
+        findings: [],
+      },
+      problem: null,
+    },
+  ],
+  stops: [
+    stopInfo(
+      1,
+      "Synthetisch A",
+      null,
+      timeInfo("departure-1", "08:00:00", "explicit", [DEPARTURE_STEP]),
+    ),
+    stopInfo(
+      2,
+      "Synthetisch B",
+      timeInfo("arrival-2", "08:10:00", "computed", [DEPARTURE_STEP, RUN_STEP]),
+      timeInfo("departure-2", "08:10:00", "computed", [
+        DEPARTURE_STEP,
+        RUN_STEP,
+        WAIT_DEFAULT_STEP,
+      ]),
+    ),
+    stopInfo(3, "Synthetisch C", NOT_COMPUTABLE, null),
+  ],
+  parts: [
+    {
+      number: 1,
+      element: element(160, "JourneyPart", "TimetableFrame", "jp1"),
+      description: [],
+      purpose: found(element(161, "Name", "ResourceFrame"), "Facility change"),
+      trainNumbers: [],
+      parentJourney: ABSENT_VALUE,
+      startStop: {
+        stop: found(element(162, "Name", "ServiceFrame"), "Synthetisch A"),
+        position: 1,
+      },
+      endStop: { stop: found(element(163, "Name", "ServiceFrame"), "Synthetisch B"), position: 2 },
+      start: {
+        time: found(element(164, "StartTime", "TimetableFrame"), "08:00:00"),
+        dayOffset: ABSENT_VALUE,
+        clock: "08:00:00",
+        day: 0,
+      },
+      end: {
+        time: found(element(165, "EndTime", "TimetableFrame"), "08:10:00"),
+        dayOffset: ABSENT_VALUE,
+        clock: "08:10:00",
+        day: 0,
+      },
+      facilities: [
+        {
+          ref: element(166, "ServiceFacilitySetRef", "TimetableFrame"),
+          facilitySet: element(167, "ServiceFacilitySet", "ResourceFrame", "fs-bistro"),
+          problem: null,
+          description: [],
+          groups: [
+            {
+              element: element(168, "CateringFacilityList", "ResourceFrame"),
+              codes: [
+                {
+                  code: "bistro",
+                  element: element(168, "CateringFacilityList", "ResourceFrame"),
+                  master: {
+                    status: "found",
+                    matches: [
+                      {
+                        sheet: "Angebote",
+                        row: 103,
+                        texts: [
+                          { label: "Angebotabkürzung", text: "WS" },
+                          { label: "Angebottext", text: "Bistro" },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      validity: [],
+      category: null,
+    },
+  ],
+  facilities: [],
+  notices: [
+    {
+      assignment: element(170, "NoticeAssignment", "TimetableFrame", "na1"),
+      scope: "journey",
+      ref: element(171, "NoticeRef", "TimetableFrame"),
+      notice: element(172, "Notice", "ServiceFrame", "ch:1:Notice:SYN"),
+      problem: null,
+      shortCode: found(element(173, "ShortCode", "ServiceFrame"), "SYN1"),
+      noticeType: ABSENT_VALUE,
+      texts: [
+        {
+          text: {
+            lang: "de",
+            text: "Synthetischer Hinweis",
+            element: element(174, "Text", "ServiceFrame"),
+          },
+          alternativeFor: null,
+        },
+        {
+          text: {
+            lang: "en",
+            text: "Synthetic notice",
+            element: element(175, "Text", "ServiceFrame"),
+          },
+          alternativeFor: null,
+        },
+      ],
+      startRef: null,
+      endRef: null,
+      startPosition: null,
+      endPosition: null,
+      validity: [],
+    },
+  ],
+  diagnostics: [
+    {
+      category: "projection",
+      severity: "warning",
+      key: "projection.time.run_time_missing",
+      params: { link: "tl-2" },
+      fileId: 1,
+      fileName: "ch20_three_stops.xml",
+      line: 121,
+      column: 8,
+    },
+  ],
+};
+
 /** Synthetische Datenquelle; einzelne Aufrufe lassen sich ersetzen. */
 export function fakeSource(overrides: Partial<DataSource> = {}): DataSource {
   return {
@@ -238,6 +540,7 @@ export function fakeSource(overrides: Partial<DataSource> = {}): DataSource {
     getGuide: () => Promise.resolve(GUIDE),
     openExample: () => Promise.resolve(DATASET),
     getJourneys: () => Promise.resolve(JOURNEYS),
+    getJourney: () => Promise.resolve(JOURNEY_VIEW),
     searchObjects: () => Promise.resolve({ total: 1, items: [JOURNEY_OBJECT] }),
     getDiagnostics: () => Promise.resolve([]),
     getObject: (id) => Promise.resolve(id === TARGET_OBJECT.id ? TARGET_DETAIL : DETAIL),

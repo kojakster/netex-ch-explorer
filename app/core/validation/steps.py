@@ -36,6 +36,14 @@ class CheckStep:
 CHECK_STEPS: Final = (
     CheckStep("xml_syntax", CheckStatus.PERFORMED),
     CheckStep("references", CheckStatus.PERFORMED),
+    CheckStep(
+        "journey_projection",
+        CheckStatus.PERFORMED,
+        tuple(
+            f"{TEMPLATES_DIR}/{name}"
+            for name in ("ServiceJourney.xml", "TimeDemandType.xml", "JourneyPart.xml")
+        ),
+    ),
     CheckStep("xsd", CheckStatus.NOT_IMPLEMENTED, (str(XSD_MAIN_FILE),)),
     CheckStep("general_rules", CheckStatus.NOT_IMPLEMENTED, (str(GENERAL_RULES_FILE),)),
     CheckStep(
