@@ -178,3 +178,57 @@ Funde und Entscheide des Benutzers (31.10.2026) sind in [decisions.md](decisions
 - Der Build meldet weiter ein Skriptpaket über 500 kB (CodeMirror).
 - Windows: nicht getestet.
 - Regel Z4 (welcher `TimingLink` gilt) ist entschieden und folgt mit Phase 3 ([mapping.md](mapping.md)).
+
+## Phase 3: Fahrtansicht CH 2.0 (31.10.2026)
+
+Umsetzung: Commits `0567c29` (Kern), `305bd93` (Schnittstelle), `46e18db` (Oberfläche, Hilfeseite, README), `046b319` (Entscheide, offene Punkte, Korrekturen) und der Commit mit diesem Bericht. Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`. Die Phase wurde von Claude ohne Rückfragen an den Benutzer umgesetzt; alle fachlichen Festlegungen und Fragen stehen in [decisions.md](decisions.md) („Umsetzung Phase 3“), [assumptions.md](assumptions.md) und [open-points.md](open-points.md) (Punkte 12–17).
+
+### Prüfbefehl
+
+`uv run python scripts/check.py --hook`: **grün** bei allen vier Commits (Git-Hook). Alle 14 Schritte OK, pip-audit und npm audit ohne Lücken. `uv run python scripts/test.py`: bestanden, `guide-tested.json` unverändert (22 Beispiele, Ergebnisse wie in Phase 2).
+
+### Tests und Abdeckung
+
+- pytest: **505 Tests bestanden**, davon 30 gegen den Guide-Klon (alle 22 Beispiele einzeln geladen **und** die Fahrtansicht jeder Fahrt gebaut: 42 Fahrten, 338 Zeiten, 17 davon „nicht berechenbar“ wegen Lücken in den Daten (Beispiele 04, 07, 11); fachliche Tests an 01, 08, 15, 21). Abdeckung `app/core`: **98,2 %** (`app/core/projection/`: `timing.py` 99 %, `journey_view.py` 99 %, `notices.py` 98 %, `offers.py` 97 %, `calendar.py`, `clock.py`, `master_data.py` 100 %, `common.py` 88 %).
+- Vitest: **115 Tests bestanden** (u. a. Fahrtansicht im App-Ablauf, Rechenkette mit Standardwerten und Grund, Umschalten Fahrt/Objekt im Verlauf, Zeit- und Datumsformat, Stammdaten, Betriebstage in Deutsch und Englisch, Halte ohne Haltestelle, Hinweise mit Strecke).
+- Synthetische Fixtures: `ch20_three_stops`, `ch20_midnight`, `ch20_missing_runtime`, `ch20_network_offer` (+ `ch20_site_offer`) und neu `ch20_offers.xml` (XSD-gültig); dazu ein Szenario-Baukasten (`tests/core/projection/builders.py`) für Randfälle der Zeitberechnung.
+
+### Abnahme
+
+| Kriterium | Ergebnis |
+|---|---|
+| Beispiel 01: Halte in richtiger Reihenfolge, nachvollziehbar berechnete Zeiten mit Rechenkette | erfüllt: Spiez ab 10:35, Interlaken West an 10:45 / ab 10:48, Interlaken Ost an 10:54; Rechenkette `DepartureTime` 10:35 + `DepartureDayOffset` 0 + `RunTime` PT10M (`tl-1`) + `WaitTime` PT3M + `RunTime` PT6M (`tl-2`), jeder Summand mit eigenem Quellelement, anklickbar (Test `test_example_01_stop_and_calculated_times`, im Browser geprüft: Klick auf den Summanden markiert genau `<RunTime>PT6M</RunTime>`) |
+| Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten | erfüllt: der Kommentar nennt 10:53, die Daten ergeben 10:54; keine weiteren Summanden; Fehler im Beispiel, nicht im Tool ([assumptions.md](assumptions.md) Abschnitt 1, Test hält den Kommentar fest) |
+| Beispiel 15 (`DepartureDayOffset` 1) korrekt | erfüllt: Abfahrt 04:34 +1, Zwischenhalte 04:36 +1 / 04:37 +1 / 04:39 +1, Ankunft 04:41 +1; Tag „ausdrücklich“ (Quelle `DepartureDayOffset`) |
+| Beispiel 21 (Kurswagen über Mitternacht) korrekt | erfüllt: Kurswagen `KW37` Zürich HB ab 22:15, Basel Bad Bf an 23:19 / ab 23:40, Hannover Hbf an 06:12 +1 / ab 06:44 +1 (Tageswechsel „berechnet“), Bremen Hbf an 07:54 +1; die ausdrücklichen Zeiten der drei Teilstrecken (mit `…TimeDayOffset`) bestätigen die Rechnung. Hinweise zur Zeitumstellung (29.03. und 25.10.2026). Betriebstage: alle vier Fahrten haben dieselbe `AvailabilityCondition` (365 von 365 Tagen); die Prüfung gegen die Elternfahrt ist nicht umgesetzt (offener Punkt 14) |
+| Beispiel 08 zeigt Angebote auf Teilstrecken | erfüllt: Bistro (`bistro` = Angebot `WS`, Mappingtabelle Blatt `Angebote` Zeile 103) bei den Halten Bern–Olten und Zürich HB–St. Gallen, für die ganze Fahrt 1. Klasse (`firstClass`, Zeile 115) und `freeWifi` (keine Erläuterung); Teilstrecken-Zeiten stimmen mit den berechneten überein; Hinweise mit Strecke (Halt 1–2, 3–5) |
+| Alle übrigen Inhalte des Plans (Kopf, Betriebstage mit aufklappbarer Liste, `order`-Hinweis, Standardwerte, Zeitumstellung, Hinweise in allen Sprachen) | erfüllt, siehe Tests; Browser (Chrome, Playwright aus dem Scratchpad) für die Beispiele 01, 08, 15 und 21: Halt anklicken → richtige XML-Stelle (`<Name lang="de">Interlaken West</Name>`), Frame `ServiceFrame`; Sprache Englisch; **Browser-Konsole leer** |
+| Hilfeseite nachgeführt | erfüllt: sieben Funktionen (Fahrtansicht, Berechnete Zeiten, Tageswechsel/Zeitumstellung, Betriebstage, Angebote/Teilstrecken, Hinweise, Stammdaten) und der Prüfschritt „Plausibilität der Fahrtansicht“ in beiden Sprachdateien; Meldungsschlüssel (`projection.*`) übersetzt; README nachgeführt; Test `tests/test_help_texts.py` |
+
+### Wichtigste Befunde der Phase
+
+1. **`ValidDayBits` passt in 15 von 22 Beispielen nicht zum Zeitraum** (373 statt 365 Bits, zu kurze oder sehr kurze Folgen). Das Tool zeigt dann keine Tage, nur die Anzahl gesetzter Bits, mit △ Warnung ([assumptions.md](assumptions.md) Abschnitt 3).
+2. **Widerspruch im Guide zu Teilstrecken:** `uc05` („überschreibt“) gegen Beispiel 08 (ergänzt); `uc08` („kein `JourneyPart` für Kurswagen“) gegen Beispiel 21. Beide Fälle als offene Punkte vorgelegt (12) bzw. in den Annahmen festgehalten.
+3. Nur 4 von 22 Beispielen nennen den `OnwardTimingLinkRef`; für die übrigen bestimmt die vom Benutzer festgelegte Regel Z4 den `TimingLink` über Von-/Nach-Punkt (ℹ Hinweis).
+4. Beispiel 04 (`RunTime` `P3M`), 07 und 11 haben Lücken, die Zeiten „nicht berechenbar“ machen; sie bleiben sichtbar (Grund mit Stelle).
+
+### Selbstkontrolle (Code-Review und Sicherheits-Review über `e1eefa0..046b319`)
+
+Eigene Durchsicht der Commits gegen die Regeln aus `CLAUDE.md` und `docs/engineering-guidelines.md` (Korrektheit, nichts erfinden, Herkunft, Texte in Sprachdateien, keine Ausnahmen von Prüfregeln, Schichten). Funde, alle behoben:
+
+1. Eine Teilstrecke mit genanntem, aber nicht zuordenbarem Ende deckte den Anfangshalt allein ab (geraten): jetzt deckt sie keinen Halt ab und ist als „nicht zugeordnet“ gekennzeichnet; Test ergänzt.
+2. `StopView.part_numbers` war eine veränderliche Liste in einer unveränderlichen Klasse und wurde nachträglich gefüllt: jetzt vor dem Bau der Halte berechnet (Tupel).
+3. Der Vermerk „TimingLink über Von-/Nach-Punkt bestimmt“ gründete auf einer Liste über die ganze Fahrt statt auf der einzelnen Strecke (Falschkennzeichnung möglich): jetzt je Strecke bestimmt, Test ergänzt.
+4. Die Nummer des Halts im Grund „Fahrplanpunkt nicht auflösbar“ war um eins falsch; Test angepasst.
+5. `NoticeAssignment` in einem `StopPointInJourneyPattern` (Guide `06_service.md` Z. 105) fehlte; ergänzt (Geltungsbereich „Halt“).
+6. Stammdaten füllten die Oberfläche (alle Spalten je Zeile); jetzt zusammengefasst und aufklappbar. Die rechte Spalte (Rechenkette, Herkunft, XML) bleibt beim Scrollen sichtbar, die Mitte ist breiter.
+
+Sicherheit: keine Funde. Der neue Aufruf nimmt nur eine zufällige Datensatz-ID mit Elementnummer (Format geprüft, unbekannte IDs und Nicht-Fahrten ergeben 404), kein Pfad, kein neues SQL (nur bestehende Abfragen des Index), keine neue XML-Verarbeitung. Werte aus Dateien erscheinen im Frontend nur als Text oder Attribut-Text (kein `innerHTML`), Farben stammen aus der geprüften Konfiguration, die CSP blieb unverändert (Browser-Konsole ohne Verstösse).
+
+### Lücken und Hinweise
+
+- Offen und dem Benutzer vorgelegt: [open-points.md](open-points.md) 12–17 (Angebote Teilstrecke gegen Fahrt, Hinweiszuweisungen ohne Ziel, Betriebstage-Prüfung der Kurswagen, zu bestätigende Annahmen, Befunde und Beispielstatus, nicht dargestellte Inhalte).
+- Nicht dargestellt: Zieländerung (`DestinationDisplay`), Takt, Formation, Flügelung, Durchbindung, Bedarfsverkehr, Elternfahrt der Kurswagen (im Objekt-Explorer sichtbar).
+- Die Fahrtansicht baut sich bei jedem Abruf neu auf (je Halt mehrere Abfragen an den Index) und begrenzt die Zahl der Halte nicht; für die Guide-Beispiele (grösste Fahrt 64 Halte) unkritisch, für grosse Lieferungen später anzupassen (offener Punkt 7).
+- Hinweis zu Bedienung: Der Vitest-Bericht meldet keine React-Warnungen; die Zeitumstellung wird nur für Betriebstage mit auflistbaren `ValidDayBits` geprüft.
+- Der Build meldet weiter ein Skriptpaket über 500 kB (CodeMirror). Windows: nicht getestet.

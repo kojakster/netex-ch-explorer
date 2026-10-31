@@ -16,7 +16,10 @@ from app.core.config import load_config
 from app.core.dataset import SourceFile, open_dataset
 from app.core.explorer import element_xml_window, object_detail
 from app.core.guide.examples import examples_dir, list_examples
+from app.core.guide.layout import MAPPING_TABLE_FILE
+from app.core.guide.mapping import MappingTable, read_mapping_table
 from app.core.projection.common import LookupStatus
+from app.core.projection.journey_view import build_journey_view
 from app.core.projection.journeys import list_journeys
 from tests.support import PROJECT_ROOT, REF_TARGETS
 
@@ -24,12 +27,21 @@ GUIDE = load_config(PROJECT_ROOT).settings.guide_path
 EXAMPLE_NAMES = [example.name for example in list_examples(GUIDE)]
 
 
+@pytest.fixture(scope="module")
+def mapping_table() -> MappingTable:
+    if not (GUIDE / ".git").exists():
+        pytest.skip(f"Guide-Klon fehlt: {GUIDE}")
+    return read_mapping_table(GUIDE.joinpath(*MAPPING_TABLE_FILE.parts))
+
+
 def test_examples_found(guide_path: Path) -> None:
     assert len(list_examples(guide_path)) >= 22
 
 
 @pytest.mark.parametrize("name", EXAMPLE_NAMES)
-def test_example_loads_without_crash(guide_path: Path, name: str) -> None:
+def test_example_loads_without_crash(
+    guide_path: Path, name: str, mapping_table: MappingTable
+) -> None:
     data = (examples_dir(guide_path) / name).read_bytes()
     dataset = open_dataset(
         [SourceFile(name, data)],
@@ -46,6 +58,13 @@ def test_example_loads_without_crash(guide_path: Path, name: str) -> None:
         snippet = text[element.start.char : element.end.char]
         assert snippet.startswith("<") and snippet.endswith(">")
     list_journeys(index)
+    # Die Fahrtansicht jeder Fahrt entsteht ohne Absturz; Lücken der Beispiele sind Befunde.
+    for journey in index.elements_by_name(["ServiceJourney", "TemplateServiceJourney"]):
+        view = build_journey_view(index, journey, mapping_table)
+        for stop in view.stops:
+            # Jede Zeit ist berechnet oder „nicht berechenbar“ mit Grund, nie beides oder keines.
+            for time in (stop.times.arrival, stop.times.departure):
+                assert time is None or (time.total is None) == (time.reason is not None)
     if objects:
         assert object_detail(index, objects[0].id) is not None
         assert element_xml_window(index, objects[-1].id) is not None
