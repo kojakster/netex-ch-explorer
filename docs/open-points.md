@@ -1,25 +1,22 @@
 # Offene Punkte
 
-Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erledigte Punkte wandern nach [decisions.md](decisions.md).
+Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erledigte Punkte stehen in [decisions.md](decisions.md).
 
-## Offene Fragen
+## Offen während der Umsetzung (Benutzer fragen)
 
-1. ~~Guide-Dateien kopieren oder von GitHub holen?~~ → geklärt, siehe decisions.md.
-2. ~~Rolle der 1.10-Lieferung~~ → geklärt: zurückgestellt, siehe decisions.md.
-3. *(Zurückgestellt mit der 1.10-Lieferung)* Sind kleine XML-Einzelausschnitte der Lieferung im LLM-Kontext erlaubt oder nur zusammengefasste Auswertungen?
-4. *(Zurückgestellt mit der 1.10-Lieferung)* Soll die Lesesperre für `../netex-files/` eingerichtet werden?
-5. Vorschläge von Claude bestätigen (je einzeln): ~~5a pyexpat~~ → geklärt; ~~5b XPath-Speicherung~~ → geklärt; ~~5c XML-Anzeige~~ → geklärt: CodeMirror 6.
-5a. ~~Webversion?~~ → geklärt: lokal + statische Webversion (Pyodide), siehe decisions.md.
-5f. *(Zurückgestellt)* Webversion: Zielgruppe (öffentlich/intern) und Ort der Veröffentlichung. Bis dahin überall lauffähig bauen, siehe decisions.md.
-5g. ~~Guide-Dateien in der Webversion~~ → geklärt: mitausliefern, siehe decisions.md.
-5g'. *(Vor öffentlicher Veröffentlichung)* Lizenz für die Weiterverteilung der Guide-Dateien (info.fachbus@sbb.ch) und der NeTEx-CEN-XSD klären.
-5h. ~~Speicher im Browser~~ → geklärt: nur Arbeitsspeicher, siehe decisions.md. *(5d ZIP-Entpacken und 5e Import-Reihenfolge: zurückgestellt mit grossen Lieferungen.)*
-6. ~~Ordnerstruktur~~ → geklärt, siehe decisions.md. Umzug von `CLAUDE.md`, `docs/` und Plan nach `netex-ch-explorer/` erledigt (30.10.2026).
-7. ~~Git-Repository~~ → erledigt 30.10.2026: `netex-ch-explorer/` ist ein lokales Git-Repo (Branch `main`, kein Remote). Guide und Lieferdaten liegen ausserhalb und sind zusätzlich per `.gitignore` ausgeschlossen.
-8. **Glossar Englisch/Deutsch** (Benutzer reicht nach): Quelle und Ablage klären; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
-9. ~~Windows-Testweg~~ → geklärt: Test von Hand, sobald der Benutzer an einem Windows-PC ist. Bis dahin plattformneutral bauen (siehe decisions.md „Plattformen“); README enthält eine kurze Windows-Testanleitung.
+1. **Entscheidungspunkt nach Phase 3:** Schweizer Profilregeln aus den Guide-Vorlagen einbinden? (siehe UMSETZUNGSPLAN Abschnitt 8)
+2. **Glossar Englisch/Deutsch:** Benutzer reicht nach; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
 
-## Findings zum Implementierungsplan
+## Zurückgestellt
+
+- Grosse Lieferungen (1.10-Lieferung `../netex-files/`, 12 GB): Import aus Ordner, Index auf Festplatte, Hintergrundprozess, ZIP-Grenzwerte, Lesesperre, Ausschnitte im LLM-Kontext (siehe decisions.md „Zurückgestellt …“).
+- Webversion: Veröffentlichung (Zielgruppe, Ort), Lizenz der Guide-Dateien (info.fachbus@sbb.ch) und der NeTEx-CEN-XSD.
+- Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
+- Auswahl mehrerer Guide-Stände in der Oberfläche; Einstellungsseite für Farben; Zellfarben der Mappingtabelle.
+
+## Archiv: Findings zum ursprünglichen Plan
+
+Alle eingearbeitet in [UMSETZUNGSPLAN.md](../UMSETZUNGSPLAN.md) (siehe [plan-abgleich.md](plan-abgleich.md)), ausser 8 und 9 (zurückgestellt mit grossen Lieferungen). Finding 14 ist geklärt: Die Daten von Beispiel 01 ergeben 10:54 (10:35 + `RunTime` 10 Min + `WaitTime` 3 Min + `RunTime` 6 Min); der Kommentar in der Datei nennt 10:53. Das Tool zeigt 10:54 mit Rechenkette; Widerspruch in `docs/assumptions.md` festhalten.
 
 1. Abschnitt 4/Phase 3: Der Guide (2.0-Entwurf) passt nicht zur Lieferung 2027 (1.10). Entschieden ist: zuerst 2.0. Die „Realitätsprüfung mit der 2027-Lieferung“ (Abschnitte 4, 10, 11) gilt damit nur für den generischen Explorer; die Fahrtansicht wird mit den Guide-Beispielen abgenommen.
 2. *(Darstellung geklärt, siehe decisions.md „Zeiten in der Fahrtansicht“; in Plan einarbeiten.)* Abschnitte 6/11: Haltefolge und Zeiten sind je Version anders modelliert. In 2.0: `ServiceJourneyPattern` + `TimeDemandType`, Zeiten berechnet. In 1.10: `calls/Call`. `TimetabledPassingTime` kommt in keiner der beiden Quellen vor (in 2.0 als deprecated markiert).

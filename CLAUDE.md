@@ -6,10 +6,10 @@ Sprache der Anwendung und der Dokumentation: Deutsch (de-CH); NeTEx-Bezeichner b
 
 ## Wo was steht
 
-- [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md): neuer Plan für die erste Ausbaustufe, **Entwurf, noch nicht freigegeben**. Abgleich mit dem Original: [docs/plan-abgleich.md](docs/plan-abgleich.md).
-- [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](NETEX_EXPLORER_IMPLEMENTATION_PLAN.md): ursprünglicher Auftrag; wird nach Freigabe des neuen Plans ersetzt.
+- [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md): Plan für die erste Ausbaustufe, **Entwurf, Freigabe ausstehend**. Abschnitt 13 beschreibt die Arbeitsweise für die Umsetzung. Abgleich mit dem ursprünglichen Plan: [docs/plan-abgleich.md](docs/plan-abgleich.md).
+- [README.md](README.md): Einrichtung (Guide klonen, Workspace).
 - [docs/decisions.md](docs/decisions.md): festgelegte Entscheidungen und unbestätigte Vorschläge. **Geht dem Plan vor.** Vor jeder Umsetzungs- oder Architekturarbeit lesen.
-- [docs/open-points.md](docs/open-points.md): offene Fragen und Findings zum Plan.
+- [docs/open-points.md](docs/open-points.md): offene und zurückgestellte Punkte.
 - [docs/research/guide-2.0.md](docs/research/guide-2.0.md): CH-Profil 2.0 (Entwurf): Artefakte, Lieferstruktur, Datenmodell.
 - [docs/research/delivery-1.10-2027.md](docs/research/delivery-1.10-2027.md): lokale Lieferung 2027 (NeTEx 1.10) in `../netex-files/`.
 

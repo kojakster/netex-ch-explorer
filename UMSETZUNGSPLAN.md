@@ -1,6 +1,6 @@
 # NeTEx CH Explorer – Umsetzungsplan, erste Ausbaustufe
 
-**Status:** Entwurf zur Prüfung durch den Benutzer. Ersetzt nach Freigabe [NETEX_EXPLORER_IMPLEMENTATION_PLAN.md](NETEX_EXPLORER_IMPLEMENTATION_PLAN.md).
+**Status:** Entwurf, Freigabe durch den Benutzer ausstehend. Ersetzt den ursprünglichen Plan `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md`.
 **Stand:** 30.10.2026
 **Massgebend für Details:** [docs/decisions.md](docs/decisions.md). Bei Abweichungen gilt `decisions.md`; der Widerspruch wird dem Benutzer vorgelegt.
 **Abgleich mit dem ursprünglichen Plan:** [docs/plan-abgleich.md](docs/plan-abgleich.md)
@@ -42,7 +42,7 @@ Grundsätze (aus [CLAUDE.md](CLAUDE.md)): klein und wartbar vor ausgefeilten Fun
 
 - Webversion (statisch, Pyodide). Der Kern wird dafür von Anfang an ohne Server-Abhängigkeiten gebaut.
 - Validierung: deutsche Erklärungen und Korrekturvorschläge.
-- Auswahl mehrerer Guide-Stände in der Oberfläche (Lock-Datei ist dafür schon eine Liste).
+- Auswahl mehrerer Guide-Stände in der Oberfläche (mehrere Guide-Klone, Pfade konfigurierbar).
 - Grosse Lieferungen (z. B. 1.10-Lieferung, 12 GB), Adapter für CH 1.10.
 - Weitere Oberflächensprachen.
 - Schweizer Profilregeln aus den Guide-Vorlagen (~350 Regeln), falls nach Phase 3 gewünscht.
@@ -106,16 +106,20 @@ netex-ch-explorer/
 │   │   └── validation/    XSD und Schematron (lxml)
 │   ├── server/     FastAPI, nur dünne Schicht über core; bindet an 127.0.0.1
 │   └── frontend/   React + TypeScript + Vite, CodeMirror 6, Sprachdateien
-├── scripts/        start als Python; start.sh/start.ps1 als Einzeiler
+├── scripts/        start.py, test.py (schreibt guide-tested.json bei Erfolg); start.sh/start.ps1 als Einzeiler
 ├── netex-ch-explorer.code-workspace   VS-Code-Workspace: Projekt + Guide-Klon
 ├── guide-tested.json                  zuletzt erfolgreich getesteter Guide-Commit
+├── config/         Einstellungsdateien (Farben, graue Elementtypen, Pfade, Grenzwerte)
 ├── fixtures/       eigene synthetische Testdateien (keine Guide-Kopien)
+├── work/           geöffnete eigene Dateien (nicht versioniert, wird aufgeräumt)
 └── docs/
 ```
 
 | Baustein | Festlegung |
 |---|---|
-| Python | 3.12+ (lokal 3.13); Abhängigkeiten mit Lockfile. |
+| Python | 3.12+ (lokal 3.13); Umgebung und Pakete mit **uv** (`pyproject.toml`, `uv.lock`). So wenige Abhängigkeiten wie möglich (FastAPI, uvicorn, lxml; Tests: pytest). |
+| Frontend-Pakete | **npm** (`package.json`, `package-lock.json`), Node.js 22. |
+| Einstellungen | Ordner `config/`: `frame-colors.json`, `not-relevant-elements.json`, `settings.json` (Guide-Pfad, Sprache, ZIP-Grenzwerte). Ungültig/fehlend → Standardwert + Hinweis. |
 | Einlesen | **pyexpat**: pro Element Byte-Offset, Zeile, Spalte; eigene Verschachtelungs- und Namespace-Behandlung; Kommentare werden für die Versionserkennung gelesen. Keine externen Entitäten, kein Netzwerkzugriff. |
 | Index | SQLite im Arbeitsspeicher je geöffnetem Datensatz; Datei wird beim Öffnen direkt eingelesen (keine Datenbankdatei, kein Hintergrundprozess). Pfadformen einmal in eigener Tabelle; Objekte speichern Datei, Offset, Zeile, Spalte, Frame. Vollständiger Pfad mit Positionsnummern wird beim Anzeigen berechnet. |
 | Referenzen | Aus allen `…Ref`-Elementen (auch in `Extensions`). Auflösung über (ID, erwarteter Typ aus Ref-Name bzw. `nameOfRefClass`); `version` und `versionRef` beide lesen. Status: `resolved`, `unresolved`, `ambiguous`, `external_or_unloaded`. |
@@ -128,7 +132,7 @@ netex-ch-explorer/
 
 | Aufruf | Zweck |
 |---|---|
-| `GET /api/guide` | Aktiver Guide-Stand, Liste der Beispiele mit Titeln |
+| `GET /api/guide` | Guide-Status (Pfad, Branch, Commit, Datum, getestet/neuer als getestet, XSD vorhanden, Probleme Mappingtabelle) und Liste der Beispiele mit Titeln |
 | `POST /api/datasets` | Datensatz öffnen: Beispiel-Name oder eigene Datei(en)/ZIP |
 | `GET /api/datasets/{id}` | Dateien, Versionserkennung, Anzahl Diagnosen |
 | `GET /api/datasets/{id}/journeys` | Liste der Fahrten der Datei (Zugnummer, Linie, erster/letzter Halt) |
@@ -163,7 +167,7 @@ Nicht eigens dargestellte Inhalte (Kurswagen, Formation, Flügelung, Durchbindun
 
 Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie eine NeTEx-Datei aufgebaut ist. Visualisiert werden alle Daten der Datei; Ausstattung von Haltestellen (Toiletten, Ticketautomaten usw.) erhält keine eigene Darstellung, bleibt im Objekt-Explorer und XML aber sichtbar.
 
-**Frame-Farben als roter Faden** (klare Farben; Standardwerte in der Einstellungsdatei `frame-colors.json`, änderbar ohne Codeänderung, ungültige/fehlende Einträge → Standardwert; Legende immer sichtbar, immer mit Frame-Name als Text). Kleinster Farbabstand ΔE76 = 33, Schriftkontrast ≥ 4,5:1:
+**Frame-Farben als roter Faden** (klare Farben; Standardwerte in `config/frame-colors.json`, änderbar ohne Codeänderung, ungültige/fehlende Einträge → Standardwert; Legende immer sichtbar, immer mit Frame-Name als Text). Kleinster Farbabstand ΔE76 = 33, Schriftkontrast ≥ 4,5:1:
 
 | Bedeutung | Farbe | Wert | Schrift |
 |---|---|---|---|
@@ -176,7 +180,7 @@ Ziel: **visuell und selbsterklärend** verstehen, woher Angaben stammen und wie 
 | unbekannter Frame | Braun | `#6D4C2F` | weiss |
 | für den Fahrplan nicht relevant | Grau | `#8A8A8A` | schwarz |
 
-**Grau** bedeutet „für den Fahrplan nicht relevant“ (z. B. Toiletten, Ticketautomaten, Ausstattung und Barrierefreiheit von Haltestellen), nicht einen Frame; der Frame-Name bleibt als Text sichtbar. `StopPlace` und `Quay` bleiben orange. Welche Elementtypen grau sind, steht in einer Konfigurationsliste; die Startliste wird dem Benutzer nach Prüfung der Guide-Beispiele vorgelegt. Eine Einstellungsseite in der Oberfläche ist später möglich.
+**Grau** bedeutet „für den Fahrplan nicht relevant“ (z. B. Toiletten, Ticketautomaten, Ausstattung und Barrierefreiheit von Haltestellen), nicht einen Frame; der Frame-Name bleibt als Text sichtbar. `StopPlace` und `Quay` bleiben orange. Welche Elementtypen grau sind, steht in `config/not-relevant-elements.json`; die Startliste wird dem Benutzer nach Prüfung der Guide-Beispiele vorgelegt. Eine Einstellungsseite in der Oberfläche ist später möglich.
 
 Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung mit `ResourceFrame`).
 
@@ -196,7 +200,7 @@ Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung m
 - **Passt die Datei nicht zum Guide-Stand** (z. B. 1.10-Lieferung): Ergebnis anzeigen, keine 2.0-Prüfung starten, generischer Explorer bleibt nutzbar.
 - **XSD-Prüfung** (lxml) gegen die XSD des Guide-Stands; Fehler mit Datei, Zeile, Spalte, Markierung im XML.
 - **Schematron:** `general_rules.sch` des Guides (4 allgemeine Regeln). Das Tool zeigt klar an: „Schweizer Profilregeln aus den Vorlagen noch nicht eingebunden“.
-- **Entscheidungspunkt nach Phase 3:** Ob die ~350 Schweizer Profilregeln aus den Guide-Vorlagen (Pflicht-, Verbots-, Werte-Regeln; je Dateityp `NETWORK_OFFER`, `SITE_OFFER`, `INTERCHANGE`, `SINGLE_FILE`) eingebunden werden. Voraussetzung: vollständige Prüfung des Build-Werkzeugs `tools/schematron_builder` (≈1100 Zeilen, nur lxml, XSLT 1.0) und Freigabe durch den Benutzer; danach läuft es in `update-guide`, Änderungen am Werkzeug werden bei jedem Update vorgelegt.
+- **Entscheidungspunkt nach Phase 3:** Ob die ~350 Schweizer Profilregeln aus den Guide-Vorlagen (Pflicht-, Verbots-, Werte-Regeln; je Dateityp `NETWORK_OFFER`, `SITE_OFFER`, `INTERCHANGE`, `SINGLE_FILE`) eingebunden werden. Voraussetzung: vollständige Prüfung des Build-Werkzeugs `tools/schematron_builder` (≈1100 Zeilen, nur lxml, XSLT 1.0) und Freigabe durch den Benutzer; danach erzeugt ein Skript die Regeln aus dem lokalen Guide-Klon; Änderungen am Werkzeug nach einem `git pull` werden dem Benutzer vorgelegt.
 - **Link zum Guide-Kapitel** über `A5_annex_index.md`, auf GitHub im exakt verwendeten Commit.
 - Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“.
 - Bekannte erste Testfälle: Beispiel 05 Zeile 399, Beispiel 16 Zeile 64, `TypeOfName` `offical`.
@@ -204,9 +208,9 @@ Fehler werden mit Symbol ⚠ und Text gezeigt, nicht nur mit Rot (Verwechslung m
 ## 9. Sicherheit
 
 - pyexpat ohne externe Entitäten und ohne Netzwerkzugriff; lxml mit `resolve_entities=False`, `no_network=True`.
-- ZIP: Zip-Slip-Schutz, keine Symlinks, Grenzwerte für Gesamtgrösse, Einzeldatei und Kompressionsrate (konfigurierbar, für die erste Ausbaustufe klein gewählt).
+- ZIP: Zip-Slip-Schutz, keine Symlinks; Standardgrenzen (in `config/settings.json` änderbar): 200 MB entpackt gesamt, 50 MB je Datei, 500 Dateien, Kompressionsrate 100:1.
 - Server nur auf `127.0.0.1`, CORS nur für das lokale Frontend, keine freien Dateipfade über die API, keine Telemetrie, keine Cloud-Dienste.
-- Hochgeladene Dateien nur in einem definierten Arbeitsverzeichnis; Aufräumen beim Schliessen des Datensatzes.
+- Über den Dialog geöffnete Dateien nur in `work/` (nicht versioniert); Aufräumen beim Schliessen des Datensatzes und beim Start.
 
 ## 10. Phasen und Abnahme
 
@@ -214,11 +218,11 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 | Phase | Inhalt | Abnahme |
 |---|---|---|
-| **0 Grundgerüst** | Projektstruktur, Abhängigkeiten mit Lockfiles, Workspace-Datei, Guide-Erkennung (Pfad, Commit, XSD vorhanden, `guide-tested.json`), Mappingtabelle lesen, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | Mit dem geklonten Guide (`b7ac158`, XSD `73b337e`) startet die App lokal, zeigt den Guide-Commit an und liest die Mappingtabelle; fehlende XSD bzw. neuerer Stand werden gemeldet |
+| **0 Grundgerüst** | Projektstruktur, Abhängigkeiten (uv, npm) mit Lockfiles, `config/`, Workspace-Datei, Guide-Erkennung (Pfad, Commit, XSD vorhanden, `guide-tested.json`), Mappingtabelle lesen, Start-Skripte, leere Oberfläche mit Sprachdateien; `docs/mapping.md` mit den bereits geprüften Ketten anlegen; synthetische Testdateien mit `fixtures/README.md` | `scripts/test.py` läuft und schreibt `guide-tested.json`; mit dem geklonten Guide (`b7ac158`, XSD `73b337e`) startet die App lokal, zeigt den Guide-Commit an und liest die Mappingtabelle; fehlende XSD bzw. neuerer Stand werden gemeldet |
 | **1 Einlesen und Objekt-Explorer** | pyexpat-Reader, Index, Frames, Pfade, Syntax-Diagnosen, Liste der Fahrten, einfache Objektsuche, Objektdetail, XML-Ansicht mit Markierung, Beispielauswahl | **Alle Guide-Beispiele** laden ohne Absturz; ID-Suche zeigt Objekt mit Frame, Datei, Zeile/Spalte; Klick markiert exakt die Stelle |
 | **2 Referenzen und Herkunft** | Referenzen inkl. `Extensions`, Auflösung über ID + Typ, Rückwärtsreferenzen, Herkunftsanzeige, Frame-Farben | Navigation vor/zurück; `Quay` und `ScheduledStopPoint` mit gleicher ID werden korrekt unterschieden; nicht auflösbare Referenzen als Diagnose |
-| **3 Fahrtansicht CH 2.0** | Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
-| **4 Eigene Dateien und Validierung** (vorher Entscheidungspunkt Profilregeln) | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + Schematron, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; Fehler in Beispiel 05/16 erscheinen mit Stelle und Link |
+| **3 Fahrtansicht CH 2.0** | Startliste `not-relevant-elements.json` dem Benutzer vorlegen; Haltefolge mit Ein-/Aussteige-Eigenschaften, berechnete Zeiten mit Rechenkette, Mitternacht, Betriebstage, Zugnummer/Linie/Verkehrsmittel, Angebote inkl. `JourneyPart`, Hinweise, Stammdaten | Beispiel 01 zeigt die Halte in richtiger Reihenfolge und nachvollziehbar berechnete Zeiten mit Rechenkette (Abweichung zum Dateikommentar 10:53/10:54 geklärt und in `docs/assumptions.md` festgehalten); Beispiel 15 (`DepartureDayOffset` 1) und 21 (Kurswagen über Mitternacht) korrekt; Beispiel 08 zeigt Angebote auf Teilstrecken |
+| **4 Eigene Dateien und Validierung** (vorher **anhalten**: Entscheidungspunkt Profilregeln mit dem Benutzer) | Öffnen von XML/mehreren XML/ZIP, Versionserkennung, XSD + Schematron, Guide-Kapitel-Links | Eigene 2.0-Datei wird geprüft; 1.10-Datei wird erkannt und nicht irreführend geprüft; Fehler in Beispiel 05/16 erscheinen mit Stelle und Link |
 | **5 Übergabe** | README, Start/Stopp, E2E-Test, Testbericht, bekannte Grenzen, Sprachdatei-Prüfung | Neue Person startet die App, lädt Beispiel 01, klickt einen Halt an und landet an der richtigen XML-Stelle, ohne Code zu ändern |
 
 ## 11. Tests
@@ -234,9 +238,21 @@ Nach jeder Phase: Tests ausführen, Ergebnis in `docs/test-report.md`, Commit. F
 
 `README.md` (Installation von null inkl. **exakter Git-Befehle** zum Klonen des Guides und Holen der XSD, Start, Bedienung, Tests ausführen, bekannte Grenzen, **Windows-Testanleitung** für den ersten Test am Windows-PC), `fixtures/README.md` (Herkunft der synthetischen Daten, Weitergabe erlaubt), `docs/mapping.md` (jede fachliche Regel mit Guide-Beleg), `docs/api.md`, `docs/assumptions.md` (Annahmen, Widersprüche im Guide), `docs/test-report.md`. Entscheidungen weiterhin in `docs/decisions.md`.
 
-## 13. Offene Fragen an den Benutzer (beim Schreiben entstanden)
+## 13. Arbeitsweise für die Umsetzung
 
-1. ~~Referenzgraph~~ → geklärt: keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (siehe Abschnitt 7).
-2. ~~Index und Import~~ → geklärt: Index nur im Arbeitsspeicher, Datei wird beim Öffnen direkt eingelesen; keine Datenbankdatei, kein Hintergrundprozess. Grosse Lieferungen bleiben zurückgestellt.
-3. ~~Schematron~~ → geklärt: Phase 4 mit XSD + `general_rules.sch` (4 allgemeine Regeln); **Entscheidungspunkt nach Phase 3** über die ~350 Schweizer Profilregeln aus den Vorlagen (siehe Abschnitt 8).
-4. ~~Widerspruch Plattformen/Windows~~ → geklärt: Windows bald nötig und wichtiger als Webversion; „Plattformen“ angepasst. Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
+Für eine neue Sitzung, die diesen Plan umsetzt:
+
+1. Zuerst lesen: [CLAUDE.md](CLAUDE.md), [docs/decisions.md](docs/decisions.md), diesen Plan, [docs/research/guide-2.0.md](docs/research/guide-2.0.md), [docs/open-points.md](docs/open-points.md).
+2. Prüfen, ob der Guide-Klon vorhanden ist (`../netexRealisationGuideSwitzerland`, Branch `next`, XSD-Submodul). Fehlt er: Benutzer auf die Befehle im README hinweisen, nicht selbst klonen.
+3. Phasen 0–5 der Reihe nach umsetzen. Nach jeder Phase: Tests, `docs/test-report.md`, Commit, kurze Rückmeldung an den Benutzer (was fertig ist, was offen ist).
+4. **Anhalten und den Benutzer fragen** bei: Startliste `not-relevant-elements.json` (Phase 3), Entscheidungspunkt Profilregeln (vor Phase 4), jeder Unklarheit oder jedem Widerspruch (Plan, Entscheidungen, Guide, Daten), jeder Anforderung mit unerwartet hohem Aufwand. Fragen einzeln stellen.
+5. Neue Entscheidungen in `docs/decisions.md`, fachliche Belege in `docs/mapping.md`, Annahmen und Widersprüche im Guide in `docs/assumptions.md`.
+6. Nichts auf GitHub oder andere Server hochladen; keine Lieferdaten aus `../netex-files/` in den Kontext laden.
+
+## 14. Während der Planung geklärte Fragen
+
+1. Referenzgraph → keine Graph-Bibliothek; Frame-Farben, Herkunftskette als Kästchen, farbige Referenzliste (Abschnitt 7).
+2. Index und Import → Index nur im Arbeitsspeicher, Datei wird beim Öffnen direkt eingelesen; keine Datenbankdatei, kein Hintergrundprozess.
+3. Schematron → Phase 4 mit XSD + `general_rules.sch`; Entscheidungspunkt nach Phase 3 über die ~350 Profilregeln aus den Vorlagen (Abschnitt 8).
+4. Plattformen → Windows bald nötig und wichtiger als die Webversion; Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
+5. Guide-Bezug → Git-Klon durch den Benutzer statt Download-Skript; Workspace-Datei; eigene Dateien nur über den „Datei öffnen“-Dialog.
