@@ -18,11 +18,15 @@ class StepOutcome:
 
 @dataclass(frozen=True)
 class FileOutcome:
-    """Eine Datei: geprüft oder, mit Grund, nicht geprüft (z. B. andere Version)."""
+    """Eine Datei: geprüft oder, mit Grund, nicht geprüft (z. B. andere Version).
+
+    `forced`: auf ausdrücklichen Wunsch als CH 2.0 geprüft, obwohl die Version nicht erkannt war.
+    """
 
     file_id: int
     checked: bool
     reason: Issue | None = None
+    forced: bool = False
 
 
 @dataclass(frozen=True)
@@ -32,3 +36,8 @@ class ValidationSummary:
     guide_commit: str | None
     steps: tuple[StepOutcome, ...]
     files: tuple[FileOutcome, ...]
+
+    @property
+    def forced(self) -> bool:
+        """`True`, wenn mindestens eine Datei auf Wunsch als CH 2.0 geprüft wurde."""
+        return any(outcome.forced for outcome in self.files)

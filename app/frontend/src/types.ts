@@ -118,11 +118,14 @@ export interface ValidationFile {
   fileId: number;
   checked: boolean;
   reason: Issue | null;
+  /** Auf Wunsch als CH 2.0 geprüft, obwohl die Version nicht erkannt war. */
+  forced: boolean;
 }
 
 /** Ergebnis einer Validierung: „geprüft gegen Entwurf <Commit>“, nie „gültig“. */
 export interface ValidationInfo {
   guideCommit: string | null;
+  forced: boolean;
   steps: ValidationStep[];
   files: ValidationFile[];
 }

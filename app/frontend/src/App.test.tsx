@@ -366,7 +366,7 @@ describe("App mit eigenen Dateien und Prüfung", () => {
     await chooseFiles(source({ getDiagnostics, validate }));
     fireEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
     expect(await screen.findByText("Geprüft gegen Entwurf b7ac158")).toBeTruthy();
-    expect(validate).toHaveBeenCalledWith(DATASET.id);
+    expect(validate).toHaveBeenCalledWith(DATASET.id, false);
     expect(
       await screen.findByText(/CH-SJ-13: ServiceJourney ch:1:sjyid:SYN:1 darf calls/),
     ).toBeTruthy();

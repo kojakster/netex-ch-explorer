@@ -309,7 +309,7 @@ Sicherheit (Upload, ZIP, lxml, Pfade, IDs, XSS) geprüft, keine offenen Funde: D
 
 ### Lücken und Hinweise
 
-- Offen und dem Benutzer vorgelegt: [open-points.md](open-points.md) 18–21 (9 statt 11 Beispiele, Dateien mit mehrdeutiger Version nicht prüfbar, Wahl des Guide-Kapitels, Fixtures ohne Produktkategorie).
+- Offene Punkte 18–21 sind vom Benutzer am 31.10.2026 entschieden (siehe unten „Bestätigungen und Knopf“); nichts offen.
 - Nicht umgesetzt (Entscheide vom 31.10.2026): CH-SJP-08, CH-SJ-16. Nicht eingebunden: übrige ~330 Profilregeln, Erklärungen und Korrekturvorschläge der XSD-Meldungen (Originalwortlaut).
 - Ein Upload liegt beim Annehmen bis zu 200 MB im Arbeitsspeicher (Rohdaten, danach nur noch Index und Text); nach der Korrektur zum Review wird nichts mehr zurückgelesen oder im Datensatz behalten. Streaming in `work/` bleibt für grosse Lieferungen zurückgestellt.
 - Eine Validierung vor Ende des XSD-Ladens wartet bis zu 17 s.
@@ -341,3 +341,10 @@ Offen: nichts aus diesem Review. Hinweise: Die Rohdaten eines Beispiels werden b
 Prüfbefehl: `uv run python scripts/check.py` grün (alle Schritte wie oben); `uv run python scripts/test.py` bestanden, `guide-tested.json` unverändert (Guide `b7ac158`, XSD `73b337e`, 22 Beispiele).
 
 Testzahlen nach den Korrekturen: pytest **805 Tests bestanden** (vorher 763), Abdeckung `app/core` **98 %** (Mindestwert 90 %; `intake.py` 96 %, `validation/engine.py` 97 %, `guide/status.py` 98 %); Vitest **152 Tests bestanden** (vorher 147).
+
+### Bestätigungen und Knopf „Trotzdem als CH 2.0 prüfen“ (31.10.2026)
+
+- **Bestätigt** vom Benutzer: die technischen Festlegungen „Umsetzung Phase 4“ und „Korrekturen nach Review Phase 4“ (inklusive: `ch_core_rules` ist „nicht durchgeführt“, wenn keine Datei prüfbar war). **Entschieden** (siehe [decisions.md](decisions.md) „Offene Punkte 18–21 aus Phase 4“): 18 berichtigt auf 9 Beispiele (Entscheid, Plan Abschnitt 8, `docs/research/guide-2.0.md`, `docs/mapping.md`); 20 und 21 bleiben wie umgesetzt.
+- **Umgesetzt (Punkt 19):** `POST /api/datasets/{id}/validate?forceCh20=true` prüft auch lesbare Dateien mit Versionserkennung „mehrdeutig“ oder „unbekannt“ wie CH 2.0; erkannte andere Versionen (1.10) und nicht lesbare Dateien bleiben gesperrt. Das Ergebnis trägt `forced` (je Datei und im Ganzen; Meldung `validation.forced`), die Oberfläche zeigt „Als CH 2.0 geprüft auf Wunsch, Version nicht erkannt.“; zweiter Knopf „Trotzdem als CH 2.0 prüfen“ nur bei mehrdeutigen oder unbekannten lesbaren Dateien. Hilfeseite (de/en), README und [api.md](api.md) nachgeführt.
+- **Tests:** neue Tests für Kern (Erkennung `forceable`, Engine: Standard prüft nicht, auf Wunsch geprüft und vermerkt, 1.10 und nicht lesbare Datei gesperrt, Wiederholung ersetzt), Schnittstelle (mit/ohne Parameter, 1.10, ungültiger Wert 422) und Vitest (Knopf bei ambiguous/unknown, nicht bei 1.10/unlesbar, gesperrt während der Prüfung, Vermerk im Ergebnis, Parameter im Aufruf). pytest **815 Tests bestanden** (vorher 805), Abdeckung `app/core` **98 %**; Vitest **157 Tests bestanden** (vorher 152). `uv run python scripts/check.py` grün, `uv run python scripts/test.py` bestanden (`guide-tested.json` unverändert).
+- **Browser (Playwright, Chrome):** synthetische XML-Datei ohne Versionshinweise hochgeladen: „Version unbekannt“, „Prüfen“ gesperrt, „Trotzdem als CH 2.0 prüfen“ prüft; Ergebnis mit Vermerk, XSD- und Schematron-Befunde mit Stelle; Konsole leer; Server danach beendet.

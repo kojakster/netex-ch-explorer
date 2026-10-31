@@ -103,4 +103,4 @@ Mit lxml lokal geprüft (`b7ac158`, XSD `73b337e`):
 
 - Die NeTEx-2.1-XSD lädt in ~17 s, ist also beim Start einmal im Hintergrund zu laden.
 - **Alle 22 Beispiele sind XSD-gültig.** Verschachtelte `<Text lang="…">` innerhalb von `<Text>`/`<Name>` (Beispiel 05 Zeile 399, Beispiel 16 Zeile 64) sind die NeTEx-2.x-Form für Übersetzungen, kein Fehler.
-- `general_rules.sch`: 121 Verstösse in 11 Beispielen, alle „The order attribute is not allowed“ (95× `StopPointInJourneyPattern`, 12× `PassengerStopAssignment`, 8× `TrainComponent`, 5× `NoticeAssignment`, 1× `DayTypeAssignment`). Laut `03_xml_modelling.md` ergibt sich die Reihenfolge aus der XML-Reihenfolge.
+- `general_rules.sch`: 121 Verstösse in 9 Beispielen, alle „The order attribute is not allowed“ (95× `StopPointInJourneyPattern`, 12× `PassengerStopAssignment`, 8× `TrainComponent`, 5× `NoticeAssignment`, 1× `DayTypeAssignment`). Laut `03_xml_modelling.md` ergibt sich die Reihenfolge aus der XML-Reihenfolge.

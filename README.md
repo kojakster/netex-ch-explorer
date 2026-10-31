@@ -147,6 +147,7 @@ Nach dem Start lädt das Tool im Hintergrund die XSD des Guides (rund 17 Sekunde
 1. In der linken Spalte **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
 2. Unter **Geöffnete Dateien** steht je Datei die erkannte Version mit Begründung (Namensraum, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur). Nur Dateien, die als CH-Profil 2.0 erkannt sind, werden geprüft; andere (z. B. NeTEx 1.10) bleiben im Explorer ansehbar.
 3. **Prüfen** startet XSD-Prüfung, die Regeln von `general_rules.sch` und die Kernregeln. Befunde erscheinen unter **Diagnosen**, getrennt nach Art, mit Schweregrad, Stelle (Klick markiert sie im XML) und Link auf das Guide-Kapitel im geprüften Commit.
+   Ist die Version einer Datei mehrdeutig oder unbekannt, wird sie nicht geprüft; der Knopf **Trotzdem als CH 2.0 prüfen** erzwingt die Prüfung auf ausdrücklichen Wunsch, das Ergebnis vermerkt „als CH 2.0 geprüft auf Wunsch, Version nicht erkannt“. Eine erkannte andere Version (z. B. 1.10) wird nie so geprüft.
 4. Abgewiesene Dateien (falscher Typ, zu gross, unsichere ZIP-Einträge …) erscheinen als Diagnosen der Art „Datei“. Die Grenzwerte stehen in `config/settings.json` (`zipLimits`).
 
 ### 6. Funktion prüfen (optional)

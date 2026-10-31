@@ -180,7 +180,7 @@ def test_validate_valid_file_has_no_findings(
         ("general_rules", True),
         ("ch_core_rules", True),
     ]
-    assert validation["files"] == [{"fileId": 1, "checked": True, "reason": None}]
+    assert validation["files"] == [{"fileId": 1, "checked": True, "reason": None, "forced": False}]
     assert data == client.get(f"/api/datasets/{dataset_id}").json()
 
 
@@ -246,6 +246,47 @@ def test_110_file_is_detected_and_not_checked(client: TestClient) -> None:
     assert diagnostics(client, data["id"], "xsd") == []
     assert diagnostics(client, data["id"], "profile_rule") == []
     assert client.get(f"/api/datasets/{data['id']}/objects").json()["total"] > 0
+
+
+UNRECOGNISED = (
+    b'<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="2.1">'
+    b'<A order="1"/></PublicationDelivery>'
+)
+
+
+def test_unrecognised_version_is_checked_only_on_request(client: TestClient) -> None:
+    data = upload(client, ("u.xml", UNRECOGNISED)).json()
+    assert data["files"][0]["detection"]["status"] == "ambiguous"
+    plain = client.post(f"/api/datasets/{data['id']}/validate").json()["validation"]
+    assert plain["forced"] is False
+    assert plain["files"][0]["checked"] is False
+    assert plain["files"][0]["forced"] is False
+    forced = client.post(f"/api/datasets/{data['id']}/validate?forceCh20=true")
+    assert forced.status_code == 200
+    validation = forced.json()["validation"]
+    assert validation["forced"] is True
+    [outcome] = validation["files"]
+    assert (outcome["checked"], outcome["forced"]) == (True, True)
+    assert outcome["reason"]["key"] == "validation.forced"
+    keys = {d["key"] for d in diagnostics(client, data["id"], "profile_rule")}
+    assert "schematron.no_order_attribute" in keys
+
+
+def test_forcing_does_not_check_a_110_file(client: TestClient) -> None:
+    data = upload(client, ("netex110_like.xml", fixture("netex110_like.xml"))).json()
+    validation = client.post(f"/api/datasets/{data['id']}/validate?forceCh20=true").json()[
+        "validation"
+    ]
+    assert validation["forced"] is False
+    assert validation["files"][0]["checked"] is False
+    assert validation["files"][0]["reason"]["key"] == "validation.file_skipped_profile"
+    assert diagnostics(client, data["id"], "xsd") == []
+
+
+def test_force_parameter_must_be_a_boolean(client: TestClient) -> None:
+    dataset_id = upload(client, ("u.xml", UNRECOGNISED)).json()["id"]
+    response = client.post(f"/api/datasets/{dataset_id}/validate?forceCh20=vielleicht")
+    assert response.status_code == 422
 
 
 def test_validation_can_be_repeated(client: TestClient) -> None:
@@ -448,10 +489,10 @@ def test_closing_during_a_validation_does_not_break_it(
     proceed = threading.Event()
     original = ValidationEngine.validate
 
-    def slow(self: ValidationEngine, dataset: Dataset) -> ValidationSummary:
+    def slow(self: ValidationEngine, dataset: Dataset, *, force_ch20: bool) -> ValidationSummary:
         started.set()
         assert proceed.wait(timeout=30)
-        return original(self, dataset)
+        return original(self, dataset, force_ch20=force_ch20)
 
     monkeypatch.setattr(ValidationEngine, "validate", slow)
     responses: list[httpx2.Response] = []

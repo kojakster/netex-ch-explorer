@@ -102,6 +102,7 @@ def _leased_element(request: Request, object_id: str) -> Iterator[_ElementTarget
 
 LeasedDataset = Annotated[_OpenDataset, Depends(_leased_dataset)]
 LeasedElement = Annotated[_ElementTarget, Depends(_leased_element)]
+ForceCh20 = Annotated[bool, Query(alias="forceCh20")]
 
 
 def _converter(runtime: Runtime, dataset_id: str, dataset: Dataset) -> Converter:
@@ -153,10 +154,13 @@ def lifecycle_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     @router.post("/datasets/{dataset_id}/validate")
-    def validate_dataset(target: LeasedDataset) -> DatasetOut:
-        """Startet die Validierung (nur als CH 2.0 erkannte Dateien) und liefert das Ergebnis."""
+    def validate_dataset(target: LeasedDataset, force_ch20: ForceCh20 = False) -> DatasetOut:
+        """Startet die Validierung (als CH 2.0 erkannte Dateien) und liefert das Ergebnis.
+
+        Mit `forceCh20=true` werden auch Dateien mit mehrdeutiger oder unbekannter Version geprüft.
+        """
         dataset_id, dataset = target
-        runtime.engine.validate(dataset)
+        runtime.engine.validate(dataset, force_ch20=force_ch20)
         return _converter(runtime, dataset_id, dataset).dataset()
 
     return router

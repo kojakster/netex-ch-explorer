@@ -8,7 +8,7 @@ interface DatasetPanelProps {
   dataset: DatasetInfo;
   validating: boolean;
   validationErrorKey: string | null;
-  onValidate: () => void;
+  onValidate: (forceCh20: boolean) => void;
 }
 
 /** Ergebnis der Versionserkennung einer Datei mit Begründung. */
@@ -78,6 +78,11 @@ function ValidationResult({
       <p>
         <strong>{t("validation.result", { commit })}</strong>
       </p>
+      {validation.forced && (
+        <p role="note">
+          <strong>{t("validation.forced")}</strong>
+        </p>
+      )}
       <p>{t("validation.scope")}</p>
       <ul>
         {validation.steps.map((step) => (
@@ -116,6 +121,12 @@ export function DatasetPanel({
   const checkable = dataset.files.some(
     (file) => file.detection?.status === "detected" && file.detection.profile === "ch_2_0",
   );
+  // Nur mehrdeutige oder unbekannte Versionen lassen sich erzwingen, nie eine erkannte andere.
+  const forceable = dataset.files.some(
+    (file) =>
+      file.readable &&
+      (file.detection?.status === "ambiguous" || file.detection?.status === "unknown"),
+  );
   return (
     <section className="dataset-panel" aria-label={t("dataset.title")}>
       <h2>{t("dataset.title")}</h2>
@@ -124,10 +135,16 @@ export function DatasetPanel({
           <FileEntry key={file.id} file={file} />
         ))}
       </ul>
-      <button type="button" onClick={onValidate} disabled={validating || !checkable}>
+      <button type="button" onClick={() => onValidate(false)} disabled={validating || !checkable}>
         {validating ? t("validation.running") : t("validation.start")}
       </button>
-      {!checkable && <p>{t("validation.notCheckable")}</p>}
+      {forceable && (
+        <button type="button" onClick={() => onValidate(true)} disabled={validating}>
+          {t("validation.force")}
+        </button>
+      )}
+      {!checkable && !forceable && <p>{t("validation.notCheckable")}</p>}
+      {forceable && <p>{t("validation.forceHint")}</p>}
       {validationErrorKey !== null && <p role="alert">{t(validationErrorKey)}</p>}
       {dataset.validation === null ? (
         checkable && <p>{t("validation.notYet")}</p>

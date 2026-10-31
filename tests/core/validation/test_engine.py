@@ -191,6 +191,75 @@ def test_file_of_another_version_is_not_checked(engine: ValidationEngine) -> Non
     assert categories <= {DiagnosticCategory.REFERENCE}
 
 
+def undetected(attributes: str = "") -> bytes:
+    """Datei ohne genügend Versionshinweise (Struktur fehlt, Wurzelattribut allein zählt nicht)."""
+    root = f'<PublicationDelivery xmlns="{NAMESPACE}" {attributes}>'
+    return f'{root}<A order="1"/></PublicationDelivery>'.encode()
+
+
+@pytest.mark.parametrize(
+    ("data", "status"),
+    [(undetected(), "unknown"), (undetected('version="2.1"'), "ambiguous")],
+)
+def test_unrecognised_version_is_not_checked_by_default(
+    engine: ValidationEngine, data: bytes, status: str
+) -> None:
+    dataset = dataset_of(("a.xml", data))
+    summary = engine.validate(dataset)
+    [outcome] = summary.files
+    assert (outcome.checked, outcome.forced, summary.forced) == (False, False, False)
+    assert dataset.detections[1].status == status
+
+
+@pytest.mark.parametrize("attributes", ["", 'version="2.1"'])
+def test_unrecognised_version_is_checked_on_request_and_marked(
+    engine: ValidationEngine, attributes: str
+) -> None:
+    dataset = dataset_of(("a.xml", undetected(attributes)))
+    summary = engine.validate(dataset, force_ch20=True)
+    [outcome] = summary.files
+    assert (outcome.checked, outcome.forced, summary.forced) == (True, True, True)
+    assert outcome.reason is not None
+    assert outcome.reason.key is MessageKey.VALIDATION_FORCED
+    assert [(s.step_id, s.performed) for s in summary.steps] == [
+        ("xsd", True),
+        ("general_rules", True),
+        ("ch_core_rules", True),
+    ]
+    assert counts(dataset)[
+        (DiagnosticCategory.PROFILE_RULE, MessageKey.SCHEMATRON_NO_ORDER_ATTRIBUTE)
+    ]
+
+
+def test_forcing_never_checks_a_recognised_other_version_or_unreadable_file(
+    engine: ValidationEngine,
+) -> None:
+    dataset = dataset_of(
+        ("netex110_like.xml", (FIXTURES_DIR / "netex110_like.xml").read_bytes()),
+        ("broken_xml.xml", (FIXTURES_DIR / "broken_xml.xml").read_bytes()),
+        ("ok.xml", ch20()),
+        ("u.xml", undetected()),
+    )
+    summary = engine.validate(dataset, force_ch20=True)
+    assert [(f.checked, f.forced) for f in summary.files] == [
+        (False, False),
+        (False, False),
+        (True, False),
+        (True, True),
+    ]
+    assert summary.files[0].reason is not None
+    assert summary.files[0].reason.key is MessageKey.VALIDATION_FILE_SKIPPED_PROFILE
+    assert summary.files[1].reason is not None
+    assert summary.files[1].reason.key is MessageKey.VALIDATION_FILE_SKIPPED_UNREADABLE
+    assert summary.forced
+
+
+def test_forced_run_is_replaced_by_a_normal_run(engine: ValidationEngine) -> None:
+    dataset = dataset_of(("u.xml", undetected()))
+    assert engine.validate(dataset, force_ch20=True).forced
+    assert not engine.validate(dataset).forced
+
+
 def test_unreadable_file_is_skipped(engine: ValidationEngine) -> None:
     dataset = dataset_of(("broken_xml.xml", (FIXTURES_DIR / "broken_xml.xml").read_bytes()))
     [outcome] = engine.validate(dataset).files

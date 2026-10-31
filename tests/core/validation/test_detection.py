@@ -75,6 +75,14 @@ def test_root_version_alone_does_not_decide() -> None:
     assert detect_bytes("y.xml", root('version="1.10"')).status is DetectionStatus.AMBIGUOUS
 
 
+def test_only_unrecognised_versions_can_be_forced() -> None:
+    ambiguous = detect_bytes("x.xml", root('version="2.1"'))
+    unknown = detect_bytes("x.xml", root())
+    ch20 = detect_fixture("ch20_calls.xml")
+    other = detect_fixture("netex110_like.xml")
+    assert [d.forceable for d in (ambiguous, unknown, ch20, other)] == [True, True, False, False]
+
+
 def test_contradiction_is_ambiguous() -> None:
     body = "<ServiceJourneyPattern/><TimeDemandType/>"
     detection = detect_bytes("x.xml", root('version="1.10"', body))

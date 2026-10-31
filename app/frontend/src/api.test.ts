@@ -57,18 +57,20 @@ describe("HttpDataSource", () => {
   it("startet die Validierung und schliesst Datensätze", async () => {
     const fetcher = vi.fn<typeof fetch>((input) =>
       Promise.resolve(
-        String(input).endsWith("/validate")
+        String(input).includes("/validate")
           ? new Response(JSON.stringify(DATASET), { status: 200 })
           : new Response(null, { status: 204 }),
       ),
     );
     const source = new HttpDataSource(fetcher);
-    await expect(source.validate("DS/1")).resolves.toEqual(DATASET);
+    await expect(source.validate("DS/1", false)).resolves.toEqual(DATASET);
     expect(fetcher.mock.calls[0]?.[0]).toBe("api/datasets/DS%2F1/validate");
+    await source.validate("DS/1", true);
+    expect(fetcher.mock.calls[1]?.[0]).toBe("api/datasets/DS%2F1/validate?forceCh20=true");
     expect(fetcher.mock.calls[0]?.[1]?.method).toBe("POST");
     await expect(source.closeDataset("DS/1")).resolves.toBeUndefined();
-    expect(fetcher.mock.calls[1]?.[0]).toBe("api/datasets/DS%2F1");
-    expect(fetcher.mock.calls[1]?.[1]?.method).toBe("DELETE");
+    expect(fetcher.mock.calls[2]?.[0]).toBe("api/datasets/DS%2F1");
+    expect(fetcher.mock.calls[2]?.[1]?.method).toBe("DELETE");
   });
 
   it("meldet Fehler beim Schliessen mit dem Fehlerschlüssel", async () => {

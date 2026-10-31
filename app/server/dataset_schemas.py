@@ -91,12 +91,14 @@ class FileOutcomeOut(ApiModel):
     file_id: int
     checked: bool
     reason: IssueOut | None
+    forced: bool
 
 
 class ValidationOut(ApiModel):
     """Ergebnis einer Validierung: „geprüft gegen Entwurf <Commit>“, nie „gültig“."""
 
     guide_commit: str | None
+    forced: bool
     steps: list[StepOutcomeOut]
     files: list[FileOutcomeOut]
 
@@ -105,6 +107,7 @@ class ValidationOut(ApiModel):
         """Wandelt das Ergebnis des Kerns um."""
         return cls(
             guide_commit=summary.guide_commit,
+            forced=summary.forced,
             steps=[
                 StepOutcomeOut(
                     id=s.step_id,
@@ -118,6 +121,7 @@ class ValidationOut(ApiModel):
                     file_id=f.file_id,
                     checked=f.checked,
                     reason=None if f.reason is None else IssueOut.from_issue(f.reason),
+                    forced=f.forced,
                 )
                 for f in summary.files
             ],

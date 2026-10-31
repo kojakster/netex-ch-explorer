@@ -86,6 +86,14 @@ class VersionDetection:
         """Nur erkanntes CH 2.0 wird gegen den Guide-Stand geprüft."""
         return self.status is DetectionStatus.DETECTED and self.profile is ProfileVersion.CH_2_0
 
+    @property
+    def forceable(self) -> bool:
+        """Mehrdeutige oder unbekannte Version: Prüfung als CH 2.0 nur auf ausdrücklichen Wunsch.
+
+        Eine erkannte andere Version (z. B. 1.10) lässt sich nie erzwingen.
+        """
+        return self.status in (DetectionStatus.AMBIGUOUS, DetectionStatus.UNKNOWN)
+
 
 def _shown(value: str) -> str:
     return value[:_MAX_SHOWN]

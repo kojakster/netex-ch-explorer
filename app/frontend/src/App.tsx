@@ -200,7 +200,7 @@ export function App({ dataSource }: AppProps) {
 
   const openFiles = (files: File[]) => openDataset(() => dataSource.openFiles(files), null);
 
-  const validate = () => {
+  const validate = (forceCh20: boolean) => {
     if (dataset === null) {
       return;
     }
@@ -211,7 +211,7 @@ export function App({ dataSource }: AppProps) {
     setValidatingId(id);
     setValidationError(null);
     dataSource
-      .validate(id)
+      .validate(id, forceCh20)
       .then((validated) => {
         if (stillOpen()) {
           setDataset(validated);

@@ -20,7 +20,7 @@ export interface DataSource {
   openExample(name: string): Promise<DatasetInfo>;
   /** Öffnet eigene Dateien aus dem Dialog „Datei öffnen“ (XML oder ZIP). */
   openFiles(files: readonly File[]): Promise<DatasetInfo>;
-  validate(datasetId: string): Promise<DatasetInfo>;
+  validate(datasetId: string, forceCh20: boolean): Promise<DatasetInfo>;
   closeDataset(datasetId: string): Promise<void>;
   getJourneys(datasetId: string): Promise<JourneyInfo[]>;
   getJourney(journeyId: string): Promise<JourneyViewInfo>;
@@ -121,10 +121,15 @@ export class HttpDataSource implements DataSource {
     });
   }
 
-  validate(datasetId: string): Promise<DatasetInfo> {
-    return requestJson<DatasetInfo>(this.fetcher, `api/datasets/${enc(datasetId)}/validate`, {
-      method: "POST",
-    });
+  validate(datasetId: string, forceCh20: boolean): Promise<DatasetInfo> {
+    const query = forceCh20 ? "?forceCh20=true" : "";
+    return requestJson<DatasetInfo>(
+      this.fetcher,
+      `api/datasets/${enc(datasetId)}/validate${query}`,
+      {
+        method: "POST",
+      },
+    );
   }
 
   async closeDataset(datasetId: string): Promise<void> {

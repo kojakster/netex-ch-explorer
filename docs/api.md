@@ -133,12 +133,12 @@ Antwort (auch `GET /api/datasets/{id}`):
 **Validierung** (`validation`, `null` bis zur ersten Prüfung, siehe `POST /api/datasets/{id}/validate`):
 
 ```json
-{ "guideCommit": "b7ac158…",
+{ "guideCommit": "b7ac158…", "forced": false,
   "steps": [{ "id": "xsd | general_rules | ch_core_rules", "performed": true, "reason": Meldung | null }],
-  "files": [{ "fileId": 1, "checked": true, "reason": Meldung | null }] }
+  "files": [{ "fileId": 1, "checked": true, "reason": Meldung | null, "forced": false }] }
 ```
 
-Das Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“. `reason` nennt, warum ein Schritt oder eine Datei nicht geprüft wurde (z. B. `validation.file_skipped_profile`, `validation.step_unavailable`).
+Das Ergebnis heisst „geprüft gegen Entwurf <Commit>“, nie „gültig“. `reason` nennt, warum ein Schritt oder eine Datei nicht geprüft wurde (z. B. `validation.file_skipped_profile`, `validation.step_unavailable`). `forced` (je Datei und im Ganzen): die Datei wurde auf ausdrücklichen Wunsch als CH 2.0 geprüft, obwohl ihre Version mehrdeutig oder unbekannt war (`reason` ist dann die Meldung `validation.forced`).
 
 **Objekt** (in allen Antworten gleich):
 
@@ -168,7 +168,9 @@ Schliesst den Datensatz und löscht seine Dateien in `work/`. 204 ohne Inhalt; u
 
 ### `POST /api/datasets/{id}/validate`
 
-Startet die Validierung (Plan Abschnitt 8) für alle Dateien, die als **CH 2.0 erkannt** sind; Dateien anderer Version (z. B. 1.10), mehrdeutige, unbekannte und nicht lesbare Dateien werden nicht geprüft (Grund in `validation.files[].reason`), bleiben aber im Explorer nutzbar. Ohne Rumpf. Antwort: die Datensatzübersicht wie `GET /api/datasets/{id}` mit gefülltem `validation` und aktualisierten `diagnosticCounts`.
+Startet die Validierung (Plan Abschnitt 8) für alle Dateien, die als **CH 2.0 erkannt** sind; Dateien anderer Version (z. B. 1.10), mehrdeutige, unbekannte und nicht lesbare Dateien werden nicht geprüft (Grund in `validation.files[].reason`), bleiben aber im Explorer nutzbar. Ohne Rumpf.
+
+**Abfrageparameter `forceCh20`** (`true`/`false`, Standard `false`; Knopf „Trotzdem als CH 2.0 prüfen“): Mit `forceCh20=true` werden zusätzlich lesbare Dateien mit Versionserkennung `ambiguous` oder `unknown` wie erkanntes CH 2.0 geprüft. Das Ergebnis vermerkt es (`forced: true` je Datei und im Ganzen, `reason` = `validation.forced`, „als CH 2.0 geprüft auf Wunsch, Version nicht erkannt“). Eine erkannte andere Version (`detected`, z. B. `netex_1_10`) und nicht lesbare Dateien bleiben auch dann gesperrt. Ungültiger Wert: 422. Antwort: die Datensatzübersicht wie `GET /api/datasets/{id}` mit gefülltem `validation` und aktualisierten `diagnosticCounts`.
 
 Schritte (immer in dieser Reihenfolge): `xsd` (lxml gegen `xsd/xsd/NeTEx_publication.xsd`; Art `xsd`, ⚠), `general_rules` (`src/schematron_rules/general_rules.sch` mit `lxml.isoschematron`; Art `profile_rule`, ⚠), `ch_core_rules` (Schweizer Kernregeln, [core-rules.md](core-rules.md); Art `profile_rule`, Schweregrad je Regel). Ist die XSD noch nicht geladen, blockiert der Aufruf bis zum Ende des Ladens (rund 17 s). Fehlt die XSD oder lässt sie sich nicht laden, ist der Schritt `performed: false` mit `validation.step_unavailable`. Ein Schritt ist nur `performed: true`, wenn mindestens eine Datei tatsächlich geprüft wurde; war keine Datei prüfbar (andere Version, nicht lesbar, für lxml nicht prüfbar), ist er `performed: false` mit `validation.step_no_file`. Eine wiederholte Validierung ersetzt die Befunde der Arten `xsd` und `profile_rule`. Je Schritt und Datei werden höchstens 500 Befunde aufgenommen (`validation.truncated`).
 

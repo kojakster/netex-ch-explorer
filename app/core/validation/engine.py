@@ -78,14 +78,19 @@ class ValidationEngine:
             return False
         return True
 
-    def validate(self, dataset: Dataset) -> ValidationSummary:
-        """Prüft alle Dateien des Datensatzes, die als CH 2.0 erkannt sind."""
+    def validate(self, dataset: Dataset, *, force_ch20: bool = False) -> ValidationSummary:
+        """Prüft alle Dateien des Datensatzes, die als CH 2.0 erkannt sind.
+
+        Mit `force_ch20` werden auch lesbare Dateien mit mehrdeutiger oder unbekannter Version
+        als CH 2.0 geprüft (auf Wunsch, im Ergebnis vermerkt); erkannte andere Versionen
+        bleiben gesperrt.
+        """
         with dataset.validation_lock:
-            summary = self._validate(dataset)
+            summary = self._validate(dataset, force_ch20)
             dataset.validation = summary
         return summary
 
-    def _validate(self, dataset: Dataset) -> ValidationSummary:
+    def _validate(self, dataset: Dataset, force_ch20: bool) -> ValidationSummary:
         index = dataset.index
         index.clear_diagnostics(_RESULT_CATEGORIES)
         files: list[FileOutcome] = []
@@ -95,6 +100,10 @@ class ValidationEngine:
             if not summary.readable or detection is None:
                 reason = Issue(Severity.INFO, MessageKey.VALIDATION_FILE_SKIPPED_UNREADABLE)
                 files.append(FileOutcome(summary.id, False, reason))
+            elif force_ch20 and detection.forceable:
+                note = Issue(Severity.INFO, MessageKey.VALIDATION_FORCED)
+                files.append(FileOutcome(summary.id, True, note, forced=True))
+                checkable.append(summary.id)
             elif not detection.checkable:
                 reason = Issue(
                     Severity.INFO,

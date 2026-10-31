@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { DATASET, VALIDATED_DATASET } from "../testData";
 import type { DatasetInfo, Detection } from "../types";
 import { DatasetPanel } from "./DatasetPanel";
@@ -38,7 +38,8 @@ describe("DatasetPanel", () => {
     expect(screen.getAllByText("spricht für CH 2.0").length).toBe(2);
     expect(screen.getByText("Noch nicht geprüft.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Prüfen" }));
-    expect(onValidate).toHaveBeenCalled();
+    expect(onValidate).toHaveBeenCalledWith(false);
+    expect(screen.queryByRole("button", { name: "Trotzdem als CH 2.0 prüfen" })).toBeNull();
   });
 
   it("prüft eine 1.10-Datei nicht und sagt das", () => {
@@ -55,6 +56,68 @@ describe("DatasetPanel", () => {
   it("zeigt mehrdeutige und unbekannte Versionen", () => {
     renderPanel(withDetection({ status: "ambiguous", profile: null, reasons: [] }));
     expect(screen.getByText("Version mehrdeutig")).toBeTruthy();
+  });
+
+  it.each(["ambiguous", "unknown"] as const)(
+    "bietet bei Version %s den Knopf „Trotzdem als CH 2.0 prüfen“ an",
+    (status) => {
+      const onValidate = renderPanel(withDetection({ status, profile: null, reasons: [] }));
+      expect((screen.getByRole("button", { name: "Prüfen" }) as HTMLButtonElement).disabled).toBe(
+        true,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Trotzdem als CH 2.0 prüfen" }));
+      expect(onValidate).toHaveBeenCalledWith(true);
+      expect(screen.getByText(/nie so geprüft/)).toBeTruthy();
+    },
+  );
+
+  it("bietet den Knopf bei erkannter 1.10-Datei und bei nicht lesbarer Datei nicht an", () => {
+    renderPanel(withDetection(DETECTION_110));
+    expect(screen.queryByRole("button", { name: "Trotzdem als CH 2.0 prüfen" })).toBeNull();
+    cleanup();
+    const [file] = DATASET.files;
+    renderPanel({
+      ...DATASET,
+      files: file
+        ? [
+            {
+              ...file,
+              readable: false,
+              detection: { status: "unknown", profile: null, reasons: [] },
+            },
+          ]
+        : [],
+    });
+    expect(screen.queryByRole("button", { name: "Trotzdem als CH 2.0 prüfen" })).toBeNull();
+  });
+
+  it("sperrt den Knopf „Trotzdem …“ während der Prüfung", () => {
+    renderPanel(withDetection({ status: "unknown", profile: null, reasons: [] }), {
+      validating: true,
+    });
+    expect(
+      (screen.getByRole("button", { name: "Trotzdem als CH 2.0 prüfen" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+
+  it("vermerkt sichtbar, dass auf Wunsch als CH 2.0 geprüft wurde", () => {
+    renderPanel({
+      ...VALIDATED_DATASET,
+      validation: {
+        ...(VALIDATED_DATASET.validation as NonNullable<DatasetInfo["validation"]>),
+        forced: true,
+        files: [
+          {
+            fileId: 1,
+            checked: true,
+            forced: true,
+            reason: { severity: "info", key: "validation.forced", params: {} },
+          },
+        ],
+      },
+    });
+    expect(screen.getByText("Als CH 2.0 geprüft auf Wunsch, Version nicht erkannt.")).toBeTruthy();
   });
 
   it("markiert eine nicht lesbare Datei", () => {
@@ -89,6 +152,7 @@ describe("DatasetPanel", () => {
       ...VALIDATED_DATASET,
       validation: {
         guideCommit: null,
+        forced: false,
         steps: [
           {
             id: "xsd",
@@ -104,9 +168,10 @@ describe("DatasetPanel", () => {
           {
             fileId: 1,
             checked: false,
+            forced: false,
             reason: { severity: "info", key: "validation.file_skipped_profile", params: {} },
           },
-          { fileId: 9, checked: false, reason: null },
+          { fileId: 9, checked: false, forced: false, reason: null },
         ],
       },
     });

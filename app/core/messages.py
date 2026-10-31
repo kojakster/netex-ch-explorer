@@ -93,6 +93,7 @@ class MessageKey(StrEnum):
     VALIDATION_FILE_SKIPPED_UNREADABLE = "validation.file_skipped_unreadable"
     VALIDATION_STEP_UNAVAILABLE = "validation.step_unavailable"
     VALIDATION_STEP_NO_FILE = "validation.step_no_file"
+    VALIDATION_FORCED = "validation.forced"
     REFERENCE_UNRESOLVED = "reference.unresolved"
     REFERENCE_AMBIGUOUS = "reference.ambiguous"
     REFERENCE_EXTERNAL_OR_UNLOADED = "reference.external_or_unloaded"

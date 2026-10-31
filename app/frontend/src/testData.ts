@@ -186,12 +186,13 @@ export const VALIDATED_DATASET: DatasetInfo = {
   diagnosticCounts: { error: 1, warning: 0, info: 0 },
   validation: {
     guideCommit: GUIDE.commit,
+    forced: false,
     steps: [
       { id: "xsd", performed: true, reason: null },
       { id: "general_rules", performed: true, reason: null },
       { id: "ch_core_rules", performed: true, reason: null },
     ],
-    files: [{ fileId: 1, checked: true, reason: null }],
+    files: [{ fileId: 1, checked: true, reason: null, forced: false }],
   },
 };
 
