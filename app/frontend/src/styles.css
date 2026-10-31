@@ -57,7 +57,7 @@ select:focus-visible {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(18rem, 26rem) minmax(20rem, 1fr) minmax(24rem, 1.2fr);
+  grid-template-columns: minmax(16rem, 22rem) minmax(30rem, 1.7fr) minmax(24rem, 1fr);
   gap: 1rem;
   padding: 1rem;
   align-items: start;

@@ -132,7 +132,7 @@ def test_example_08_offers_on_sections(guide_path: Path) -> None:
             "Winterthur",
             "St_Gallen",
         ]
-        assert [stop.part_numbers for stop in view.stops] == [[1], [1], [2], [2], [2]]
+        assert [stop.part_numbers for stop in view.stops] == [(1,), (1,), (2,), (2,), (2,)]
         first, second = view.parts
         assert (first.start_stop.position, first.end_stop.position) == (1, 2)
         assert (second.start_stop.position, second.end_stop.position) == (3, 5)

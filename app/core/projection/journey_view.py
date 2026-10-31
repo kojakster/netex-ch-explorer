@@ -16,7 +16,7 @@ Nichts wird ergänzt: Was fehlt oder sich nicht auflösen lässt, steht mit Grun
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import pairwise
 
 from app.core.guide.mapping import MappingTable
@@ -91,7 +91,7 @@ class StopView:
     request_stop: Lookup
     stop_use: CodedValue | None
     times: StopTimes
-    part_numbers: list[int] = field(default_factory=list)
+    part_numbers: tuple[int, ...] = ()
     """Nummern (ab 1) der `JourneyPart`, deren Strecke diesen Halt einschliesst."""
 
 
@@ -237,15 +237,25 @@ def _order_finding(points: list[ElementRow]) -> Finding | None:
     return Finding(Severity.INFO, MessageKey.STOP_ORDER_DIFFERS, {}, points[0])
 
 
+def _part_numbers(parts: list[PartView], stop_count: int) -> list[tuple[int, ...]]:
+    """Je Halt die Nummern der Teilstrecken, die ihn einschliessen."""
+    return [
+        tuple(part.number for part in parts if position in _covered(part, stop_count))
+        for position in range(1, stop_count + 1)
+    ]
+
+
 def _stop_views(
     index: DatasetIndex,
     points: list[ElementRow],
     times: list[StopTimes],
+    part_numbers: list[tuple[int, ...]],
     table: MappingTable,
 ) -> list[StopView]:
     has_stop_places = any(name == "StopPlace" for name, _ in index.object_types())
     views = []
-    for position, (point, stop_times) in enumerate(zip(points, times, strict=True), start=1):
+    rows = zip(points, times, part_numbers, strict=True)
+    for position, (point, stop_times, numbers) in enumerate(rows, start=1):
         scheduled, _ = follow_child(index, point, "ScheduledStopPointRef")
         place, quay, assignment = _places(index, scheduled, has_stop_places)
         views.append(
@@ -261,6 +271,7 @@ def _stop_views(
                 request_stop=text_of(child(index, point, "RequestStop")),
                 stop_use=_stop_use(index, point, table),
                 times=stop_times,
+                part_numbers=numbers,
             )
         )
     return views
@@ -356,11 +367,13 @@ def _covered(part: PartView, stop_count: int) -> range:
     if first is None:
         return range(0)
     last = part.end_stop.position
-    if last is None:
+    if last is not None:
+        return range(first, last + 1)
+    if part.end_stop.stop.status is LookupStatus.ABSENT:
         # Fehlt das Ende, reicht die Teilstrecke bis zum Ende der Fahrt (Vorlage JourneyPart.xml).
-        has_end = part.end_stop.stop.status is not LookupStatus.ABSENT
-        last = first if has_end else stop_count
-    return range(first, last + 1)
+        return range(first, stop_count + 1)
+    # Das Ende ist genannt, lässt sich aber keinem Halt zuordnen: nichts raten.
+    return range(0)
 
 
 def _time_difference(
@@ -451,12 +464,8 @@ def build_journey_view(
     pattern, pattern_problem = follow_child(index, journey, "ServiceJourneyPatternRef")
     points = _stop_points(index, pattern)
     timing = compute_times(index, journey, points)
-    stops = _stop_views(index, points, timing.stops, table)
     parts = _part_views(index, journey, points, table)
-    for number, part in enumerate(parts, start=1):
-        for position in _covered(part, len(stops)):
-            if 1 <= position <= len(stops):
-                stops[position - 1].part_numbers.append(number)
+    stops = _stop_views(index, points, timing.stops, _part_numbers(parts, len(points)), table)
     line, line_object = _line(index, pattern)
     demand, demand_problem = follow_child(index, journey, "TimeDemandTypeRef")
     own_validities = validities(index, journey)

@@ -256,7 +256,7 @@ def test_part_with_facilities_on_a_section() -> None:
     assert [g.codes[0].code for f in part.facilities for g in f.groups] == ["bistro"]
     assert part.facilities[0].groups[0].codes[0].master is not None
     assert part.facilities[0].groups[0].codes[0].master.status is MasterStatus.FOUND
-    assert [stop.part_numbers for stop in view.stops] == [[1], [1], []]
+    assert [stop.part_numbers for stop in view.stops] == [(1,), (1,), ()]
     assert MessageKey.PART_TIME_DIFFERS not in keys(view)
 
 
@@ -320,7 +320,7 @@ def test_part_without_end_reaches_the_end_of_the_journey() -> None:
         "<StartTime>08:12:00</StartTime><EndTime>08:27:00</EndTime></JourneyPart></parts>"
     )
     view = Scenario(journey_extra=part).view()
-    assert [stop.part_numbers for stop in view.stops] == [[], [1], [1]]
+    assert [stop.part_numbers for stop in view.stops] == [(), (1,), (1,)]
     assert view.parts[0].end_stop.stop.status is LookupStatus.ABSENT
 
 
@@ -527,3 +527,23 @@ def test_notice_embedded_in_a_stop_applies_to_that_stop() -> None:
     assert notice.scope is NoticeScope.STOP
     assert (notice.start_position, notice.end_position) == (2, 2)
     assert notice.texts[0].text.text == "Nur hier"
+
+
+def test_part_whose_end_cannot_be_placed_covers_no_stop() -> None:
+    refs = "<FromStopPointRef ref='a'/><ToStopPointRef ref='fehlt'/>"
+    view = Scenario(journey_extra=_part_xml("08:00:00", "08:10:00", refs=refs)).view()
+    assert view.parts[0].start_stop.position == 1
+    assert view.parts[0].end_stop.position is None
+    assert [stop.part_numbers for stop in view.stops] == [(), (), ()]
+
+
+def test_part_on_single_days() -> None:
+    part = (
+        "<parts><JourneyPart id='jp'><validityConditions><AvailabilityConditionRef ref='ac'/>"
+        "</validityConditions><FromStopPointRef ref='a'/><ToStopPointRef ref='b'/>"
+        "<StartTime>08:00:00</StartTime><EndTime>08:10:00</EndTime></JourneyPart></parts>"
+    )
+    [item] = Scenario(journey_extra=part).view().parts
+    [validity] = item.validity
+    assert validity.days is not None
+    assert [day.isoformat() for day in validity.days.days] == ["2026-06-01", "2026-06-02"]
