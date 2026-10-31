@@ -4,7 +4,7 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 
 ## Offen während der Umsetzung (Benutzer fragen)
 
-1. **Entscheidungspunkt nach Phase 3:** Schweizer Profilregeln aus den Guide-Vorlagen einbinden? (siehe UMSETZUNGSPLAN Abschnitt 8)
+1. **Unklare Kernregeln** und **unklare Grau-Einordnungen**, falls bei der Umsetzung welche auftauchen.
 2. **Glossar Englisch/Deutsch:** Benutzer reicht nach; dann vorläufige Fachbegriffe in `de-CH.json`/`en.json` abgleichen.
 
 ## Zurückgestellt
@@ -12,6 +12,7 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 - Grosse Lieferungen (1.10-Lieferung `../netex-files/`, 12 GB): Import aus Ordner, Index auf Festplatte, Hintergrundprozess, ZIP-Grenzwerte, Lesesperre, Ausschnitte im LLM-Kontext (siehe decisions.md „Zurückgestellt …“).
 - Webversion: Veröffentlichung (Zielgruppe, Ort), Lizenz der Guide-Dateien (info.fachbus@sbb.ch) und der NeTEx-CEN-XSD.
 - Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
+- Übrige ~330 Schweizer Profilregeln über das Build-Werkzeug des Guides.
 - Auswahl mehrerer Guide-Stände in der Oberfläche; Einstellungsseite für Farben; Zellfarben der Mappingtabelle.
 
 ## Archiv: Findings zum ursprünglichen Plan
