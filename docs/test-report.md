@@ -348,3 +348,65 @@ Testzahlen nach den Korrekturen: pytest **805 Tests bestanden** (vorher 763), Ab
 - **Umgesetzt (Punkt 19):** `POST /api/datasets/{id}/validate?forceCh20=true` prüft auch lesbare Dateien mit Versionserkennung „mehrdeutig“ oder „unbekannt“ wie CH 2.0; erkannte andere Versionen (1.10) und nicht lesbare Dateien bleiben gesperrt. Das Ergebnis trägt `forced` (je Datei und im Ganzen; Meldung `validation.forced`), die Oberfläche zeigt „Als CH 2.0 geprüft auf Wunsch, Version nicht erkannt.“; zweiter Knopf „Trotzdem als CH 2.0 prüfen“ nur bei mehrdeutigen oder unbekannten lesbaren Dateien. Hilfeseite (de/en), README und [api.md](api.md) nachgeführt.
 - **Tests:** neue Tests für Kern (Erkennung `forceable`, Engine: Standard prüft nicht, auf Wunsch geprüft und vermerkt, 1.10 und nicht lesbare Datei gesperrt, Wiederholung ersetzt), Schnittstelle (mit/ohne Parameter, 1.10, ungültiger Wert 422) und Vitest (Knopf bei ambiguous/unknown, nicht bei 1.10/unlesbar, gesperrt während der Prüfung, Vermerk im Ergebnis, Parameter im Aufruf). pytest **815 Tests bestanden** (vorher 805), Abdeckung `app/core` **98 %**; Vitest **157 Tests bestanden** (vorher 152). `uv run python scripts/check.py` grün, `uv run python scripts/test.py` bestanden (`guide-tested.json` unverändert).
 - **Browser (Playwright, Chrome):** synthetische XML-Datei ohne Versionshinweise hochgeladen: „Version unbekannt“, „Prüfen“ gesperrt, „Trotzdem als CH 2.0 prüfen“ prüft; Ergebnis mit Vermerk, XSD- und Schematron-Befunde mit Stelle; Konsole leer; Server danach beendet.
+
+## Phase 5: Übergabe (31.10.2026)
+
+Umgesetzt in `a9256ad` (Korrektur der Origin-Prüfung, Test der Hilfeseiten-Daten) und `10a3228` (E2E-Test, Sprachdatei-Prüfung, Hilfeseite, README) sowie dem Abschluss-Commit mit diesem Bericht. Technische Festlegungen (Claude, zur Bestätigung): [decisions.md](decisions.md) „Umsetzung Phase 5“.
+
+### Prüfbefehl
+
+`uv run python scripts/check.py` grün (alle 13 Schritte wie in Phase 4; als Git-Hook bei beiden Commits). `uv run python scripts/test.py` bestanden; `guide-tested.json` unverändert (Guide `b7ac158`, XSD `73b337e`, 22 Beispiele). Neue Abhängigkeit (Entwicklung): `@playwright/test` 1.64.1; `npm audit` meldet keine Funde.
+
+### Tests und Abdeckung
+
+- pytest: **820 Tests bestanden**, keine übersprungen (vorher 815); Abdeckung `app/core` **98 %** (Mindestwert 90 %).
+- Vitest: **161 Tests bestanden** (vorher 152).
+- E2E (Playwright): **1 Test bestanden** (`npm run e2e`, rund 4 s Testlauf nach dem Serverstart): einmal mit dem installierten Chrome (`E2E_BROWSER_CHANNEL=chrome`), einmal mit dem von Playwright installierten Chromium (`npm run e2e:install`, Standard), einmal in einem frischen Klon des Repositorys (siehe unten). Ohne Guide-Klon wird der Test übersprungen („1 skipped“), mit `NETEX_REQUIRE_GUIDE=1` schlägt er fehl (beides geprüft mit einem absichtlich falschen `guidePath`). Nach jedem Lauf ist der Server beendet und `work/` leer.
+- Neue Tests: `tests/test_help_texts.py` (ungenutzte Schlüssel, Muster zusammengesetzter Schlüssel), `tests/server/test_api.py` (Hilfeseiten-Daten gegen `config/` und Liste der Prüfschritte; Origin-Prüfung mit abweichendem Port), Vitest `HelpPage.test.tsx` (Farben, Grau-Liste und Prüfungen genau aus den Daten, Quellen, Stand, Guide-Stand), `app/frontend/e2e/example01.spec.ts`.
+
+### Abnahme
+
+| Kriterium (Plan Phase 5) | Beleg |
+|---|---|
+| Neue Person startet die App, lädt Beispiel 01, klickt einen Halt an und landet an der richtigen XML-Stelle, ohne Code zu ändern | E2E-Test `example01.spec.ts`: startet den echten Server mit `scripts/start.py`, öffnet Beispiel 01 und die Fahrt, klickt „Interlaken West“; markiert ist `<Name lang="de">Interlaken West</Name>`, Randbeschriftung und erstes Glied der Herkunftskette zeigen `ServiceFrame` in der Farbe aus `config/frame-colors.json`, das zweite Glied `ScheduledStopPoint`; Konsole ohne Fehler. README: Abschnitte „Starten und beenden“ und „Bedienung“ (Schritte 1–3) beschreiben genau diesen Weg. |
+| … ohne Code zu ändern / frische Einrichtung nach README | Frischer Klon des Repositorys in einem leeren Ordner (neben dem Guide-Klon): `uv sync` legte `.venv` an, `scripts/start.py` führte `npm ci` und `npm run build` aus dem leeren `dist` aus und startete den Server (`/api/guide` antwortet mit Branch `next`, Commit `b7ac158`, XSD vorhanden); in diesem Klon bestand der E2E-Test. **Nicht geprüft:** Installation der Voraussetzungen (Homebrew, Node, Git) und das Klonen des Guides von GitHub auf einem frischen Rechner (nichts heruntergeladen ausser dem Browser des E2E-Tests). |
+| Hilfeseite zeigt aktuelle Farben | `test_help_data_shows_the_current_config_and_all_checks` (Daten der Seite = `config/frame-colors.json`, `config/not-relevant-elements.json`); Vitest „zeigt jede Frame-Farbe und jede Grau-Element der Daten, nicht mehr und nicht weniger“; Hilfeseiten-Test auf Texte in beiden Sprachen (Phase 0). |
+| … durchgeführte und nicht durchgeführte Prüfungen | Daten der Seite = Liste `CHECK_STEPS` (gleicher Test, mindestens eine nicht durchgeführte Prüfung); Vitest „ordnet jede Prüfung der Daten genau einer der beiden Listen zu und nennt Quellen“ (Quelle bzw. Stand „später“/„noch nicht umgesetzt“). Sichtprüfung im Browser (Chrome) am Ende der Hilfeseite: Guide-Stand mit Branch, Commit, XSD und Teststand. |
+| Sprachdatei-Prüfung | Bestehend (Phase 0–4): gleiche Schlüssel in beiden Dateien, keine leeren Texte, alle im Code verwendeten festen Schlüssel vorhanden, Test „keine festen Texte im Frontend-Code“, Hilfetexte für Funktionen, Prüfschritte, Schweregrade, Farben, Meldungen. **Neu:** `test_no_unused_texts` (ungenutzte Schlüssel; berücksichtigt Aufzählungen und zusammengesetzte Schlüssel wie `feature.${id}.title`) und `test_every_composed_key_pattern_matches_a_text`. Ergebnis: alle 416 Schlüssel belegt, nichts zu entfernen. |
+| README vollständig | Installation (geprüft, unverändert gültig), Start und Beenden, Bedienung, Tests inklusive E2E, Windows-Testanleitung (angepasst an Datei öffnen, Prüfen, Hilfe), vollständige bekannte Grenzen. |
+
+### Wichtigster Befund der Phase
+
+`scripts/start.py --port <Port>` (im README als Option genannt) setzte nur den Port des Servers; die Origin-Prüfung erwartete weiter den Port aus `config/settings.json` und wies jede Änderung (Beispiel öffnen, Datei hochladen) mit 403 ab. Gefunden beim ersten E2E-Lauf auf dem Testport; behoben in `a9256ad` (`create_app(..., port)`), Test `test_origin_check_uses_the_port_the_server_runs_on`.
+
+### Selbstkontrolle (Code-Review und Sicherheits-Review über `0edce54..10a3228`)
+
+Eigene Durchsicht gegen `CLAUDE.md` und `docs/engineering-guidelines.md`; keine `noqa`, `type: ignore` oder `biome-ignore` hinzugefügt. Funde und Prüfpunkte:
+
+1. **Port der Origin-Prüfung** (siehe oben) behoben und getestet.
+2. **E2E gegen fremden Server:** `reuseExistingServer: false` und eigener Testport verhindern, dass der Test gegen einen laufenden Explorer läuft; ist der Port belegt, bricht Playwright mit klarer Meldung ab.
+3. **Keine festen Pfade:** Der Test liest Guide-Pfad und Farben aus `config/`; Auswahl der Elemente über CSS-Klassen statt Oberflächentexten (Sprachumschaltung ändert den Test nicht).
+4. **Vitest nimmt die E2E-Dateien nicht auf** (`exclude: e2e/**`), TypeScript und Biome prüfen sie mit.
+5. **Sicherheit:** Der Server bleibt auf `127.0.0.1`; der Test öffnet nur lokale Adressen; `npm audit` ohne Funde; die Testartefakte (`test-results/`, `playwright-report/`) sind ignoriert. Keine Lieferdaten aus `../netex-files/` verwendet.
+6. **Schwäche (nicht behoben, offen):** Das Beenden des Servers durch Playwright (`SIGINT`, Prozessbaum) ist unter Windows nicht geprüft; in der Windows-Testanleitung vermerkt ([open-points.md](open-points.md) 8).
+
+### Gesamtübersicht der bekannten Grenzen und offenen Punkte der ersten Ausbaustufe
+
+Aus den Testberichten der Phasen 0–4, [open-points.md](open-points.md) und [decisions.md](decisions.md); dieselbe Liste in der README („Bekannte Grenzen“).
+
+**Nicht umgesetzt oder nicht eingebunden**
+- Rund 330 Schweizer Profilregeln (über das Build-Werkzeug des Guides, später); CH-SJP-08 und CH-SJ-16 bewusst nicht umgesetzt; Erklärungen und Korrekturvorschläge zu XSD-Meldungen.
+- Fahrtansicht: `DestinationDisplay`, Takt, Formation, Flügelung, Durchbindung, Bedarfsverkehr, Elternfahrt der Kurswagen (nur im Objekt-Explorer); automatische Prüfung der Betriebstage von Kurswagen und Elternfahrt; Zeitumstellung nur bei auflistbaren `ValidDayBits` (bei 15 von 22 Beispielen weicht deren Länge ab).
+- Auswahl mehrerer Guide-Stände, Einstellungsseite für Farben, Zellfarben der Mappingtabelle; Webversion (Pyodide) samt Veröffentlichung und Lizenzklärung der Guide- und XSD-Dateien (info.fachbus@sbb.ch).
+
+**Leistung und Umfang (zurückgestellt bis zu den grossen Lieferungen)**
+- 12-GB-Lieferung (NeTEx 1.10): Import aus Ordner, Index auf Festplatte, Hintergrundprozess, angepasste ZIP-Grenzwerte, Lesesperre für `../netex-files/`; offener Punkt 7 (Auflösung und Fahrtansicht mit vielen Einzelabfragen, Referenzen im Speicher, keine Begrenzung der Halte).
+- Upload bis 200 MB im Arbeitsspeicher; höchstens 10 offene Datensätze; nur UTF-8/ASCII; `DOCTYPE` abgewiesen; reine CR-Zeilenenden ohne richtige Zeilennummern.
+
+**Inhalt der Guide-Beispiele**
+- 121 `order`-Verstösse in 9 Beispielen, 3 Hinweise „Rumpf-Fahrt“ (17), 3 Warnungen CH-JP-01 (21); Kommentar von Beispiel 01 (10:53) weicht von der Rechnung (10:54) ab ([assumptions.md](assumptions.md)); `offical` ist kein Regelverstoss.
+
+**Betrieb und Werkzeuge**
+- Guide-Status nur beim Start; Prüfung vor Ende des XSD-Ladens wartet bis zu 17 s; kein Commit-Datum des Guides; `pip-audit`/`npm audit` brauchen Internet; Skriptpaket über 500 kB (CodeMirror); einige SQLite-Datensätze der Tests bleiben ungeschlossen (`ResourceWarning`, harmlos).
+- **Windows: nicht getestet** (Start-Skript, Prüfbefehl, E2E-Test, Beenden des Servers).
+- Offen beim Benutzer: Glossar Englisch/Deutsch (offener Punkt 2); Bestätigung der technischen Festlegungen „Umsetzung Phase 5“; Entscheid, ob der E2E-Test in den Git-Hook soll.
