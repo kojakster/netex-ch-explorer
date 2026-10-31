@@ -13,43 +13,87 @@ NeTEx-Viewer/                          Sammelordner
 └── netex-ch-explorer/                 dieses Projekt
 ```
 
-## Einrichtung
+## Installation
 
-### Voraussetzungen
+Schritt für Schritt für einen neuen Rechner. Befehle für **macOS** im Programm *Terminal*, für **Windows** in der *PowerShell*. Den Pfad zum Sammelordner jeweils an den eigenen Rechner anpassen (Beispiele: `~/dev/NeTEx-Viewer` bzw. `C:\dev\NeTEx-Viewer`).
 
-- **Git**
-- **uv** (Python-Umgebung und -Pakete; installiert bei Bedarf Python 3.13 selbst): https://docs.astral.sh/uv/getting-started/installation/
-- **Node.js 22** mit npm (für die Oberfläche): https://nodejs.org/
+### 1. Voraussetzungen installieren (einmalig)
 
-Auf macOS sind alle drei bereits eingerichtet. Unter Windows einmalig installieren (siehe [Windows-Testanleitung](#windows-testanleitung)).
+| Programm | Wofür | Version |
+|---|---|---|
+| **Git** | Projekt und Guide holen und aktualisieren | aktuell |
+| **uv** | Python-Umgebung und -Pakete; holt Python 3.13 bei Bedarf selbst | aktuell |
+| **Node.js** mit npm | Oberfläche bauen und prüfen (nicht für den Betrieb) | 22 |
 
-### CH-NeTEx-Guide klonen (einmalig)
-
-Der Guide liegt **neben** diesem Projekt im Ordner `netexRealisationGuideSwitzerland`. Die XSD ist im Guide ein Git-Submodul und wird beim Klonen **nicht** automatisch mitgeladen; deshalb der zweite Befehl.
-
-**macOS** (Terminal; Pfad an den eigenen Sammelordner anpassen):
+**macOS** (mit Homebrew, https://brew.sh):
 
 ```bash
-cd /Users/hildebrandb/dev/NeTEx-Viewer
-git clone --branch next https://github.com/openTdataCH/netexRealisationGuideSwitzerland.git netexRealisationGuideSwitzerland
-cd netexRealisationGuideSwitzerland
-git submodule update --init --depth 1
+# Homebrew, falls noch nicht vorhanden
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+brew install git uv node@22
+# node@22 wird von Homebrew nicht automatisch in den PATH gelegt:
+echo 'export PATH="$(brew --prefix node@22)/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-**Windows** (PowerShell; `C:\Pfad\zu\NeTEx-Viewer` durch den eigenen Sammelordner ersetzen):
+**Windows** (PowerShell):
 
 ```powershell
-cd C:\Pfad\zu\NeTEx-Viewer
+winget install --id Git.Git -e
+winget install --id astral-sh.uv -e
+```
+
+Node.js 22: Installer „v22 LTS, Windows Installer (.msi)“ von https://nodejs.org/en/download herunterladen und ausführen. Danach **PowerShell schliessen und neu öffnen**, damit die neuen Programme gefunden werden.
+
+Falls `winget` fehlt: Git von https://git-scm.com/download/win installieren und uv mit
+`powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`.
+
+**Prüfen** (macOS und Windows gleich):
+
+```bash
+git --version     # git version 2.x
+uv --version      # uv 0.x
+node --version    # v22.x
+npm --version     # 10.x oder neuer
+```
+
+### 2. Sammelordner anlegen und Projekt holen
+
+**macOS:**
+
+```bash
+mkdir -p ~/dev/NeTEx-Viewer
+cd ~/dev/NeTEx-Viewer
+```
+
+**Windows:**
+
+```powershell
+New-Item -ItemType Directory -Force C:\dev\NeTEx-Viewer
+cd C:\dev\NeTEx-Viewer
+```
+
+Das Projekt muss danach als Ordner `netex-ch-explorer` im Sammelordner liegen:
+
+- **Aus einem Git-Repository** (sobald eines eingerichtet ist; die URL nennt, wer es verwaltet):
+  `git clone <URL des Projekt-Repositorys> netex-ch-explorer`
+- **Ohne Repository:** den Ordner `netex-ch-explorer` vollständig in den Sammelordner kopieren (inklusive des versteckten Ordners `.git`). Nicht mitkopieren müssen `.venv`, `app/frontend/node_modules` und `app/frontend/dist`; sie entstehen neu.
+
+### 3. CH-NeTEx-Guide klonen (einmalig)
+
+Der Guide liegt **neben** dem Projekt im Ordner `netexRealisationGuideSwitzerland`. Die XSD ist im Guide ein Git-Submodul und wird beim Klonen **nicht** automatisch mitgeladen; deshalb der zweite Befehl. Im Sammelordner (macOS und Windows gleich):
+
+```bash
 git clone --branch next https://github.com/openTdataCH/netexRealisationGuideSwitzerland.git netexRealisationGuideSwitzerland
 cd netexRealisationGuideSwitzerland
 git submodule update --init --depth 1
+cd ..
 ```
 
 `--depth 1` lädt von der XSD nur den benötigten Stand statt der ganzen Geschichte des NeTEx-Repositorys. Getestet am 31.10.2026: Guide-Commit `b7ac158`, XSD `73b337e`, rund 130 MB.
 
-### Prüfen
-
-Im Ordner `netexRealisationGuideSwitzerland` (macOS und Windows gleich):
+**Prüfen** im Ordner `netexRealisationGuideSwitzerland`:
 
 ```bash
 git branch --show-current          # erwartet: next
@@ -58,6 +102,52 @@ git submodule status               # erwartet: Zeile mit "xsd"
 ```
 
 Zusätzlich muss die Datei `xsd/xsd/NeTEx_publication.xsd` existieren, und in `src/examples/` liegen die Beispiel-XML-Dateien.
+
+Danach sieht der Sammelordner so aus:
+
+```text
+NeTEx-Viewer/
+├── netexRealisationGuideSwitzerland/
+└── netex-ch-explorer/
+```
+
+### 4. Projekt einrichten (einmalig)
+
+Im Ordner `netex-ch-explorer` (macOS und Windows gleich):
+
+```bash
+uv sync
+git config core.hooksPath .githooks
+```
+
+`uv sync` legt die Python-Umgebung `.venv` mit den Paketen aus `uv.lock` an (lädt bei Bedarf Python 3.13). Der zweite Befehl aktiviert den Git-Hook, der vor jedem Commit den Prüfbefehl ausführt. Die Pakete der Oberfläche installiert und baut das Start-Skript beim ersten Start selbst (`npm ci`, `npm run build`).
+
+**Nur Windows:** Falls PowerShell Skripte blockiert („Ausführung von Skripts ist deaktiviert“), einmalig:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+### 5. Starten
+
+Im Ordner `netex-ch-explorer`:
+
+| System | Befehl |
+|---|---|
+| macOS | `./start.sh` |
+| Windows (PowerShell) | `.\start.ps1` |
+| beide | `uv run python scripts/start.py` |
+
+Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist (beim ersten Start rund eine Minute), startet den Server auf `http://127.0.0.1:8765/` und öffnet den Browser. Beenden mit **Ctrl+C**. Optionen: `--port 9000`, `--no-browser`.
+
+### 6. Funktion prüfen (optional)
+
+```bash
+uv run python scripts/test.py      # alle Tests; schreibt guide-tested.json
+uv run python scripts/check.py     # alle Qualitätsprüfungen (braucht Internet)
+```
+
+Beide müssen mit „erfolgreich“ bzw. „Prüfbefehl grün“ enden.
 
 ### Guide aktualisieren
 
@@ -68,36 +158,11 @@ git pull
 git submodule update --init --depth 1
 ```
 
-Die Dateien im Guide-Ordner nie von Hand ändern.
-
-### Projekt einrichten (einmalig)
-
-Im Ordner `netex-ch-explorer` (macOS und Windows gleich):
-
-```bash
-uv sync
-git config core.hooksPath .githooks
-```
-
-`uv sync` legt die Python-Umgebung `.venv` mit den Paketen aus `uv.lock` an. Der zweite Befehl aktiviert den Git-Hook, der vor jedem Commit den Prüfbefehl ausführt. Die Pakete der Oberfläche (`app/frontend/node_modules`) installiert das Start-Skript beim ersten Start selbst (`npm ci`).
+Danach die Anwendung neu starten. Die Guide-Status-Box meldet „weicht vom zuletzt getesteten Stand ab“, bis `scripts/test.py` mit dem neuen Stand gelaufen ist. Die Dateien im Guide-Ordner nie von Hand ändern.
 
 ### VS-Code-Workspace
 
 In VS Code **Datei → Arbeitsbereich aus Datei öffnen…** wählen und `netex-ch-explorer/netex-ch-explorer.code-workspace` öffnen. Projekt und Guide erscheinen nebeneinander. `netex-files/` ist bewusst nicht enthalten (sehr gross).
-
-## Start
-
-Im Ordner `netex-ch-explorer`:
-
-| System | Befehl |
-|---|---|
-| macOS | `./start.sh` |
-| Windows (PowerShell) | `.\start.ps1` |
-| beide | `uv run python scripts/start.py` |
-
-Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist, startet den Server auf `http://127.0.0.1:8765/` und öffnet den Browser. Beenden mit **Ctrl+C**. Optionen: `--port 9000`, `--no-browser`.
-
-Nach einem Guide-Update (`git pull` im Guide-Ordner) die Anwendung neu starten; die Guide-Status-Box meldet dann „weicht vom zuletzt getesteten Stand ab“, bis die Tests mit dem neuen Stand gelaufen sind.
 
 ## Einstellungen
 
@@ -124,13 +189,10 @@ Im Ordner `config/` (JSON, UTF-8). Fehlt eine Datei oder ist ein Eintrag ungült
 
 Für den ersten Test an einem Windows-PC (Windows gilt bis dahin als „nicht getestet“):
 
-1. Installieren: Git (https://git-scm.com/download/win), uv (PowerShell: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`), Node.js 22 LTS (https://nodejs.org/). PowerShell danach neu öffnen.
-2. Sammelordner anlegen, Guide klonen wie oben unter „CH-NeTEx-Guide klonen“ beschrieben, das Projekt `netex-ch-explorer` daneben ablegen.
-3. Im Ordner `netex-ch-explorer`: `uv sync` und `git config core.hooksPath .githooks`.
-4. Falls PowerShell das Skript blockiert: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-5. `.\start.ps1` ausführen. Prüfen: Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar; Beispiel 01 anklicken, in der Fahrtenliste Zug 99999 anklicken, im Inhalt `DepartureTime` anklicken: rechts ist `<DepartureTime>10:35:00</DepartureTime>` markiert; „Hilfe“ öffnet die Hilfeseite; Sprache auf English umschalten.
-6. `uv run python scripts/test.py` und `uv run python scripts/check.py` ausführen; beide müssen grün enden.
-7. Ergebnis (inkl. Fehlermeldungen) im Testbericht `docs/test-report.md` festhalten.
+1. [Installation](#installation) Schritte 1–4 für Windows ausführen.
+2. `.\start.ps1` ausführen. Prüfen: Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar; Beispiel 01 anklicken, in der Fahrtenliste „ServiceJourney“ anklicken, im Inhalt `DepartureTime` anklicken: rechts ist `<DepartureTime>10:35:00</DepartureTime>` markiert; „Hilfe“ öffnet die Hilfeseite; Sprache auf English umschalten.
+3. `uv run python scripts/test.py` und `uv run python scripts/check.py` ausführen; beide müssen grün enden.
+4. Ergebnis (inkl. Fehlermeldungen) im Testbericht `docs/test-report.md` festhalten.
 
 ## Bekannte Grenzen
 
