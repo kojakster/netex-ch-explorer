@@ -12,6 +12,7 @@ from app.core.diagnostics import DiagnosticCategory
 from app.core.explorer import element_xml_window, object_detail, position_xml_window
 from app.core.guide.examples import Example, read_example
 from app.core.messages import Severity
+from app.core.projection.journey_view import build_journey_view, is_journey
 from app.core.projection.journeys import list_journeys
 from app.core.provenance import provenance_chain
 from app.server.dataset_schemas import (
@@ -26,6 +27,7 @@ from app.server.dataset_schemas import (
     XmlWindowOut,
 )
 from app.server.datasets import DatasetRegistry, parse_object_id
+from app.server.journey_schemas import JourneyConverter, JourneyViewOut
 from app.server.runtime import Runtime
 
 MAX_SEARCH_LIMIT: Final = 200
@@ -161,5 +163,24 @@ def object_router(registry: DatasetRegistry) -> APIRouter:
         if window is None:
             raise _not_found()
         return Converter(dataset_id, dataset).xml_window(window)
+
+    return router
+
+
+def journey_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
+    """Router der Fahrtansicht: `GET /api/journeys/{id}`."""
+    router = APIRouter(prefix="/api")
+    lookup = _Lookup(registry)
+
+    @router.get("/journeys/{journey_id}")
+    def get_journey(journey_id: str) -> JourneyViewOut:
+        """Fahrtansicht einer `ServiceJourney` (oder `TemplateServiceJourney`)."""
+        dataset_id, dataset, element_id = lookup.element(journey_id)
+        element = dataset.index.element(element_id)
+        if element is None or not is_journey(element):
+            raise _not_found()
+        view = build_journey_view(dataset.index, element, runtime.guide.mapping)
+        converter = JourneyConverter(Converter(dataset_id, dataset), runtime.guide.revision.commit)
+        return converter.journey(view)
 
     return router

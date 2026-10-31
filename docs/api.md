@@ -1,6 +1,6 @@
 # Lokale Schnittstelle (JSON)
 
-Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 2.
+Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 3.
 
 ## Allgemein
 
@@ -193,6 +193,40 @@ XML-Ausschnitt um ein Element bzw. um eine Stelle (z. B. einer Diagnose), 30 Zei
 
 Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. Bisher entstehen `file` (Zeichenkodierung), `xml_syntax` (Syntaxfehler, `DOCTYPE`) und `reference` (Phase 2: `reference.unresolved` ⚠ Fehler, `reference.ambiguous` △ Warnung, `reference.external_or_unloaded` ℹ Hinweis, `reference.version_differs` ℹ Hinweis für eine aufgelöste Referenz mit abweichender Version; Parameter `element`, `ref`, `expected` bzw. bei `version_differs` `version` (Referenz) und `found` (Ziel); Stelle = das Ref-Element).
 
+### `GET /api/journeys/{id}`
+
+Fahrtansicht einer `ServiceJourney` oder `TemplateServiceJourney`. `{id}` ist die Objekt-ID der Fahrt (`<Datensatz-ID>.<Elementnummer>`, z. B. aus `GET /api/datasets/{id}/journeys`). Andere Elemente, unbekannte oder ungültige IDs ergeben 404. Regeln und Belege: [mapping.md](mapping.md); Annahmen: [assumptions.md](assumptions.md).
+
+**Quelle** (`ObjectOut`, wie `object` in allen Antworten): Jede Angabe nennt ihr Element der Quelle mit Typ, `id`, Datei, Zeile/Spalte, Frame und `colorKey`. Die Oberfläche markiert damit die Stelle im XML und färbt die Angabe.
+
+**Angabe** (`ValueOut`): `{ "status": "found | absent | not_resolved | ambiguous | external_or_unloaded", "text": "…", "element": Objekt | null }`. `text` ist bei `not_resolved`/`ambiguous`/`external_or_unloaded` die gesuchte Referenz.
+
+```json
+{
+  "journey": Objekt,
+  "guideCommit": "b7ac158…",
+  "pattern": Angabe, "timeDemandType": Angabe,
+  "trainNumbers": [Angabe], "line": Angabe,
+  "privateCodes": [{ "codeType": "sjyid", "value": "…", "element": Objekt }],
+  "transports": [{ "owner": Objekt, "role": "journey | line", "mode": Angabe, "submodeType": "RailSubmode", "submode": Angabe }],
+  "categories": [{ "role": "journey | line", "ref": Objekt, "target": Objekt, "problem": Angabe,
+                   "shortName": Angabe, "names": [{ "lang": "de", "text": "…", "element": Objekt }], "master": Stammdaten }],
+  "validities": [{ "ref": Objekt, "days": Betriebstage, "problem": Angabe }],
+  "stops": [Halt], "parts": [Teilstrecke], "facilities": [Angebotsmenge], "notices": [Hinweis],
+  "diagnostics": [Diagnose]
+}
+```
+
+- **Halt:** `position` (ab 1, XML-Reihenfolge), `point` (`StopPointInJourneyPattern`), `stopPoint` (Name des `ScheduledStopPoint`), `stopPlace` (Name der `StopPlace`), `quay` (`PublicCode` der Kante), `assignment` (`PassengerStopAssignment`), `forBoarding`, `forAlighting`, `requestStop` (Angaben), `stopUse` (Code mit Stammdaten), `arrival`/`departure` (Zeit; erster Halt ohne Ankunft, letzter ohne Abfahrt), `partNumbers` (Nummern der Teilstrecken, die den Halt einschliessen). Fehlt die Zuordnung zur Haltestelle, steht in `stopPlace`/`quay` der Status: `external_or_unloaded` („Haltestelle nicht in dieser Datei“, wenn die Datei keine `StopPlace` enthält) oder `absent`.
+- **Zeit:** `id` (`arrival-<n>`/`departure-<n>`), `status` (`explicit` = steht in der Datei, `computed`, `not_computable`), `clock` (`hh:mm:ss`, `null` wenn nicht berechenbar), `dayOffset` (Tage ab Betriebstag, negativ möglich), `offsetOrigin` (`explicit` = `DepartureDayOffset` steht in der Datei, `default` = fehlt, 0 als Standardwert, `computed` = durch das Aufsummieren ein anderer Tag), `source` (Element der Zeit), `chain` (Rechenkette), `reason` (Grund bei `not_computable`: Schlüssel, Parameter, Element).
+- **Rechenkette:** Liste von Summanden in der Reihenfolge der Rechnung: `kind` (`departure_time`, `day_offset`, `run_time`, `wait_time`), `value` (Text aus der Datei, `null` bei Standardwert), `default` (Standardwert: kein Element als Quelle), `seconds` (Summand), `clock`/`dayOffset` (Zwischenstand nach dem Summanden), `element` (Quelle), `related` (beteiligte Objekte: `TimingLink`, `JourneyRunTime` bzw. `JourneyWaitTime`), `viaFromTo` (der `TimingLink` wurde über `FromPointRef`/`ToPointRef` bestimmt).
+- **Betriebstage:** `condition`, `fromDate`/`toDate`/`validDayBits` (Elemente), `firstDay`/`lastDay` (ISO-Datum), `periodDays`, `validCount` (Anzahl Bits `1`), `days` (gültige Tage als ISO-Datum; leer, wenn `daysListed` falsch ist), `findings` (Probleme).
+- **Stammdaten** (`master`): `{ "status": "found | none | unavailable", "matches": [{ "sheet": "Angebote", "row": 115, "texts": [{ "label": "Angebottext", "text": "1. Klasse" }] }] }`. `none` = „keine Erläuterung in den Stammdaten“, `unavailable` = Blatt oder Spalte der Mappingtabelle fehlt. Den Guide-Stand nennt `guideCommit`.
+- **Teilstrecke** (`JourneyPart`): `number`, `element`, `description`, `purpose`, `trainNumbers`, `parentJourney`, `startStop`/`endStop` (`stop` = Name, `position` = Halt dieser Fahrt oder `null`), `start`/`end` (`time`, `dayOffset`, `clock`, `day`), `facilities`, `validity`, `category`.
+- **Angebotsmenge** (`ServiceFacilitySet`): `ref`, `facilitySet`, `problem`, `description`, `groups` (je Gruppe `element` und `codes` mit Quelle und Stammdaten).
+- **Hinweis:** `assignment`, `scope` (`journey`, `pattern`, `stop`, `journey_ref`, `pattern_ref`), `notice`, `shortCode`, `noticeType`, `texts` (alle Fassungen, `alternativeFor` bei `AlternativeText`), `startPosition`/`endPosition` (Halte dieser Fahrt), `validity`.
+- **Diagnosen** (Art `projection`): wie in `GET /api/datasets/{id}/diagnostics`, aber nur für diese Fahrt und bei Abruf berechnet. Schlüssel: `projection.time.*` (Zeit nicht berechenbar, △ Warnung), `projection.timing_link_from_to`, `projection.day_offset_default`, `projection.stop_order_differs`, `projection.dst_night_forward`/`_back` (ℹ Hinweise), `projection.part_time_differs`, `projection.availability_*` (△ Warnungen), `projection.notice_unassigned` (ℹ Hinweis, ohne Stelle). Sie zählen nicht in `diagnosticCounts` und erscheinen nicht in der Diagnosenliste des Datensatzes.
+
 ## Geplant
 
-`POST /api/datasets` für eigene Dateien (XML, mehrere XML, ZIP) und `POST /api/datasets/{id}/validate` folgen in Phase 4; `GET /api/journeys/{id}` (Fahrtansicht) in Phase 3.
+`POST /api/datasets` für eigene Dateien (XML, mehrere XML, ZIP) und `POST /api/datasets/{id}/validate` folgen in Phase 4.

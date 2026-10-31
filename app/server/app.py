@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.core.config import SUPPORTED_LANGUAGES
-from app.server.dataset_routes import dataset_router, object_router
+from app.server.dataset_routes import dataset_router, journey_router, object_router
 from app.server.datasets import DatasetRegistry
 from app.server.errors import register_error_handlers
 from app.server.runtime import Runtime
@@ -42,6 +42,7 @@ def create_app(runtime: Runtime, frontend_dist: Path | None) -> FastAPI:
     registry = DatasetRegistry()
     app.include_router(dataset_router(runtime, registry))
     app.include_router(object_router(registry))
+    app.include_router(journey_router(runtime, registry))
     if frontend_dist is not None and frontend_dist.is_dir():
         app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
     return app

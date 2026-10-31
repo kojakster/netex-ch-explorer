@@ -267,3 +267,120 @@ def test_reference_diagnostics_are_listed(client: TestClient) -> None:
         f"/api/datasets/{data['id']}/diagnostics", params={"category": "reference"}
     ).json()
     assert items == []
+
+
+def journey_view(client: TestClient, name: str, position: int = 0) -> dict[str, Any]:
+    dataset_id = open_example(client, name)["id"]
+    journeys = client.get(f"/api/datasets/{dataset_id}/journeys").json()
+    response = client.get(f"/api/journeys/{journeys[position]['object']['id']}")
+    assert response.status_code == 200
+    data: dict[str, Any] = response.json()
+    return data
+
+
+def test_journey_view_stops_times_and_chain(client: TestClient) -> None:
+    view = journey_view(client, "ch20_three_stops.xml")
+    assert view["journey"]["xmlId"] == "ch:1:sjyid:SYN:1"
+    assert view["journey"]["colorKey"] == "TimetableFrame"
+    assert view["guideCommit"] == "a" * 40
+    assert [number["text"] for number in view["trainNumbers"]] == ["1"]
+    assert view["line"]["text"] == "Synthetische Linie"
+    assert view["line"]["element"]["colorKey"] == "ServiceFrame"
+    first, second, third = view["stops"]
+    assert [stop["stopPoint"]["text"] for stop in view["stops"]] == [
+        "Synthetisch A",
+        "Synthetisch B",
+        "Synthetisch C",
+    ]
+    assert first["arrival"] is None
+    assert first["departure"]["status"] == "explicit"
+    assert (first["departure"]["clock"], first["departure"]["dayOffset"]) == ("08:00:00", 0)
+    assert first["departure"]["offsetOrigin"] == "explicit"
+    assert second["arrival"]["status"] == "computed"
+    assert (second["arrival"]["clock"], second["departure"]["clock"]) == ("08:10:00", "08:12:00")
+    assert (third["arrival"]["clock"], third["departure"]) == ("08:27:00", None)
+    chain = third["arrival"]["chain"]
+    assert [(step["kind"], step["value"], step["clock"]) for step in chain] == [
+        ("departure_time", "08:00:00", "08:00:00"),
+        ("day_offset", "0", "08:00:00"),
+        ("run_time", "PT10M", "08:10:00"),
+        ("wait_time", "PT2M", "08:12:00"),
+        ("run_time", "PT15M", "08:27:00"),
+    ]
+    assert chain[2]["viaFromTo"] is True
+    assert chain[2]["element"]["name"] == "RunTime"
+    assert chain[2]["element"]["colorKey"] == "ServiceFrame"
+    assert [item["name"] for item in chain[2]["related"]] == ["TimingLink", "JourneyRunTime"]
+    assert second["quay"]["text"] == "2"
+    assert second["stopPlace"]["element"]["name"] == "Name"
+    assert second["forBoarding"]["text"] == "true"
+    assert third["forBoarding"]["element"]["name"] == "ForBoarding"
+    [validity] = view["validities"]
+    assert validity["days"]["periodDays"] == 7
+    assert validity["days"]["days"][0] == "2026-12-14"
+    assert validity["days"]["validDayBits"]["name"] == "ValidDayBits"
+    diagnostics = view["diagnostics"]
+    assert [d["key"] for d in diagnostics] == ["projection.timing_link_from_to"]
+    assert diagnostics[0]["category"] == "projection"
+    assert diagnostics[0]["severity"] == "info"
+    assert diagnostics[0]["line"] is not None
+
+
+def test_journey_view_not_computable_time(client: TestClient) -> None:
+    view = journey_view(client, "ch20_midnight.xml", 1)
+    departure = view["stops"][0]["departure"]
+    assert (departure["clock"], departure["dayOffset"]) == ("00:11:00", 1)
+    last = view["stops"][2]["arrival"]
+    assert (last["clock"], last["dayOffset"], last["offsetOrigin"]) == ("00:38:00", 1, "explicit")
+    first = journey_view(client, "ch20_midnight.xml", 0)
+    arrival = first["stops"][1]["arrival"]
+    assert (arrival["clock"], arrival["dayOffset"], arrival["offsetOrigin"]) == (
+        "00:00:00",
+        1,
+        "computed",
+    )
+    assert first["stops"][0]["departure"]["offsetOrigin"] == "default"
+    assert "projection.day_offset_default" in [d["key"] for d in first["diagnostics"]]
+
+
+def test_journey_view_of_unknown_or_other_elements_is_not_found(client: TestClient) -> None:
+    data = open_example(client)
+    quay = client.get(
+        f"/api/datasets/{data['id']}/objects", params={"type": "Quay", "limit": 1}
+    ).json()["items"][0]
+    assert client.get(f"/api/journeys/{quay['id']}").status_code == 404
+    assert client.get(f"/api/journeys/{data['id']}.99999").status_code == 404
+    assert client.get("/api/journeys/ungueltig").status_code == 404
+    assert client.get("/api/journeys/unbekanntunbekanntunbekannt.5").status_code == 404
+
+
+def test_journey_view_with_offers_and_notices(synthetic_guide: Path, tmp_path: Path) -> None:
+    examples = synthetic_guide / "src" / "examples"
+    (examples / "ch20_offers.xml").write_bytes((FIXTURES_DIR / "ch20_offers.xml").read_bytes())
+    config = load_config(PROJECT_ROOT)
+    config = replace(config, settings=replace(config.settings, guide_path=synthetic_guide))
+    guide = inspect_guide(synthetic_guide, tmp_path / "t.json", REF_TARGETS)
+    client = TestClient(create_app(Runtime(config, guide), None), base_url=BASE_URL)
+    view = journey_view(client, "ch20_offers.xml")
+    [category, _] = view["categories"]
+    assert category["shortName"]["text"] == "SYN"
+    assert [name["lang"] for name in category["names"]] == ["de", "en"]
+    assert category["master"]["status"] in {"found", "none"}
+    [part] = view["parts"]
+    assert part["startStop"]["position"] == 1
+    assert part["facilities"][0]["groups"][0]["codes"][0]["code"] == "bistro"
+    assert view["stops"][0]["partNumbers"] == [1]
+    [facility] = view["facilities"]
+    assert [g["element"]["name"] for g in facility["groups"]] == [
+        "FareClasses",
+        "PassengerCommsFacilityList",
+    ]
+    first, second = view["notices"]
+    assert (first["scope"], second["scope"]) == ("journey", "pattern_ref")
+    assert [t["text"]["lang"] for t in first["texts"]] == ["de", "en"]
+    assert (second["startPosition"], second["endPosition"]) == (2, 3)
+    second_stop = view["stops"][1]
+    assert second_stop["stopUse"]["code"] == "access"
+    assert second_stop["stopUse"]["master"]["status"] in {"found", "none"}
+    unassigned = [d for d in view["diagnostics"] if d["key"] == "projection.notice_unassigned"]
+    assert unassigned[0]["line"] is None
