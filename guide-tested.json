@@ -1,7 +1,97 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "guide": {
     "commit": "b7ac15860369818a8fb53c64ed6f71318f019380",
     "xsdCommit": "73b337e22ceed7905a1be14e4e506f1afa359b54"
+  },
+  "examples": {
+    "01_NeTEx_Spiez_Interlaken_Ost.xml": {
+      "sha256": "4c1a24aa203336ed490c7707e256678a7496c362a9762eec7b24dfd9ef526b75",
+      "result": "clean"
+    },
+    "02_NeTEx_CH_PAG_11929.xml": {
+      "sha256": "765e01b795019ecb782f5ba2c0bc7754df91ebba12f5943cb84d09f0817d30af",
+      "result": "clean"
+    },
+    "03_NeTEx_CH_Bus803_Nyon.xml": {
+      "sha256": "d40e320855c8745a25eac9eb7ff9276068e6fc5a757ce5afc0b909382d8a569c",
+      "result": "clean"
+    },
+    "04_NeTEx_CH_DRT_Line_50.110.xml": {
+      "sha256": "828e2c0aff40ba85ce788a6a6ab3ac0852a22af0e98c764ad1b34c6237f528b6",
+      "result": "clean"
+    },
+    "05_NeTEx_CH_DRT_Line_Dependent_On_Passengers_At_Start.xml": {
+      "sha256": "d61e7a9550afd53c03a63e699c1d0ac722fd592497480bf84cb9627bd235fe6a",
+      "result": "clean"
+    },
+    "06_NeTEx_CH_Bern_Spiez_Zweisimmen.xml": {
+      "sha256": "a71929be67986fbe0b5d0ea3dec6011e605720feebcefe6e56ac9f53ced4ca29",
+      "result": "clean"
+    },
+    "07_NeTEx_CH_Interlaken_BS_Freiburg_Breisach_Durchbindung.xml": {
+      "sha256": "6834d77c3d61ee1449b624b9113e7148eaf64924a6c1f9b129ad645f27f860f7",
+      "result": "clean"
+    },
+    "08_NeTEX_CH_Bern_Olten_ZuerichHB_Winterthur_StGallen_with_Facilities.xml": {
+      "sha256": "c7458e8f4c968febbc6598b80c938bcd3418954d87da037490e5a1c8401f2aba",
+      "result": "clean"
+    },
+    "09_NeTEx_CH_Fribourg_Bern_Zuerich_Perron.xml": {
+      "sha256": "8ea90a3b57a6f6caaad1caf61b7ad5ec629ed79da248359e2739bd6b14c9f576",
+      "result": "clean"
+    },
+    "10_NeTEx_CH_BLS_Bern_Luzern_DestinationChange.xml": {
+      "sha256": "4fbd54712f88f318783f1abac659549efc81e3cb9b740a68b160c07efdb2b84c",
+      "result": "clean"
+    },
+    "11_NeTEx_CH_BLS_Bern_Luzern_Change_TrainNumber_and_other_stuff.xml": {
+      "sha256": "b5b140f61077cbc14401b25fbc6615288d7378cc71b80e3c63116d16ad2e24b9",
+      "result": "clean"
+    },
+    "12_NeTEx_CH_Frequency_Based_Line.xml": {
+      "sha256": "60a71493120c74bb3799b2400b2d1a8166ae12a1bb06057598c40539ba01db4a",
+      "result": "clean"
+    },
+    "13_NeTEx_CH_Bern_Spiez_Zweisimmen_TimeDemandType_Quay_Change.xml": {
+      "sha256": "2f1e0d37424a82f7ec7df2c3e3a712209a50f7e3968a9159f9ba6a14a3a05452",
+      "result": "clean"
+    },
+    "14_NeTEx_CH_Linie_722_Mischbetrieb.xml": {
+      "sha256": "dcd2ae3f34a80a8c7ee1f8822b90249dbe618b42b72e22106ba7ad3138735a66",
+      "result": "clean"
+    },
+    "15_NeTEx_CH_1026478_11957.xml": {
+      "sha256": "8ac346a0c1897ff67675bf20f26edc39c7e4a73db848eb802fc0be8d93bc5d52",
+      "result": "clean"
+    },
+    "16_NeTEx_CH_SITE_OFFER_Connections.xml": {
+      "sha256": "db0549ab7ebd60fdd9f07dd7094fa7c0a67e1288b9a4e88f631c3d9fe0072aa0",
+      "result": "clean"
+    },
+    "17_NeTEx_CH_INTERCHANGE.xml": {
+      "sha256": "6955a000d52da90f473aa5428053d4d5ade05dfff8a0bd6c466147442e98e8e5",
+      "result": "clean"
+    },
+    "18_NETWORK_OFFER_export_operators.xml": {
+      "sha256": "8123be965d2da084167fb2d112c3040c867cb9223a1c209bec435014271ea209",
+      "result": "clean"
+    },
+    "19_NeTEx_CH_NJ470_IC60470_Kurswagen.xml": {
+      "sha256": "eeb78c8b0e88a05a3b027af09ee31aa91852f2abc7891f0390686867f8e8c436",
+      "result": "clean"
+    },
+    "20_NeTEx_Interlaken_Spiez_Formation.xml": {
+      "sha256": "f66a714f95a303949d0f792f19b98aaf3b2e7d0865ef8c2f541a4e4d1276bc89",
+      "result": "clean"
+    },
+    "21_NeTEx_CH_Kurswagen_Zuerich_Bremen.xml": {
+      "sha256": "1fbd2f4b85d7fbff108d8ecce16bdb8be628759a197b10bf1e8ba4e266f2beb7",
+      "result": "clean"
+    },
+    "22_NeTEx_CH_Line_5_Partial_Lines_Owner_Subcontractor.xml": {
+      "sha256": "44de9dc5878832feff78ce4b54e51340adeb0ccd3de1108bc489e22a8c591e28",
+      "result": "clean"
+    }
   }
 }

@@ -10,3 +10,4 @@ export const SEVERITY_SYMBOLS: Readonly<Record<Severity, string>> = {
 };
 
 export const OK_SYMBOL = "✔";
+export const UNREADABLE_SYMBOL = "✖";

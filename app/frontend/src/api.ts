@@ -1,10 +1,27 @@
 // Austauschbare Datenschicht: lokal über HTTP, später in der Webversion direkt über Pyodide.
 
-import type { AppInfo, GuideInfo } from "./types";
+import type {
+  AppInfo,
+  DatasetInfo,
+  DiagnosticInfo,
+  GuideInfo,
+  JourneyInfo,
+  ObjectDetail,
+  ObjectSearchResult,
+  SearchParams,
+  XmlWindow,
+} from "./types";
 
 export interface DataSource {
   getAppInfo(): Promise<AppInfo>;
   getGuide(): Promise<GuideInfo>;
+  openExample(name: string): Promise<DatasetInfo>;
+  getJourneys(datasetId: string): Promise<JourneyInfo[]>;
+  searchObjects(datasetId: string, params: SearchParams): Promise<ObjectSearchResult>;
+  getDiagnostics(datasetId: string): Promise<DiagnosticInfo[]>;
+  getObject(objectId: string): Promise<ObjectDetail>;
+  getObjectXml(objectId: string): Promise<XmlWindow>;
+  getXmlAt(datasetId: string, file: number, line: number, column: number): Promise<XmlWindow>;
 }
 
 /** Fehler der Schnittstelle mit Übersetzungsschlüssel aus dem einheitlichen Fehlerformat. */
@@ -33,8 +50,15 @@ function errorKey(body: unknown): string {
   return FALLBACK_ERROR_KEY;
 }
 
-async function getJson<T>(fetcher: typeof fetch, path: string): Promise<T> {
-  const response = await fetcher(path, { headers: { Accept: "application/json" } });
+async function requestJson<T>(
+  fetcher: typeof fetch,
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const response = await fetcher(path, {
+    ...init,
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+  });
   if (!response.ok) {
     let body: unknown = null;
     try {
@@ -47,6 +71,8 @@ async function getJson<T>(fetcher: typeof fetch, path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+const enc = encodeURIComponent;
+
 /** Datenquelle über die lokale HTTP-Schnittstelle (relative Pfade, gleicher Ursprung). */
 export class HttpDataSource implements DataSource {
   private readonly fetcher: typeof fetch;
@@ -56,10 +82,65 @@ export class HttpDataSource implements DataSource {
   }
 
   getAppInfo(): Promise<AppInfo> {
-    return getJson<AppInfo>(this.fetcher, "api/app");
+    return requestJson<AppInfo>(this.fetcher, "api/app");
   }
 
   getGuide(): Promise<GuideInfo> {
-    return getJson<GuideInfo>(this.fetcher, "api/guide");
+    return requestJson<GuideInfo>(this.fetcher, "api/guide");
+  }
+
+  openExample(name: string): Promise<DatasetInfo> {
+    return requestJson<DatasetInfo>(this.fetcher, "api/datasets", {
+      method: "POST",
+      body: JSON.stringify({ example: name }),
+    });
+  }
+
+  getJourneys(datasetId: string): Promise<JourneyInfo[]> {
+    return requestJson<JourneyInfo[]>(this.fetcher, `api/datasets/${enc(datasetId)}/journeys`);
+  }
+
+  searchObjects(datasetId: string, params: SearchParams): Promise<ObjectSearchResult> {
+    const query = new URLSearchParams({
+      limit: String(params.limit),
+      offset: String(params.offset),
+    });
+    if (params.type) {
+      query.set("type", params.type);
+    }
+    if (params.q) {
+      query.set("q", params.q);
+    }
+    return requestJson<ObjectSearchResult>(
+      this.fetcher,
+      `api/datasets/${enc(datasetId)}/objects?${query.toString()}`,
+    );
+  }
+
+  getDiagnostics(datasetId: string): Promise<DiagnosticInfo[]> {
+    return requestJson<DiagnosticInfo[]>(
+      this.fetcher,
+      `api/datasets/${enc(datasetId)}/diagnostics`,
+    );
+  }
+
+  getObject(objectId: string): Promise<ObjectDetail> {
+    return requestJson<ObjectDetail>(this.fetcher, `api/objects/${enc(objectId)}`);
+  }
+
+  getObjectXml(objectId: string): Promise<XmlWindow> {
+    return requestJson<XmlWindow>(this.fetcher, `api/objects/${enc(objectId)}/xml`);
+  }
+
+  getXmlAt(datasetId: string, file: number, line: number, column: number): Promise<XmlWindow> {
+    const query = new URLSearchParams({
+      file: String(file),
+      line: String(line),
+      column: String(column),
+    });
+    return requestJson<XmlWindow>(
+      this.fetcher,
+      `api/datasets/${enc(datasetId)}/xml?${query.toString()}`,
+    );
   }
 }

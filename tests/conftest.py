@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -10,7 +11,10 @@ import pytest
 from openpyxl import Workbook
 
 from app.core.config import load_config
+from app.core.guide.layout import EXAMPLES_DIR, MAPPING_TABLE_FILE, XSD_MAIN_FILE
+from app.core.guide.mapping import SHEET_SPECS
 from tests.support import (
+    FIXTURES_DIR,
     PROJECT_ROOT,
     REQUIRE_GUIDE_ENV,
     SHA_A,
@@ -96,3 +100,34 @@ def make_workbook() -> WorkbookFactory:
         return path
 
     return factory
+
+
+SYNTHETIC_EXAMPLES = ("ch20_three_stops.xml", "broken_xml.xml", "ch20_midnight.xml")
+
+
+@pytest.fixture
+def synthetic_guide(
+    tmp_path: Path, make_git_repo: GitRepoFactory, make_workbook: WorkbookFactory
+) -> Path:
+    """Synthetischer Guide-Klon: Git, XSD-Submodul, Mappingtabelle, drei Beispiele mit README."""
+    root = tmp_path / "guide"
+    make_git_repo(root)
+    make_git_repo(root / ".git" / "modules" / "xsd", branch=None, commit=SHA_B)
+    xsd_work_tree = root / "xsd"
+    xsd_work_tree.mkdir()
+    (xsd_work_tree / ".git").write_text("gitdir: ../.git/modules/xsd/.git\n", encoding="utf-8")
+    xsd_file = root.joinpath(*XSD_MAIN_FILE.parts)
+    xsd_file.parent.mkdir(parents=True)
+    xsd_file.write_text("<schema/>", encoding="utf-8")
+    sheets = {spec.name: [list(spec.columns), ["x"] * len(spec.columns)] for spec in SHEET_SPECS}
+    make_workbook(root.joinpath(*MAPPING_TABLE_FILE.parts), sheets)
+    examples = root.joinpath(*EXAMPLES_DIR.parts)
+    examples.mkdir(parents=True)
+    for name in SYNTHETIC_EXAMPLES:
+        shutil.copyfile(FIXTURES_DIR / name, examples / name)
+    (examples / "README.md").write_text(
+        "# Examples\n\n## Synthetische Fahrt\nText\n[Link](ch20_three_stops.xml)\n\n"
+        "### Kaputt\n[Link](broken_xml.xml) und [nochmals](./ch20_three_stops.xml)\n",
+        encoding="utf-8",
+    )
+    return root

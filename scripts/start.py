@@ -20,7 +20,8 @@ import uvicorn
 from frontend import FRONTEND_DIR, PROJECT_ROOT, dependencies_need_install, frontend_needs_build
 
 from app.core.config import MAX_PORT, MIN_PORT
-from app.server.app import FRONTEND_DIST, create_app, load_runtime
+from app.server.app import FRONTEND_DIST, create_app
+from app.server.runtime import load_runtime
 from app.server.security import LOCAL_HOST
 
 BROWSER_DELAY_SECONDS: Final = 1.5

@@ -34,7 +34,7 @@ class CheckStep:
 
 
 CHECK_STEPS: Final = (
-    CheckStep("xml_syntax", CheckStatus.NOT_IMPLEMENTED),
+    CheckStep("xml_syntax", CheckStatus.PERFORMED),
     CheckStep("references", CheckStatus.NOT_IMPLEMENTED),
     CheckStep("xsd", CheckStatus.NOT_IMPLEMENTED, (str(XSD_MAIN_FILE),)),
     CheckStep("general_rules", CheckStatus.NOT_IMPLEMENTED, (str(GENERAL_RULES_FILE),)),

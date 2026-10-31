@@ -16,8 +16,13 @@ from pathlib import Path
 from typing import Final
 
 from app.core.config import load_config
-from app.core.guide.guide_tested import TEST_RECORD_FILE, GuideTestRecord, write_test_record
-from app.core.guide.status import read_guide_revision
+from app.core.guide.guide_tested import (
+    TEST_RECORD_FILE,
+    ExampleRecord,
+    GuideTestRecord,
+    write_test_record,
+)
+from app.core.guide.status import analyze_examples, read_guide_revision
 
 PROJECT_ROOT: Final = Path(__file__).resolve().parent.parent
 REQUIRE_GUIDE_ENV: Final = "NETEX_REQUIRE_GUIDE"
@@ -48,13 +53,19 @@ def main(argv: list[str] | None = None) -> int:
     if revision.commit is None:
         logger.error("Guide-Commit nicht bestimmbar; %s bleibt unverändert.", TEST_RECORD_FILE)
         return 1
-    record = GuideTestRecord(guide_commit=revision.commit, xsd_commit=revision.xsd_commit)
+    examples = {
+        status.name: ExampleRecord(status.sha256, status.result)
+        for status in analyze_examples(config.settings.guide_path, None)
+        if status.sha256 is not None
+    }
+    record = GuideTestRecord(revision.commit, revision.xsd_commit, examples)
     write_test_record(PROJECT_ROOT / TEST_RECORD_FILE, record)
     logger.info(
-        "Alle Tests erfolgreich; %s geschrieben (Guide %s, XSD %s).",
+        "Alle Tests erfolgreich; %s geschrieben (Guide %s, XSD %s, %d Beispiele).",
         TEST_RECORD_FILE,
         revision.commit[:7],
         revision.xsd_commit[:7] if revision.xsd_commit else "-",
+        len(examples),
     )
     return 0
 

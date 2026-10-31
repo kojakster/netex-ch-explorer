@@ -6,10 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import load_config
+from app.core.features import Feature
 from app.core.guide.mapping import MappingRow, MappingSheet, MappingTable
 from app.core.guide.status import GuideRevision, GuideStatus, GuideTestState
 from app.core.messages import Issue, MessageKey, Severity
-from app.server.app import Runtime, create_app, load_runtime
+from app.server.app import create_app
+from app.server.runtime import Runtime, load_runtime
 from app.server.security import CONTENT_SECURITY_POLICY
 from tests.support import SHA_A, SHA_B
 
@@ -52,6 +54,7 @@ def test_guide_endpoint(client: TestClient, tmp_path: Path) -> None:
         "testState": "differs",
         "testedCommit": SHA_B,
         "mappingSheets": [{"name": "StopUse", "headerRow": 3, "rows": 1}],
+        "examples": [],
         "issues": [
             {
                 "severity": "info",
@@ -73,7 +76,7 @@ def test_app_endpoint(client: TestClient) -> None:
         "text": "#FFFFFF",
     }
     assert "SiteFacilitySet" in data["notRelevantElements"]
-    assert data["features"] == ["guide_status", "frame_legend", "language_switch", "help_page"]
+    assert data["features"] == [str(feature) for feature in Feature]
     assert data["severities"] == ["error", "warning", "info"]
     assert {
         "id": "xsd",

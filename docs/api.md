@@ -1,6 +1,6 @@
 # Lokale Schnittstelle (JSON)
 
-Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 0.
+Vertrag zwischen Server (`app/server`) und Oberfläche (`app/frontend/src/api.ts`, Typen in `types.ts`). Stand: Phase 1.
 
 ## Allgemein
 
@@ -51,6 +51,15 @@ Guide-Status für die Guide-Status-Box. Wird beim Start einmal ermittelt; nach e
   "testState": "tested | differs | never_tested | unknown",
   "testedCommit": "b7ac15860369818a8fb53c64ed6f71318f019380",
   "mappingSheets": [{ "name": "StopUse", "headerRow": 3, "rows": 4 }],
+  "examples": [
+    {
+      "name": "01_NeTEx_Spiez_Interlaken_Ost.xml",
+      "title": "Basic train with TimeDemandType",
+      "result": "clean | notes | errors | unreadable",
+      "counts": { "error": 0 },
+      "change": "unchanged | changed | new | untested"
+    }
+  ],
   "issues": []
 }
 ```
@@ -79,6 +88,81 @@ Daten für Farblegende, Hilfeseite und Sprache. Ergänzt den Plan (Abschnitt 5),
 - `frameColors`: Reihenfolge und Schlüssel fest; `unknown` = unbekannter Frame, `notRelevant` = Grau.
 - `issues`: Meldungen beim Laden von `config/` (`config.*`).
 
-## Geplant (Plan Abschnitt 5)
+### IDs
 
-`POST /api/datasets`, `GET /api/datasets/{id}`, `GET /api/datasets/{id}/journeys`, `GET /api/datasets/{id}/objects`, `GET /api/objects/{id}`, `GET /api/objects/{id}/xml`, `GET /api/journeys/{id}`, `GET /api/datasets/{id}/diagnostics`, `POST /api/datasets/{id}/validate`. Werden mit den Phasen 1–4 hier beschrieben.
+Datensätze haben eine zufällige ID (nicht erratbar). Objekte und alle anderen Elemente haben die ID `<Datensatz-ID>.<Elementnummer>`; jedes Element ist damit einzeln abrufbar (z. B. eine Eigenschaft eines Objekts für die Markierung im XML). Unbekannte oder ungültige IDs ergeben 404. Der Server hält höchstens 10 Datensätze offen.
+
+### `POST /api/datasets`
+
+Öffnet ein Beispiel des Guides. Nur Dateinamen aus der Beispielliste von `GET /api/guide`; keine Pfade.
+
+```json
+{ "example": "01_NeTEx_Spiez_Interlaken_Ost.xml" }
+```
+
+Antwort (auch `GET /api/datasets/{id}`):
+
+```json
+{
+  "id": "Zuf4ll1g3-ID",
+  "files": [{ "id": 1, "name": "01_….xml", "size": 16651, "sha256": "…", "readable": true, "elements": 278, "objects": 47 }],
+  "objectTypes": [{ "name": "Quay", "count": 3 }],
+  "frames": [Objekt, …],
+  "diagnosticCounts": { "error": 0, "warning": 0, "info": 0 }
+}
+```
+
+**Objekt** (in allen Antworten gleich):
+
+```json
+{
+  "id": "Zuf4ll1g3-ID.37", "name": "Quay", "xmlId": "ch:1:sloid:7483:0:90840", "version": "1",
+  "label": null, "fileName": "01_….xml", "line": 115, "column": 9,
+  "frame": { "objectId": "Zuf4ll1g3-ID.36", "name": "SiteFrame", "xmlId": "ch:1:SiteFrame:j26" },
+  "colorKey": "SiteFrame | … | unknown | notRelevant | null", "notRelevant": false
+}
+```
+
+### `GET /api/datasets/{id}/journeys`
+
+Fahrten (`ServiceJourney`, `TemplateServiceJourney`) mit `trainNumbers`, `departureTime`, `departureDayOffset`, `line`, `firstStop`, `lastStop`. Jede Angabe: `{ "status": "found | absent | not_resolved | ambiguous", "text": "…", "objectId": "…" }`. `text` ist bei `not_resolved`/`ambiguous` die gesuchte Referenz; `objectId` zeigt auf die Herkunft (Element der Angabe bzw. die Referenz).
+
+### `GET /api/datasets/{id}/objects?type=&q=&limit=&offset=`
+
+Einfache Objektsuche: `type` = Elementname, `q` = Teiltext in ID oder Name (ohne Gross-/Kleinschreibung, höchstens 200 Zeichen), `limit` 1–200 (Standard 50), `offset` ≥ 0. Antwort `{ "total": 3, "items": [Objekt, …] }`.
+
+### `GET /api/objects/{id}`
+
+```json
+{ "object": Objekt, "path": "/PublicationDelivery/…/StopPlace[1]/quays/Quay",
+  "attributes": { "id": "…", "version": "1" },
+  "properties": [{ "id": "…", "name": "PublicCode", "attributes": {}, "text": "8", "line": 130, "column": 10, "children": [] }],
+  "truncated": false }
+```
+
+`text` ist der direkte Textinhalt, unverändert (auch Leerzeichen). Positionsnummern im Pfad nur bei gleichnamigen Geschwistern. Höchstens 2000 Elemente, sonst `truncated`.
+
+### `GET /api/objects/{id}/xml` und `GET /api/datasets/{id}/xml?file=&line=&column=`
+
+XML-Ausschnitt um ein Element bzw. um eine Stelle (z. B. einer Diagnose), 30 Zeilen Kontext, höchstens 2000 Zeilen.
+
+```json
+{ "fileName": "01_….xml", "firstLine": 85, "text": "…", "focusFrom": 812, "focusTo": 1190,
+  "frames": [{ "objectId": "…", "name": "SiteFrame", "xmlId": "…", "colorKey": "SiteFrame", "fromLine": 85, "toLine": 157 }],
+  "truncated": false }
+```
+
+`focusFrom`/`focusTo` sind Zeichen-Offsets in `text` (Element vom `<` bis nach dem schliessenden `>`). `frames` enthält alle Frames im Ausschnitt; der innerste gilt.
+
+### `GET /api/datasets/{id}/diagnostics?category=&severity=`
+
+```json
+[{ "category": "xml_syntax", "severity": "error", "key": "xml.syntax_error", "params": { "detail": "mismatched tag" },
+   "fileId": 1, "fileName": "broken_xml.xml", "line": 48, "column": 34 }]
+```
+
+Arten: `file`, `xml_syntax`, `xsd`, `profile_rule`, `reference`, `projection`. In Phase 1 entstehen nur `file` (Zeichenkodierung) und `xml_syntax` (Syntaxfehler, `DOCTYPE`).
+
+## Geplant
+
+`POST /api/datasets` für eigene Dateien (XML, mehrere XML, ZIP) und `POST /api/datasets/{id}/validate` folgen in Phase 4; Referenzen ein-/ausgehend im Objektdetail in Phase 2; `GET /api/journeys/{id}` (Fahrtansicht) in Phase 3.

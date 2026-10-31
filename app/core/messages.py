@@ -42,6 +42,9 @@ class MessageKey(StrEnum):
     MAPPING_SHEET_MISSING = "mapping.sheet_missing"
     MAPPING_HEADER_NOT_FOUND = "mapping.header_not_found"
     MAPPING_COLUMN_MISSING = "mapping.column_missing"
+    XML_SYNTAX_ERROR = "xml.syntax_error"
+    XML_DOCTYPE_FORBIDDEN = "xml.doctype_forbidden"
+    XML_ENCODING_UNSUPPORTED = "xml.encoding_unsupported"
 
 
 @dataclass(frozen=True)

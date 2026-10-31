@@ -2,7 +2,7 @@
 
 Lokales Werkzeug, um Schweizer NeTEx-Dateien visuell und selbsterklärend zu verstehen: Fahrt als Fahrplan, Herkunft jeder Angabe bis zur Stelle im XML, Frame-Farben, Objekte und Verweise, Fehler mit Guide-Verweis.
 
-> **Stand:** Phase 0 (Grundgerüst) des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md). Die Anwendung startet, zeigt den Guide-Stand, die Farblegende und die Hilfeseite. Beispiele laden, Fahrtansicht und Prüfungen folgen in den nächsten Phasen. Unter Windows noch **nicht getestet**.
+> **Stand:** Phase 1 (Einlesen und Objekt-Explorer) des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte und zeigt jedes Objekt mit Frame, Stelle und exakter Markierung im XML. Referenzen, Fahrtansicht, eigene Dateien und Prüfungen folgen in den nächsten Phasen. Unter Windows noch **nicht getestet**.
 
 ## Ordnerstruktur
 
@@ -128,13 +128,14 @@ Für den ersten Test an einem Windows-PC (Windows gilt bis dahin als „nicht ge
 2. Sammelordner anlegen, Guide klonen wie oben unter „CH-NeTEx-Guide klonen“ beschrieben, das Projekt `netex-ch-explorer` daneben ablegen.
 3. Im Ordner `netex-ch-explorer`: `uv sync` und `git config core.hooksPath .githooks`.
 4. Falls PowerShell das Skript blockiert: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
-5. `.\start.ps1` ausführen. Prüfen: Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar; „Hilfe“ öffnet die Hilfeseite; Sprache auf English umschalten.
+5. `.\start.ps1` ausführen. Prüfen: Browser öffnet sich; links oben steht der Guide-Stand mit Branch `next`, Commit, XSD „vorhanden“, Mappingtabelle „8 Blätter gelesen“; die Farblegende ist sichtbar; Beispiel 01 anklicken, in der Fahrtenliste Zug 99999 anklicken, im Inhalt `DepartureTime` anklicken: rechts ist `<DepartureTime>10:35:00</DepartureTime>` markiert; „Hilfe“ öffnet die Hilfeseite; Sprache auf English umschalten.
 6. `uv run python scripts/test.py` und `uv run python scripts/check.py` ausführen; beide müssen grün enden.
 7. Ergebnis (inkl. Fehlermeldungen) im Testbericht `docs/test-report.md` festhalten.
 
 ## Bekannte Grenzen
 
-- Phase 0: noch keine Beispiele, keine eigenen Dateien, keine Fahrtansicht, keine Prüfungen (die Hilfeseite listet sie als „nicht durchgeführt“).
+- Phase 1: Referenzen nur als Grundstufe für die Fahrtenliste (keine Rückwärtsreferenzen, keine Referenzdiagnosen), keine Fahrtansicht, keine eigenen Dateien; geprüft wird nur die XML-Syntax (die Hilfeseite listet die übrigen Prüfungen als „nicht durchgeführt“).
+- Nur Dateien in UTF-8 (oder ASCII); Dateien mit `DOCTYPE` werden aus Sicherheitsgründen nicht gelesen.
 - Kein Commit-Datum des Guides (bewusst, siehe `docs/decisions.md`).
 - Der Guide-Status wird beim Start ermittelt; nach einem Guide-Update neu starten.
 - Windows: noch nicht getestet.

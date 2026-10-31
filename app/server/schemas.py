@@ -7,7 +7,8 @@ from pydantic.alias_generators import to_camel
 
 from app.core.config import AppConfig
 from app.core.features import Feature
-from app.core.guide.status import GuideStatus, GuideTestState
+from app.core.guide.examples import ExampleResult
+from app.core.guide.status import ExampleChange, ExampleStatus, GuideStatus, GuideTestState
 from app.core.messages import Issue, MessageKey, Severity
 from app.core.validation.steps import CHECK_STEPS, CheckStatus
 
@@ -39,6 +40,27 @@ class MappingSheetOut(ApiModel):
     rows: int
 
 
+class ExampleOut(ApiModel):
+    """Ein Beispiel des Guides mit Ergebnis und Stand gegenüber dem letzten Test."""
+
+    name: str
+    title: str | None
+    result: ExampleResult
+    counts: dict[Severity, int]
+    change: ExampleChange
+
+    @classmethod
+    def from_status(cls, status: ExampleStatus) -> ExampleOut:
+        """Wandelt den Beispielstatus des Kerns um."""
+        return cls(
+            name=status.name,
+            title=status.title,
+            result=status.result,
+            counts=dict(status.counts),
+            change=status.change,
+        )
+
+
 class GuideOut(ApiModel):
     """Antwort von `GET /api/guide`."""
 
@@ -51,6 +73,7 @@ class GuideOut(ApiModel):
     test_state: GuideTestState
     tested_commit: str | None
     mapping_sheets: list[MappingSheetOut]
+    examples: list[ExampleOut]
     issues: list[IssueOut]
 
     @classmethod
@@ -69,6 +92,7 @@ class GuideOut(ApiModel):
                 MappingSheetOut(name=sheet.name, header_row=sheet.header_row, rows=len(sheet.rows))
                 for sheet in status.mapping.sheets.values()
             ],
+            examples=[ExampleOut.from_status(example) for example in status.examples],
             issues=[IssueOut.from_issue(issue) for issue in status.issues],
         )
 

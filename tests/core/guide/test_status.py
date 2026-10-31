@@ -4,29 +4,18 @@ from pathlib import Path
 
 import pytest
 
-from app.core.guide.guide_tested import GuideTestRecord, write_test_record
+from app.core.guide.examples import ExampleResult
+from app.core.guide.guide_tested import ExampleRecord, GuideTestRecord, write_test_record
 from app.core.guide.layout import MAPPING_TABLE_FILE, XSD_MAIN_FILE
 from app.core.guide.mapping import SHEET_SPECS
-from app.core.guide.status import GuideTestState, inspect_guide, read_guide_revision
-from app.core.messages import MessageKey
-from tests.support import SHA_A, SHA_B, GitRepoFactory, WorkbookFactory
+from app.core.guide.status import ExampleChange, GuideTestState, inspect_guide, read_guide_revision
+from app.core.messages import MessageKey, Severity
+from tests.support import SHA_A, SHA_B
 
 
 @pytest.fixture
-def guide(tmp_path: Path, make_git_repo: GitRepoFactory, make_workbook: WorkbookFactory) -> Path:
-    """Synthetischer Guide-Klon mit XSD-Submodul und vollständiger Mappingtabelle."""
-    root = tmp_path / "guide"
-    make_git_repo(root)
-    make_git_repo(root / ".git" / "modules" / "xsd", branch=None, commit=SHA_B)
-    xsd_work_tree = root / "xsd"
-    xsd_work_tree.mkdir()
-    (xsd_work_tree / ".git").write_text("gitdir: ../.git/modules/xsd/.git\n", encoding="utf-8")
-    xsd_file = root.joinpath(*XSD_MAIN_FILE.parts)
-    xsd_file.parent.mkdir(parents=True)
-    xsd_file.write_text("<schema/>", encoding="utf-8")
-    sheets = {spec.name: [list(spec.columns), ["x"] * len(spec.columns)] for spec in SHEET_SPECS}
-    make_workbook(root.joinpath(*MAPPING_TABLE_FILE.parts), sheets)
-    return root
+def guide(synthetic_guide: Path) -> Path:
+    return synthetic_guide
 
 
 def keys(status_issues: tuple[object, ...]) -> list[object]:
@@ -124,3 +113,41 @@ def test_missing_xsd_submodule_is_no_git_issue(guide: Path) -> None:
     revision = read_guide_revision(guide)
     assert revision.xsd_commit is None
     assert revision.issues == ()
+
+
+def test_examples_are_analyzed(guide: Path, tmp_path: Path) -> None:
+    record = tmp_path / "guide-tested.json"
+    status = inspect_guide(guide, record)
+    by_name = {example.name: example for example in status.examples}
+    assert list(by_name) == ["broken_xml.xml", "ch20_midnight.xml", "ch20_three_stops.xml"]
+    assert by_name["ch20_three_stops.xml"].title == "Synthetische Fahrt"
+    assert by_name["broken_xml.xml"].title == "Kaputt"
+    assert by_name["ch20_midnight.xml"].title is None
+    assert by_name["broken_xml.xml"].result is ExampleResult.UNREADABLE
+    assert by_name["broken_xml.xml"].counts == {Severity.ERROR: 1}
+    assert by_name["ch20_three_stops.xml"].result is ExampleResult.CLEAN
+    assert {example.change for example in status.examples} == {ExampleChange.UNTESTED}
+
+
+def test_example_changes_against_record(guide: Path, tmp_path: Path) -> None:
+    record = tmp_path / "guide-tested.json"
+    first = {example.name: example for example in inspect_guide(guide, record).examples}
+    three = first["ch20_three_stops.xml"]
+    assert three.sha256 is not None
+    write_test_record(
+        record,
+        GuideTestRecord(
+            SHA_A,
+            SHA_B,
+            {
+                "ch20_three_stops.xml": ExampleRecord(three.sha256, ExampleResult.CLEAN),
+                "ch20_midnight.xml": ExampleRecord("0" * 64, ExampleResult.CLEAN),
+            },
+        ),
+    )
+    changes = {example.name: example.change for example in inspect_guide(guide, record).examples}
+    assert changes == {
+        "ch20_three_stops.xml": ExampleChange.UNCHANGED,
+        "ch20_midnight.xml": ExampleChange.CHANGED,
+        "broken_xml.xml": ExampleChange.NEW,
+    }

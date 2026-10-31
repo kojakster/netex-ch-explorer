@@ -13,9 +13,12 @@ from pathlib import Path
 import pytest
 
 from app.core.config import DEFAULT_FRAME_COLORS, SUPPORTED_LANGUAGES
+from app.core.diagnostics import DiagnosticCategory
 from app.core.features import Feature
-from app.core.guide.status import GuideTestState
+from app.core.guide.examples import ExampleResult
+from app.core.guide.status import ExampleChange, GuideTestState
 from app.core.messages import MessageKey, Severity
+from app.core.projection.journeys import LookupStatus
 from app.core.validation.steps import CHECK_STEPS, CheckStatus
 from app.server.errors import ErrorKey
 from tests.support import LOCALES_DIR
@@ -37,6 +40,10 @@ def required_keys() -> set[str]:
     for severity in Severity:
         keys |= {f"severity.{severity}", f"severity.{severity}.description"}
     keys |= {f"guide.testState.{state}" for state in GuideTestState}
+    keys |= {f"diagnostics.category.{category}" for category in DiagnosticCategory}
+    keys |= {f"examples.result.{result}" for result in ExampleResult}
+    keys |= {f"examples.change.{change}" for change in ExampleChange}
+    keys |= {f"lookup.{status}" for status in LookupStatus}
     keys |= {f"language.{language}" for language in SUPPORTED_LANGUAGES}
     # NeTEx-Frame-Namen bleiben unübersetzt; nur die übrigen Farben brauchen einen Text.
     keys |= {f"frame.{key}" for key in DEFAULT_FRAME_COLORS if not key.endswith("Frame")}

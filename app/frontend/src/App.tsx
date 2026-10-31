@@ -1,19 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { ApiError, type DataSource } from "./api";
+import { DiagnosticList } from "./components/DiagnosticList";
+import { ExampleList } from "./components/ExampleList";
 import { FrameLegend } from "./components/FrameLegend";
 import { GuideStatusBox } from "./components/GuideStatusBox";
 import { HelpPage } from "./components/HelpPage";
 import { IssueList } from "./components/IssueList";
+import { JourneyList } from "./components/JourneyList";
 import { LanguageSwitch } from "./components/LanguageSwitch";
+import { ObjectSearch } from "./components/ObjectSearch";
+import { ObjectView } from "./components/ObjectView";
+import { XmlPanel, type XmlTarget } from "./components/XmlPanel";
+import { DataSourceContext, LOAD_ERROR_KEY } from "./data";
 import { DEFAULT_LANGUAGE, I18nContext, messagesFor, translate } from "./i18n";
-import type { AppInfo, GuideInfo } from "./types";
+import type { AppInfo, DatasetInfo, DiagnosticInfo, GuideInfo } from "./types";
 
 type View = "main" | "help";
 
-const LOAD_ERROR_KEY = "app.loadError";
-
 interface AppProps {
   dataSource: DataSource;
+}
+
+function errorKeyOf(error: unknown): string {
+  return error instanceof ApiError ? error.key : LOAD_ERROR_KEY;
 }
 
 export function App({ dataSource }: AppProps) {
@@ -22,6 +31,12 @@ export function App({ dataSource }: AppProps) {
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
   const [view, setView] = useState<View>("main");
+  const [exampleName, setExampleName] = useState<string | null>(null);
+  const [dataset, setDataset] = useState<DatasetInfo | null>(null);
+  const [datasetErrorKey, setDatasetErrorKey] = useState<string | null>(null);
+  const [objectId, setObjectId] = useState<string | null>(null);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [xmlTarget, setXmlTarget] = useState<XmlTarget | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -35,7 +50,7 @@ export function App({ dataSource }: AppProps) {
       })
       .catch((error: unknown) => {
         if (active) {
-          setErrorKey(error instanceof ApiError ? error.key : LOAD_ERROR_KEY);
+          setErrorKey(errorKeyOf(error));
         }
       });
     return () => {
@@ -57,45 +72,114 @@ export function App({ dataSource }: AppProps) {
     document.documentElement.lang = language;
   }, [language]);
 
+  const openExample = (name: string) => {
+    setExampleName(name);
+    setDataset(null);
+    setDatasetErrorKey(null);
+    setObjectId(null);
+    setSelectedElement(null);
+    setXmlTarget(null);
+    dataSource
+      .openExample(name)
+      .then(setDataset)
+      .catch((error: unknown) => setDatasetErrorKey(errorKeyOf(error)));
+  };
+
+  const selectObject = (id: string) => {
+    setObjectId(id);
+    setSelectedElement(id);
+    setXmlTarget({ kind: "object", objectId: id });
+  };
+
+  const selectElement = (id: string) => {
+    setSelectedElement(id);
+    setXmlTarget({ kind: "object", objectId: id });
+  };
+
+  const showDiagnostic = (diagnostic: DiagnosticInfo) => {
+    if (dataset !== null && diagnostic.line !== null) {
+      setSelectedElement(null);
+      setXmlTarget({
+        kind: "position",
+        datasetId: dataset.id,
+        file: diagnostic.fileId,
+        line: diagnostic.line,
+        column: diagnostic.column ?? 1,
+      });
+    }
+  };
+
   return (
-    <I18nContext.Provider value={i18n}>
-      <div className="app">
-        <header className="app-header">
-          <h1>{t("app.title")}</h1>
-          <nav>
-            {appInfo && <LanguageSwitch languages={appInfo.languages} onChange={setLanguage} />}
-            <button type="button" onClick={() => setView("help")} disabled={appInfo === null}>
-              {t("app.help")}
-            </button>
-          </nav>
-        </header>
-        {errorKey !== null && (
-          <p className="load-error" role="alert">
-            {t(errorKey)}
-          </p>
-        )}
-        {errorKey === null && appInfo === null && <p>{t("app.loading")}</p>}
-        {appInfo !== null && view === "help" && (
-          <HelpPage appInfo={appInfo} guide={guide} onBack={() => setView("main")} />
-        )}
-        {appInfo !== null && view === "main" && (
-          <div className="layout">
-            <aside className="sidebar">
-              {guide !== null && <GuideStatusBox guide={guide} />}
-              {appInfo.issues.length > 0 && (
-                <section className="settings-issues" aria-label={t("settings.title")}>
-                  <h2>{t("settings.title")}</h2>
-                  <IssueList issues={appInfo.issues} />
-                </section>
-              )}
-              <FrameLegend colors={appInfo.frameColors} onHelp={() => setView("help")} />
-            </aside>
-            <main className="content">
-              <p>{t("app.empty")}</p>
-            </main>
-          </div>
-        )}
-      </div>
-    </I18nContext.Provider>
+    <DataSourceContext.Provider value={dataSource}>
+      <I18nContext.Provider value={i18n}>
+        <div className="app">
+          <header className="app-header">
+            <h1>{t("app.title")}</h1>
+            <nav>
+              {appInfo && <LanguageSwitch languages={appInfo.languages} onChange={setLanguage} />}
+              <button type="button" onClick={() => setView("help")} disabled={appInfo === null}>
+                {t("app.help")}
+              </button>
+            </nav>
+          </header>
+          {errorKey !== null && (
+            <p className="load-error" role="alert">
+              {t(errorKey)}
+            </p>
+          )}
+          {errorKey === null && appInfo === null && <p>{t("app.loading")}</p>}
+          {appInfo !== null && view === "help" && (
+            <HelpPage appInfo={appInfo} guide={guide} onBack={() => setView("main")} />
+          )}
+          {appInfo !== null && view === "main" && (
+            <div className="layout">
+              <aside className="sidebar">
+                {guide !== null && <GuideStatusBox guide={guide} />}
+                {appInfo.issues.length > 0 && (
+                  <section className="settings-issues" aria-label={t("settings.title")}>
+                    <h2>{t("settings.title")}</h2>
+                    <IssueList issues={appInfo.issues} />
+                  </section>
+                )}
+                <FrameLegend colors={appInfo.frameColors} onHelp={() => setView("help")} />
+                {guide !== null && (
+                  <ExampleList
+                    examples={guide.examples}
+                    selected={exampleName}
+                    onOpen={openExample}
+                  />
+                )}
+                {datasetErrorKey !== null && <p role="alert">{t(datasetErrorKey)}</p>}
+                {exampleName !== null && dataset === null && datasetErrorKey === null && (
+                  <p>{t("app.loading")}</p>
+                )}
+                {dataset !== null && (
+                  <>
+                    <JourneyList datasetId={dataset.id} onSelect={selectObject} />
+                    <ObjectSearch dataset={dataset} onSelect={selectObject} />
+                    <DiagnosticList datasetId={dataset.id} onShow={showDiagnostic} />
+                  </>
+                )}
+              </aside>
+              <main className="content">
+                {objectId === null ? (
+                  <p className="hint">{t(dataset === null ? "app.empty" : "app.selectObject")}</p>
+                ) : (
+                  <ObjectView
+                    objectId={objectId}
+                    colors={appInfo.frameColors}
+                    selectedElement={selectedElement}
+                    onSelectElement={selectElement}
+                  />
+                )}
+              </main>
+              <aside className="xml-column">
+                <XmlPanel target={xmlTarget} colors={appInfo.frameColors} />
+              </aside>
+            </div>
+          )}
+        </div>
+      </I18nContext.Provider>
+    </DataSourceContext.Provider>
   );
 }

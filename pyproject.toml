@@ -61,6 +61,8 @@ convention = "google"
 "tests/**" = ["S101", "D", "PLR2004"]
 # Skripte rufen bewusst npm/uv als Unterprozess auf (feste Argumentlisten, kein Shell).
 "scripts/**" = ["S603", "S607"]
+# SQL im Index entsteht nur aus festen Teilen; alle Werte gehen als Parameter (?) an SQLite.
+"app/core/index/**" = ["S608"]
 
 [tool.mypy]
 strict = true

@@ -7,9 +7,12 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Final
 
+from app.core.dataset import SourceFile, open_dataset
+from app.core.guide.examples import ExampleResult, example_result, list_examples, read_example
 from app.core.guide.git import GitHead, GitReadError, find_git_dir, read_head
 from app.core.guide.guide_tested import (
     TEST_COMMAND,
+    GuideTestRecord,
     GuideTestRecordError,
     read_test_record,
 )
@@ -34,6 +37,28 @@ class GuideTestState(StrEnum):
     UNKNOWN = "unknown"
 
 
+class ExampleChange(StrEnum):
+    """Stand eines Beispiels gegenüber dem letzten erfolgreichen Testlauf."""
+
+    UNCHANGED = "unchanged"
+    CHANGED = "changed"
+    NEW = "new"
+    UNTESTED = "untested"
+    """Es gibt keinen gültigen Testnachweis."""
+
+
+@dataclass(frozen=True)
+class ExampleStatus:
+    """Ein Beispiel mit Ergebnis beim Laden und Stand gegenüber dem Testnachweis."""
+
+    name: str
+    title: str | None
+    sha256: str | None
+    result: ExampleResult
+    counts: dict[Severity, int]
+    change: ExampleChange
+
+
 @dataclass(frozen=True)
 class GuideRevision:
     """Branch und Commits des Guide-Klons und seines XSD-Submoduls."""
@@ -55,6 +80,7 @@ class GuideStatus:
     test_state: GuideTestState
     tested_commit: str | None
     mapping: MappingTable
+    examples: tuple[ExampleStatus, ...] = ()
     issues: tuple[Issue, ...] = field(default=())
 
 
@@ -99,7 +125,8 @@ def inspect_guide(guide_path: Path, test_record_path: Path) -> GuideStatus:
                 {"file": str(XSD_MAIN_FILE), "command": XSD_FETCH_COMMAND},
             )
         )
-    test_state, tested_commit = _compare_with_test_record(revision, test_record_path, issues)
+    record, record_valid = _read_record(test_record_path, issues)
+    test_state, tested_commit = _compare_with_test_record(revision, record, record_valid, issues)
     mapping = read_mapping_table(guide_path.joinpath(*MAPPING_TABLE_FILE.parts))
     issues.extend(mapping.issues)
     return GuideStatus(
@@ -110,6 +137,7 @@ def inspect_guide(guide_path: Path, test_record_path: Path) -> GuideStatus:
         test_state=test_state,
         tested_commit=tested_commit,
         mapping=mapping,
+        examples=tuple(analyze_examples(guide_path, record if record_valid else None)),
         issues=tuple(issues),
     )
 
@@ -133,17 +161,26 @@ def _read_git_head(
         return None
 
 
-def _compare_with_test_record(
-    revision: GuideRevision, record_path: Path, issues: list[Issue]
-) -> tuple[GuideTestState, str | None]:
+def _read_record(record_path: Path, issues: list[Issue]) -> tuple[GuideTestRecord | None, bool]:
+    """Liest den Testnachweis; der zweite Wert ist `False`, wenn er ungültig ist."""
     try:
-        record = read_test_record(record_path)
+        return read_test_record(record_path), True
     except GuideTestRecordError:
         issues.append(
             Issue(
                 Severity.WARNING, MessageKey.GUIDE_TEST_RECORD_INVALID, {"file": record_path.name}
             )
         )
+        return None, False
+
+
+def _compare_with_test_record(
+    revision: GuideRevision,
+    record: GuideTestRecord | None,
+    record_valid: bool,
+    issues: list[Issue],
+) -> tuple[GuideTestState, str | None]:
+    if not record_valid:
         return GuideTestState.UNKNOWN, None
     if record is None:
         issues.append(
@@ -166,6 +203,58 @@ def _compare_with_test_record(
         )
     )
     return GuideTestState.DIFFERS, record.guide_commit
+
+
+def analyze_examples(guide_path: Path, record: GuideTestRecord | None) -> list[ExampleStatus]:
+    """Lädt jedes Beispiel einzeln und vergleicht es mit dem Testnachweis.
+
+    Ein fehlerhaftes Beispiel beeinträchtigt die anderen nicht.
+    """
+    examples = list_examples(guide_path)
+    statuses = []
+    for example in examples:
+        data = read_example(guide_path, example.name, examples)
+        if data is None:
+            statuses.append(
+                ExampleStatus(
+                    example.name,
+                    example.title,
+                    None,
+                    ExampleResult.UNREADABLE,
+                    {},
+                    _change(record, example.name, None),
+                )
+            )
+            continue
+        dataset = open_dataset([SourceFile(example.name, data)], ())
+        try:
+            sha256 = dataset.index.files()[0].sha256
+            counts: dict[Severity, int] = {}
+            for item in dataset.index.diagnostics():
+                counts[item.diagnostic.severity] = counts.get(item.diagnostic.severity, 0) + 1
+            result = example_result(dataset)
+        finally:
+            dataset.close()
+        statuses.append(
+            ExampleStatus(
+                example.name,
+                example.title,
+                sha256,
+                result,
+                counts,
+                _change(record, example.name, sha256),
+            )
+        )
+    return statuses
+
+
+def _change(record: GuideTestRecord | None, name: str, sha256: str | None) -> ExampleChange:
+    if record is None:
+        return ExampleChange.UNTESTED
+    tested = record.examples.get(name)
+    if tested is None:
+        return ExampleChange.NEW
+    return ExampleChange.UNCHANGED if tested.sha256 == sha256 else ExampleChange.CHANGED
 
 
 def _short(commit: str | None) -> str:

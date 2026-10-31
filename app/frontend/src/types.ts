@@ -26,6 +26,7 @@ export interface GuideInfo {
   testState: GuideTestState;
   testedCommit: string | null;
   mappingSheets: MappingSheet[];
+  examples: ExampleInfo[];
   issues: Issue[];
 }
 
@@ -50,4 +51,131 @@ export interface AppInfo {
   checks: CheckStep[];
   severities: Severity[];
   issues: Issue[];
+}
+
+export type ExampleResult = "clean" | "notes" | "errors" | "unreadable";
+export type ExampleChange = "unchanged" | "changed" | "new" | "untested";
+
+export interface ExampleInfo {
+  name: string;
+  title: string | null;
+  result: ExampleResult;
+  counts: Partial<Record<Severity, number>>;
+  change: ExampleChange;
+}
+
+export interface FileInfo {
+  id: number;
+  name: string;
+  size: number;
+  sha256: string;
+  readable: boolean;
+  elements: number;
+  objects: number;
+}
+
+export interface FrameRef {
+  objectId: string;
+  name: string;
+  xmlId: string | null;
+}
+
+export interface ObjectInfo {
+  id: string;
+  name: string;
+  xmlId: string | null;
+  version: string | null;
+  label: string | null;
+  fileName: string;
+  line: number;
+  column: number;
+  frame: FrameRef | null;
+  colorKey: string | null;
+  notRelevant: boolean;
+}
+
+export interface DatasetInfo {
+  id: string;
+  files: FileInfo[];
+  objectTypes: { name: string; count: number }[];
+  frames: ObjectInfo[];
+  diagnosticCounts: Record<Severity, number>;
+}
+
+export interface ObjectSearchResult {
+  total: number;
+  items: ObjectInfo[];
+}
+
+export interface PropertyInfo {
+  id: string;
+  name: string;
+  attributes: Record<string, string>;
+  text: string;
+  line: number;
+  column: number;
+  children: PropertyInfo[];
+}
+
+export interface ObjectDetail {
+  object: ObjectInfo;
+  path: string;
+  attributes: Record<string, string>;
+  properties: PropertyInfo[];
+  truncated: boolean;
+}
+
+export type LookupStatus = "found" | "absent" | "not_resolved" | "ambiguous";
+
+export interface LookupInfo {
+  status: LookupStatus;
+  text: string | null;
+  objectId: string | null;
+}
+
+export interface JourneyInfo {
+  object: ObjectInfo;
+  trainNumbers: LookupInfo[];
+  departureTime: LookupInfo;
+  departureDayOffset: LookupInfo;
+  line: LookupInfo;
+  firstStop: LookupInfo;
+  lastStop: LookupInfo;
+}
+
+export interface DiagnosticInfo {
+  category: string;
+  severity: Severity;
+  key: string;
+  params: Record<string, string | number>;
+  fileId: number;
+  fileName: string;
+  line: number | null;
+  column: number | null;
+}
+
+export interface FrameBand {
+  objectId: string;
+  name: string;
+  xmlId: string | null;
+  colorKey: string | null;
+  fromLine: number;
+  toLine: number;
+}
+
+export interface XmlWindow {
+  fileName: string;
+  firstLine: number;
+  text: string;
+  focusFrom: number;
+  focusTo: number;
+  frames: FrameBand[];
+  truncated: boolean;
+}
+
+export interface SearchParams {
+  type?: string;
+  q?: string;
+  limit: number;
+  offset: number;
 }

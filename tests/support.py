@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+FIXTURES_DIR = PROJECT_ROOT / "fixtures"
 LOCALES_DIR = PROJECT_ROOT / "app" / "frontend" / "src" / "locales"
 REQUIRE_GUIDE_ENV = "NETEX_REQUIRE_GUIDE"
 

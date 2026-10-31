@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
@@ -11,29 +10,15 @@ from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.core.config import SUPPORTED_LANGUAGES, AppConfig, load_config
-from app.core.guide.guide_tested import TEST_RECORD_FILE
-from app.core.guide.status import GuideStatus, inspect_guide
+from app.core.config import SUPPORTED_LANGUAGES
+from app.server.dataset_routes import dataset_router, object_router
+from app.server.datasets import DatasetRegistry
 from app.server.errors import register_error_handlers
+from app.server.runtime import Runtime
 from app.server.schemas import AppInfoOut, GuideOut
 from app.server.security import ALLOWED_HOSTS, NO_STORE, SECURITY_HEADERS
 
 FRONTEND_DIST: Final = Path("app") / "frontend" / "dist"
-
-
-@dataclass(frozen=True)
-class Runtime:
-    """Beim Start geladener Zustand: Einstellungen und Guide-Status."""
-
-    config: AppConfig
-    guide: GuideStatus
-
-
-def load_runtime(project_root: Path) -> Runtime:
-    """Lädt Einstellungen und untersucht den Guide-Klon."""
-    config = load_config(project_root)
-    guide = inspect_guide(config.settings.guide_path, project_root / TEST_RECORD_FILE)
-    return Runtime(config=config, guide=guide)
 
 
 def create_app(runtime: Runtime, frontend_dist: Path | None) -> FastAPI:
@@ -54,6 +39,9 @@ def create_app(runtime: Runtime, frontend_dist: Path | None) -> FastAPI:
     app.middleware("http")(_add_security_headers)
     register_error_handlers(app)
     app.include_router(_api_router(runtime))
+    registry = DatasetRegistry()
+    app.include_router(dataset_router(runtime, registry))
+    app.include_router(object_router(registry))
     if frontend_dist is not None and frontend_dist.is_dir():
         app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
     return app
