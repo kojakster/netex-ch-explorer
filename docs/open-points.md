@@ -11,12 +11,6 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 5. *(Erledigt: Entscheid (1) „Zieltypen aus der XSD“ in [decisions.md](decisions.md).)*
 6. *(Erledigt: Entscheid (2) „Abweichende Version“ in [decisions.md](decisions.md).)*
 7. **Öffnen grosser Dateien (Phase 2, Code-Review).** Die Auflösung stellt je Referenz mehrere Abfragen an den Index, und `object_detail`/`reference_view` fragen je Verweis einzeln ab (Ziel, Besitzer, Frame); alle Referenzen liegen bis zum Ende im Speicher; für die kleinen Guide-Dateien unkritisch, für grosse Lieferungen ungeeignet. Wird mit Variante B des Index (Entscheid „Index: alle Elemente im Arbeitsspeicher“) angepasst. Gilt auch für die Fahrtansicht (Phase 3): je Halt mehrere Einzelabfragen (Haltestellenzuordnung, Verweise, Stammdaten); bei den kleinen Dateien unkritisch.
-12. **Phase 3, Angebote einer Teilstrecke: „überschreiben“ oder „ergänzen“?** `uc05_journey_parts.md` Z. 104 sagt, das `ServiceFacilitySet` der `JourneyPart` „overrides“ das der Fahrt; Beispiel 08 meint ergänzend (Fahrt: 1. Klasse, WLAN; Teilstrecken: Bistro). Das Tool zeigt beide getrennt und rechnet keine gültige Menge. *Empfehlung:* so lassen (ergänzend lesen), Widerspruch beim Guide-Team klären lassen; erst danach je Halt eine Gesamtmenge zeigen.
-13. **Phase 3, Hinweiszuweisungen ohne Ziel (Beispiel 08, `na-1`, `na-2`).** Auf Frame-Ebene nur mit `NoticeRef`, ohne Fahrt, Fahrtmuster oder Objekt. Das Tool zeigt sie keiner Fahrt zu und meldet ihre Anzahl als ℹ Hinweis. Alternative: auf alle Fahrten des Frames anwenden (geraten). *Empfehlung:* nicht anzeigen, beim Guide-Team nachfragen, wie solche Zuweisungen gemeint sind.
-14. **Phase 3, Betriebstage der Kurswagen-Teilstrecken (Beispiel 21) nicht automatisch geprüft.** Eine Prüfung „die Elternfahrt verkehrt an den verschobenen Tagen des Kurswagens“ bräuchte die Zeiten der Elternfahrt am Anfangshalt der Teilstrecke (Fahrtmuster der Elternfahrt, Tagesverschiebung, `ValidDayBits` beider Fahrten): rund einen halben bis einen Tag Aufwand. Im Beispiel 21 haben alle vier Fahrten dieselbe `AvailabilityCondition` mit 365 gesetzten Bits, die Prüfung ergäbe nichts. *Empfehlung:* zurückstellen, bis Daten mit unterschiedlichen Betriebstagen vorliegen.
-15. **Phase 3, Annahmen bestätigen** ([assumptions.md](assumptions.md), Tabelle „Annahmen des Tools“): (a) Spalte `Abk` des Blatts `VMArt->NeTEx` entspricht dem `ShortName` der Produktkategorie; (d) `StartTime` einer `JourneyPart` ist die Abfahrt am Anfangshalt, `EndTime` die Ankunft am Endhalt (Beispiel 08 bestätigt es); (e) Zeitumstellung am letzten Sonntag im März und Oktober; (f) Hinweiszuweisungen auf Frame-Ebene mit `JourneyPatternRef` gelten für alle Fahrten des Musters. *Empfehlung:* alle bestätigen.
-16. **Phase 3, Befunde der Fahrtansicht und Beispielstatus.** Die Diagnosen der Art `projection` entstehen beim Abruf einer Fahrt, stehen nur dort und zählen weder in die Diagnosenliste des Datensatzes noch in den Beispielstatus (14 von 22 Beispielen hätten sonst eine Warnung wegen `ValidDayBits`). *Empfehlung:* so lassen; mit Phase 4 (Kernregeln) neu entscheiden, welche Befunde als Profilregel gelten.
-17. **Phase 3, nicht dargestellte Inhalte.** Zieländerung (`DestinationDisplay` am Halt, 13 Halte in den Beispielen), Takt (`frequencyGroups`), Formation, Flügelung, Durchbindung, Bedarfsverkehr und die Elternfahrt der Kurswagen erscheinen nur im Objekt-Explorer (Plan Abschnitt 6: „nach Bedarf“). *Empfehlung:* als Nächstes die Zieländerung (kleiner Aufwand, steht für Reisende im Fahrplan), den Rest später.
 
 ## Zurückgestellt
 
@@ -25,6 +19,8 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 - Windows-Test von Hand, sobald ein Windows-PC verfügbar ist.
 - Übrige ~330 Schweizer Profilregeln über das Build-Werkzeug des Guides.
 - Auswahl mehrerer Guide-Stände in der Oberfläche; Einstellungsseite für Farben; Zellfarben der Mappingtabelle.
+- Automatische Prüfung der Betriebstage von Kurswagen und Elternfahrt (Phase 3, Punkt 14; siehe decisions.md „Offene Punkte 12–17 aus Phase 3“).
+- Fahrtansicht für Zieländerung (`DestinationDisplay`) als Nächstes; Takt, Formation, Flügelung, Durchbindung, Bedarfsverkehr, Elternfahrt der Kurswagen später (Phase 3, Punkt 17).
 
 ## Archiv: Findings zum ursprünglichen Plan
 
