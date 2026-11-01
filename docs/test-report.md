@@ -445,4 +445,4 @@ Sicherheit: kein `dangerouslySetInnerHTML`, kein `innerHTML`, kein `setAttribute
 
 Verloren gegangene Funktionen gegenüber vorher: keine gefunden (Verlauf, Objektansicht, Suche, Diagnosen mit Sprung, Rechenkette, Herkunftskette, XML-Markierung, Datei öffnen, Prüfen inkl. „Trotzdem als CH 2.0 prüfen“, Guide-Status, Sprachwechsel sind erreichbar; „Geöffnete Dateien“ und „Prüfen“ stehen im Reiter „Prüfung“).
 
-Nachweis: `scripts/check.py` grün; pytest 835 Tests, Abdeckung `app/core` 98 %; Vitest 234 Tests; E2E siehe Commit-Nachricht und Rückmeldung (`npm run e2e`).
+Nachweis: `scripts/check.py` grün; pytest 835 Tests, Abdeckung `app/core` 98 %; Vitest 234 Tests; E2E (`npm run e2e`) bestanden (1 Test, rund 19 s).
