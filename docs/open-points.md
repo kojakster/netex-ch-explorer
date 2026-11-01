@@ -22,6 +22,7 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 - Auswahl mehrerer Guide-Stände in der Oberfläche; Einstellungsseite für Farben; Zellfarben der Mappingtabelle.
 - Automatische Prüfung der Betriebstage von Kurswagen und Elternfahrt (Phase 3, Punkt 14; siehe decisions.md „Offene Punkte 12–17 aus Phase 3“).
 - Fahrtansicht für Zieländerung (`DestinationDisplay`) als Nächstes; Takt, Formation, Flügelung, Durchbindung, Bedarfsverkehr, Elternfahrt der Kurswagen später (Phase 3, Punkt 17).
+- Docker-Container (mögliche Option, am 01.11.2026 vom Benutzer zurückgestellt): mehrstufiges Image (Node für den Frontend-Build, Laufzeit nur Python), Guide-Klon schreibgeschützt eingebunden, Start mit `docker run -p 127.0.0.1:8765:8765`. Vor der Umsetzung zu entscheiden: Bindung des Servers an `0.0.0.0` innerhalb des Containers (nach aussen nur 127.0.0.1). Unter Windows braucht Docker Desktop WSL 2 und ist für grössere Firmen kostenpflichtig. Aufwand etwa ein halber Tag.
 
 ## Archiv: Findings zum ursprünglichen Plan
 
