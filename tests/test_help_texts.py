@@ -6,6 +6,7 @@ Meldungsschlüssel in einer Sprachdatei fehlt (Regel „Hilfeseite immer nachfü
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from itertools import combinations
@@ -138,15 +139,48 @@ _TEMPLATE_KEY = re.compile(r"`([a-z][A-Za-z]*\.[^`]*\$\{[^`]*)`")
 _PLACEHOLDER = re.compile(r"\$\{[^}]*\}")
 
 
+_BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_LINE_COMMENT = re.compile(r"(?m)^\s*//.*$")
+
+
+def _python_strings(path: Path) -> list[str]:
+    """Zeichenketten des Python-Codes ohne Docstrings (Kommentare kennt `ast` nicht)."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    docstrings = {
+        id(node.body[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+    }
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+    ]
+
+
+def _typescript_code(path: Path) -> str:
+    """TypeScript-Quelltext ohne Block- und Zeilenkommentare (ganze Kommentarzeilen)."""
+    text = _BLOCK_COMMENT.sub("", path.read_text(encoding="utf-8"))
+    return _LINE_COMMENT.sub("", text)
+
+
 def _source_texts() -> list[str]:
-    files = list((PROJECT_ROOT / "app").rglob("*.py"))
-    files += [
-        path
+    """Zeichenketten des Anwendungscodes: ohne Kommentare, Docstrings und Testdateien."""
+    texts = [
+        text for path in (PROJECT_ROOT / "app").rglob("*.py") for text in _python_strings(path)
+    ]
+    texts += [
+        _typescript_code(path)
         for pattern in ("*.ts", "*.tsx")
         for path in _FRONTEND_SOURCE.rglob(pattern)
         if ".test." not in path.name
     ]
-    return [path.read_text(encoding="utf-8") for path in files]
+    return texts
 
 
 def _key_patterns(texts: list[str]) -> list[re.Pattern[str]]:
@@ -175,6 +209,11 @@ def _split_placeholders(template: str) -> list[str | None]:
     return parts
 
 
+def _mentions(text: str, key: str) -> bool:
+    """Python-Zeichenkette ist der Schlüssel selbst; im TypeScript steht er in Anführungszeichen."""
+    return text == key or f'"{key}"' in text
+
+
 def test_no_unused_texts() -> None:
     """Jeder Schlüssel der Sprachdateien wird gebraucht: im Code als Text, als Schlüssel einer
     Aufzählung bzw. Liste (Hilfeseiten-Test) oder über einen zusammengesetzten Schlüssel."""
@@ -185,7 +224,7 @@ def test_no_unused_texts() -> None:
         key
         for key in load_messages(SUPPORTED_LANGUAGES[0])
         if key not in required
-        and not any(f'"{key}"' in text for text in texts)
+        and not any(_mentions(text, key) for text in texts)
         and not any(pattern.match(key) for pattern in patterns)
     )
     assert unused == []
@@ -197,7 +236,7 @@ def test_unused_texts_are_detected() -> None:
     patterns = _key_patterns(texts)
     assert patterns
     assert not any(pattern.match("nirgends.verwendet") for pattern in patterns)
-    assert not any('"nirgends.verwendet"' in text for text in texts)
+    assert not any(_mentions(text, "nirgends.verwendet") for text in texts)
 
 
 def test_every_composed_key_pattern_matches_a_text() -> None:
@@ -205,3 +244,15 @@ def test_every_composed_key_pattern_matches_a_text() -> None:
     keys = load_messages(SUPPORTED_LANGUAGES[0]).keys()
     patterns = _key_patterns(_source_texts())
     assert [pattern.pattern for pattern in patterns if not any(map(pattern.match, keys))] == []
+
+
+def test_comments_and_docstrings_do_not_count_as_use(tmp_path: Path) -> None:
+    """Ein Schlüssel nur in Kommentar oder Docstring gilt nicht als benutzt."""
+    python = tmp_path / "modul.py"
+    python.write_text('"""Doc mit a.b."""\n# a.c\nWERT = "a.d"\n', encoding="utf-8")
+    assert _python_strings(python) == ["a.d"]
+    typescript = tmp_path / "datei.ts"
+    typescript.write_text('// "a.b"\n/* "a.c" */\nconst x = "a.d";\n', encoding="utf-8")
+    assert _mentions(_typescript_code(typescript), "a.d")
+    assert not _mentions(_typescript_code(typescript), "a.b")
+    assert not _mentions(_typescript_code(typescript), "a.c")

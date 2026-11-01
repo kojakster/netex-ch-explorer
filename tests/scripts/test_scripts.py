@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -74,6 +75,15 @@ def test_dependencies_need_install(tmp_path: Path) -> None:
 def test_start_rejects_invalid_port(value: str) -> None:
     with pytest.raises(SystemExit):
         start.main(["--port", value])
+
+
+def test_port_is_free_detects_a_listening_server() -> None:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
+        server.bind(("127.0.0.1", 0))
+        server.listen()
+        port = server.getsockname()[1]
+        assert not start.port_is_free(port)
+    assert start.port_is_free(port)
 
 
 def fake_project(tmp_path: Path, make_git_repo: GitRepoFactory) -> Path:

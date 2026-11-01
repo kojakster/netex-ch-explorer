@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -47,6 +49,19 @@ def build_frontend(frontend_dir: Path) -> bool:
     return True
 
 
+def port_is_free(port: int) -> bool:
+    """`True`, wenn auf `127.0.0.1:<port>` noch kein Server lauscht."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        if os.name != "nt":
+            # Wie uvicorn; unter Windows würde SO_REUSEADDR ein Mitbenutzen erlauben.
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            probe.bind((LOCAL_HOST, port))
+        except OSError:
+            return False
+    return True
+
+
 def _port(value: str) -> int:
     port = int(value)
     if not MIN_PORT <= port <= MAX_PORT:
@@ -65,8 +80,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if frontend_needs_build(FRONTEND_DIR) and not build_frontend(FRONTEND_DIR):
         return 1
-    runtime = load_runtime(PROJECT_ROOT)
+    runtime = load_runtime(PROJECT_ROOT, port=args.port)
     port: int = args.port or runtime.config.settings.port
+    # Vor dem Aufräumen von work/<port>/ prüfen, dass dort nicht schon ein Server läuft.
+    if not port_is_free(port):
+        logger.error(
+            "Port %d ist belegt; läuft der Explorer bereits? (--port wählt einen anderen)", port
+        )
+        return 1
     app = create_app(runtime, PROJECT_ROOT / FRONTEND_DIST, port)
     # XSD laden und Beispiele prüfen (rund 20 Sekunden); die Oberfläche zeigt den Stand an.
     runtime.start_background()
@@ -76,7 +97,10 @@ def main(argv: list[str] | None = None) -> int:
         timer = threading.Timer(BROWSER_DELAY_SECONDS, webbrowser.open, args=(url,))
         timer.daemon = True
         timer.start()
-    uvicorn.run(app, host=LOCAL_HOST, port=port, log_level="info")
+    try:
+        uvicorn.run(app, host=LOCAL_HOST, port=port, log_level="info")
+    finally:
+        runtime.workspace.close()
     return 0
 
 

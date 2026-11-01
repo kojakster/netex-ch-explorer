@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 export const PROJECT_ROOT = resolve(import.meta.dirname, "..", "..", "..");
+// Wie der Python-Lader (app/core/config.py), wenn guidePath in settings.json fehlt.
+const DEFAULT_GUIDE_PATH = "../netexRealisationGuideSwitzerland";
 export const REQUIRE_GUIDE_ENV = "NETEX_REQUIRE_GUIDE";
 
 function readJson(relativePath: string): unknown {
@@ -12,8 +14,8 @@ function readJson(relativePath: string): unknown {
 
 /** Pfad des Guide-Klons laut config/settings.json (relativ zum Projektordner). */
 export function guidePath(): string {
-  const settings = readJson("config/settings.json") as { guidePath: string };
-  return resolve(PROJECT_ROOT, settings.guidePath);
+  const settings = readJson("config/settings.json") as { guidePath?: string };
+  return resolve(PROJECT_ROOT, settings.guidePath ?? DEFAULT_GUIDE_PATH);
 }
 
 export function guideAvailable(): boolean {

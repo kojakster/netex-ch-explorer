@@ -138,9 +138,9 @@ Im Ordner `netex-ch-explorer`:
 | Windows (PowerShell) | `.\start.ps1` |
 | beide | `uv run python scripts/start.py` |
 
-Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist (beim ersten Start rund eine Minute; es installiert dabei die Pakete der Oberfläche mit `npm ci`), startet den Server auf `http://127.0.0.1:8765/` und öffnet den Browser. Optionen: `--port 9000` (anderer Port; der Server prüft die Herkunft der Anfragen gegen genau diesen Port), `--no-browser` (Browser nicht öffnen).
+Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist (beim ersten Start rund eine Minute; es installiert dabei die Pakete der Oberfläche mit `npm ci`), startet den Server auf `http://127.0.0.1:8765/` und öffnet den Browser. Optionen: `--port 9000` (anderer Port; der Server prüft die Herkunft der Anfragen gegen genau diesen Port und arbeitet in `work/9000/`; ist der Port belegt, bricht der Start ab, ohne etwas zu löschen), `--no-browser` (Browser nicht öffnen).
 
-**Beenden:** im Terminal-Fenster, in dem der Server läuft, **Ctrl+C** drücken. Danach ist der Port wieder frei; Dateien im Ordner `work/` werden beim nächsten Start gelöscht. Das Schliessen des Browser-Tabs beendet den Server nicht.
+**Beenden:** im Terminal-Fenster, in dem der Server läuft, **Ctrl+C** drücken. Danach ist der Port wieder frei; Die Dateien im Arbeitsordner des Servers (`work/<Port>/`) werden beim Beenden und, falls der Server abgestürzt ist, beim nächsten Start auf demselben Port gelöscht; Ordner anderer Ports (laufende Server) bleiben unberührt. Das Schliessen des Browser-Tabs beendet den Server nicht.
 
 Nach dem Start lädt das Tool im Hintergrund die XSD des Guides (rund 17 Sekunden) und prüft die Beispiele; die Guide-Status-Box zeigt „XSD wird geladen …", solange das läuft. Danach zeigt die Beispielliste den Status jedes Beispiels (XML-Syntax, XSD, Guide-Regeln, Kernregeln, Referenzen).
 
@@ -182,7 +182,7 @@ Kurzanleitung für den ersten Test (die Hilfeseite der Anwendung erklärt alle F
 
 ### Eigene Dateien öffnen und prüfen
 
-1. In der linken Spalte **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
+1. In der linken Spalte **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/<Port>/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
 2. Unter **Geöffnete Dateien** steht je Datei die erkannte Version mit Begründung (Namensraum, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur). Nur Dateien, die als CH-Profil 2.0 erkannt sind, werden geprüft; andere (z. B. NeTEx 1.10) bleiben im Explorer ansehbar.
 3. **Prüfen** startet XSD-Prüfung, die Regeln von `general_rules.sch` und die Kernregeln. Befunde erscheinen unter **Diagnosen**, getrennt nach Art, mit Schweregrad, Stelle (Klick markiert sie im XML) und Link auf das Guide-Kapitel im geprüften Commit.
    Ist die Version einer Datei mehrdeutig oder unbekannt, wird sie nicht geprüft; der Knopf **Trotzdem als CH 2.0 prüfen** erzwingt die Prüfung auf ausdrücklichen Wunsch, das Ergebnis vermerkt „als CH 2.0 geprüft auf Wunsch, Version nicht erkannt“. Eine erkannte andere Version (z. B. 1.10) wird nie so geprüft.
@@ -206,6 +206,7 @@ Im Ordner `config/` (JSON, UTF-8). Fehlt eine Datei oder ist ein Eintrag ungült
 | `uv run python scripts/check.py` | Prüfbefehl: Lockfile, ruff, mypy --strict, pytest mit Abdeckung ≥ 90 % für `app/core`, TypeScript, Biome, Vitest, Build, pip-audit, npm audit, Git-Hook aktiv. Läuft vor jedem Commit über den Git-Hook (rund 15 s); der Hook verlangt zusätzlich, dass alle Änderungen vorgemerkt sind (`git add`), damit genau der Commit-Inhalt geprüft wird. `pip-audit` und `npm audit` brauchen eine Internetverbindung. |
 | `uv run pytest` | Nur die Python-Tests (ohne Testnachweis). |
 | `npm run test` (in `app/frontend`) | Nur die Frontend-Tests (Vitest). |
+| `NETEX_API_PORT=9000 npm run dev` (in `app/frontend`) | Entwicklungsserver der Oberfläche; der Proxy geht an den Server auf dem Port aus `config/settings.json`, mit `NETEX_API_PORT` an den Port, mit dem `start.py --port` gestartet wurde (PowerShell: `$env:NETEX_API_PORT="9000"; npm run dev`). |
 | `npm run e2e:install` (in `app/frontend`, einmalig) | Lädt den Browser (Chromium) für den E2E-Test herunter (rund 150 MB, braucht Internet). |
 | `npm run e2e` (in `app/frontend`) | E2E-Test mit Playwright: startet den Server selbst (Testport 8766, anderer Port mit `E2E_PORT`), öffnet Beispiel 01, die Fahrt und einen Halt und prüft XML-Stelle und Frame; beendet den Server danach. Ohne Guide-Klon wird der Test übersprungen (mit `NETEX_REQUIRE_GUIDE=1` schlägt er stattdessen fehl). Statt des heruntergeladenen Browsers lässt sich der installierte Chrome nutzen: `E2E_BROWSER_CHANNEL=chrome npm run e2e` (macOS/Linux) bzw. `$env:E2E_BROWSER_CHANNEL="chrome"; npm run e2e` (PowerShell). |
 

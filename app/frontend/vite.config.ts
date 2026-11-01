@@ -6,8 +6,12 @@ import { configDefaults } from "vitest/config";
 
 const DEFAULT_PORT = 8765;
 
-/** Port des lokalen Servers aus config/settings.json (eine Quelle für Server und Entwicklungsmodus). */
+/** Port des lokalen Servers: NETEX_API_PORT (wenn `start.py --port` verwendet wird), sonst config/settings.json. */
 function serverPort(): number {
+  const fromEnvironment = Number(process.env.NETEX_API_PORT);
+  if (Number.isInteger(fromEnvironment) && fromEnvironment > 0) {
+    return fromEnvironment;
+  }
   try {
     const settings: unknown = JSON.parse(
       readFileSync(new URL("../../config/settings.json", import.meta.url), "utf-8"),

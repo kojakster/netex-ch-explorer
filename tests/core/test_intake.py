@@ -379,3 +379,19 @@ class TestWorkspace:
         (root / ("l" * 20)).symlink_to(outside, target_is_directory=True)
         Workspace(root).clear()
         assert (outside / "wichtig.txt").exists()
+
+    def test_close_removes_sessions_and_the_empty_folder(self, tmp_path: Path) -> None:
+        root = tmp_path / "work" / "8765"
+        workspace = Workspace(root)
+        workspace.new_session()
+        workspace.close()
+        assert not root.exists()
+        assert (tmp_path / "work").is_dir()
+
+    def test_close_keeps_a_folder_with_foreign_files(self, tmp_path: Path) -> None:
+        root = tmp_path / "work"
+        workspace = Workspace(root)
+        workspace.new_session()
+        (root / "notizen").mkdir()
+        workspace.close()
+        assert (root / "notizen").exists()

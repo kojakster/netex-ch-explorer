@@ -73,11 +73,19 @@ class Runtime:
             logger.exception("Prüfung der Beispiele fehlgeschlagen")
 
 
-def load_runtime(project_root: Path, work_dir: Path | None = None) -> Runtime:
-    """Lädt Einstellungen und untersucht den Guide-Klon (Beispiele erst im Hintergrund)."""
+def load_runtime(
+    project_root: Path, work_dir: Path | None = None, port: int | None = None
+) -> Runtime:
+    """Lädt Einstellungen und untersucht den Guide-Klon (Beispiele erst im Hintergrund).
+
+    Ohne `work_dir` arbeitet der Server in `work/<port>/` (Port des Servers, sonst der aus
+    `config/settings.json`): Jeder Port hat genau einen Server, so löscht ein zweiter Server auf
+    einem anderen Port nie die Arbeitsdateien eines laufenden.
+    """
     config = load_config(project_root)
     record_path = project_root / TEST_RECORD_FILE
     guide = inspect_guide(
         config.settings.guide_path, record_path, config.ref_targets, defer_examples=True
     )
-    return Runtime(config, guide, work_dir or project_root / WORK_DIR_NAME, record_path)
+    instance_dir = project_root / WORK_DIR_NAME / str(port or config.settings.port)
+    return Runtime(config, guide, work_dir or instance_dir, record_path)

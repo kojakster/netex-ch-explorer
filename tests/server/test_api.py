@@ -150,7 +150,7 @@ def test_origin_check_uses_the_port_the_server_runs_on(tmp_path: Path) -> None:
     client = TestClient(app, base_url="http://127.0.0.1:9000")
     own = {"Origin": "http://127.0.0.1:9000"}
     configured = {"Origin": "http://127.0.0.1:8765"}
-    assert client.delete("/api/datasets/abc", headers=own).status_code != 403
+    assert client.delete("/api/datasets/abc", headers=own).status_code == 404
     assert client.delete("/api/datasets/abc", headers=configured).status_code == 403
 
 
@@ -203,3 +203,15 @@ def test_load_runtime_uses_project_config(tmp_path: Path) -> None:
         == (tmp_path / "../netexRealisationGuideSwitzerland").resolve()
     )
     assert loaded.guide.found is loaded.config.settings.guide_path.is_dir()
+
+
+def test_each_port_has_its_own_work_folder(tmp_path: Path) -> None:
+    """Ein zweiter Server (anderer Port) darf die Arbeitsdateien des ersten nie löschen."""
+    first = load_runtime(tmp_path, port=8765)
+    second = load_runtime(tmp_path, port=8766)
+    assert first.workspace.root == tmp_path / "work" / "8765"
+    assert second.workspace.root == tmp_path / "work" / "8766"
+    session = first.workspace.new_session()
+    create_app(second, None, port=8766)
+    assert session.is_dir()
+    assert load_runtime(tmp_path).workspace.root == tmp_path / "work" / "8765"

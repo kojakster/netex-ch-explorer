@@ -114,15 +114,22 @@ describe("HelpPage", () => {
     const guide = screen.getByText("Guide-Stand", { selector: "h2" }).closest("section");
     const section = within(guide as HTMLElement);
     expect(section.getByText("next")).toBeTruthy();
-    expect(section.getByText("b7ac15860369818a8fb53c64ed6f71318f019380")).toBeTruthy();
-    expect(section.getByText("73b337e22ceed7905a1be14e4e506f1afa359b54")).toBeTruthy();
+    expect(section.getByText("b7ac158")).toBeTruthy();
+    expect(section.getByText("73b337e")).toBeTruthy();
     expect(section.getByText("mit diesem Stand getestet")).toBeTruthy();
+  });
+
+  it("zeigt bei fehlender XSD keinen Commit der XSD", () => {
+    const guide = { ...GUIDE, xsdPresent: false, xsdLoaded: false };
+    render(<HelpPage appInfo={APP_INFO} guide={guide} onBack={() => undefined} />);
+    expect(screen.queryByText("73b337e")).toBeNull();
+    expect(screen.getByText("fehlt")).toBeTruthy();
   });
 
   it("zeigt ohne gefundenen Guide keinen Stand", () => {
     render(
       <HelpPage appInfo={APP_INFO} guide={{ ...GUIDE, found: false }} onBack={() => undefined} />,
     );
-    expect(screen.queryByText("b7ac15860369818a8fb53c64ed6f71318f019380")).toBeNull();
+    expect(screen.queryByText("b7ac158")).toBeNull();
   });
 });

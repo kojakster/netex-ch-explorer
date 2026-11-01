@@ -5,6 +5,7 @@
 import { expect, test } from "@playwright/test";
 import { frameBackground, guideAvailable, REQUIRE_GUIDE_ENV, toRgb } from "./support";
 
+const GUIDE_READY_TIMEOUT_MS = 120_000;
 const EXAMPLE_FILE = "01_NeTEx_Spiez_Interlaken_Ost.xml";
 const STOP_NAME = "Interlaken West";
 const STOP_XML = `<Name lang="de">${STOP_NAME}</Name>`;
@@ -31,6 +32,13 @@ test("Beispiel 01: Halt anklicken führt zur richtigen XML-Stelle und zum richti
     }
   });
   page.on("pageerror", (error) => problems.push(String(error)));
+
+  // XSD laden und Beispiele prüfen dauert rund 20 s; erst danach ist die Prüfung bereit.
+  await expect
+    .poll(async () => (await page.request.get("/api/guide")).json(), {
+      timeout: GUIDE_READY_TIMEOUT_MS,
+    })
+    .toMatchObject({ examplesReady: true });
 
   await page.goto("/");
   await page.getByText(EXAMPLE_FILE, { exact: true }).click();

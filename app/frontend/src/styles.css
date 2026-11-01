@@ -99,18 +99,18 @@ select:focus-visible {
   margin: 0 0 0.5rem;
 }
 
-.guide-status dl {
+.guide-facts {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 0.15rem 0.75rem;
   margin: 0.5rem 0;
 }
 
-.guide-status dt {
+.guide-facts dt {
   color: var(--muted);
 }
 
-.guide-status dd {
+.guide-facts dd {
   margin: 0;
 }
 

@@ -137,7 +137,7 @@ def _is_noise(entry_name: str) -> bool:
 
 
 class Workspace:
-    """Arbeitsverzeichnis `work/`: je geöffnetem Datensatz ein Unterordner mit zufälligem Namen."""
+    """Arbeitsordner eines Servers (`work/<port>/`): je Datensatz ein Unterordner."""
 
     def __init__(self, root: Path) -> None:
         self.root = root
@@ -149,6 +149,15 @@ class Workspace:
         for child in self.root.iterdir():
             if _SESSION_NAME.match(child.name):
                 self._remove(child)
+
+    def close(self) -> None:
+        """Räumt beim Beenden auf: löscht die Datensätze und den leeren Ordner des Servers."""
+        self.clear()
+        try:
+            self.root.rmdir()
+        except OSError:
+            # Nicht leer (fremde Dateien) oder schon weg: nichts weiter löschen.
+            logger.debug("Arbeitsordner bleibt bestehen: %s", self.root)
 
     def new_session(self) -> Path:
         """Legt den Ordner für einen Datensatz an."""
