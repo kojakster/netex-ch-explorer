@@ -683,6 +683,14 @@ input {
   color: inherit;
 }
 
+.tree-frame .link-button {
+  text-decoration: none;
+}
+
+.tree-frame .link-button:hover {
+  text-decoration: underline;
+}
+
 .tree-toggle {
   margin: 0;
   padding: 0 0.3rem;
