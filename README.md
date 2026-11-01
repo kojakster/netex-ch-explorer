@@ -2,7 +2,7 @@
 
 Lokales Werkzeug, um Schweizer NeTEx-Dateien visuell und selbsterklärend zu verstehen: Fahrt als Fahrplan, Herkunft jeder Angabe bis zur Stelle im XML, Frame-Farben, Objekte und Verweise, Fehler mit Guide-Verweis.
 
-> **Stand:** Erste Ausbaustufe (Phasen 0–5 des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md)) abgeschlossen; Nachweis und Gesamtübersicht der Grenzen in [docs/test-report.md](docs/test-report.md). Die Anwendung zeigt den Guide-Stand, lädt jedes Beispiel des Guides, listet Fahrten, sucht Objekte, zeigt jedes Objekt mit Frame, Stelle, Verweisen vor und zurück und exakter Markierung im XML, und zeigt jede Fahrt als Fahrplan: Halte in XML-Reihenfolge, berechnete Zeiten mit Rechenkette, Tageswechsel, Betriebstage, Angebote, Teilstrecken und Hinweise, jede Angabe mit Herkunft. Eigene Dateien (XML, mehrere XML oder ZIP) öffnet der Dialog „Datei öffnen“; das Tool erkennt ihre Version und prüft CH-2.0-Dateien mit XSD, den allgemeinen Guide-Regeln und den Schweizer Kernregeln für den Fahrplan (Ergebnis „geprüft gegen Entwurf <Commit>“). Unter Windows noch **nicht getestet**. Was nicht geht: [Bekannte Grenzen](#bekannte-grenzen).
+> **Stand:** Erste Ausbaustufe abgeschlossen (Phasen 0–5 des [UMSETZUNGSPLAN.md](UMSETZUNGSPLAN.md), 01.11.2026): Guide-Beispiele und eigene Dateien öffnen, Fahrtansicht mit berechneten Zeiten und Herkunft bis zur Stelle im XML, Objekt-Explorer mit Referenzen, Prüfung gegen XSD, Guide-Regeln und Schweizer Kernregeln. Unter Windows noch **nicht getestet**.
 
 ## Ordnerstruktur
 
