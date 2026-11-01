@@ -41,7 +41,7 @@ export function OperatingDays({ validities, ...source }: OperatingDaysProps) {
               {t("days.summary", {
                 from: first,
                 to: last,
-                period: days.periodDays ?? "?",
+                period: t("unit.days", { count: days.periodDays ?? "?" }),
                 count: days.validCount ?? "?",
               })}
             </summary>

@@ -531,6 +531,30 @@ describe("JourneyView als Fahrplananzeige", () => {
     expect(within(head).getByText("5 Betriebstage (7 Tage im Zeitraum)")).toBeTruthy();
   });
 
+  it("schreibt bei einem Betriebstag und einem Tag im Zeitraum die Einzahl", () => {
+    const [validity] = JOURNEY_VIEW.validities;
+    if (validity === undefined || validity.days === null) {
+      throw new Error("Testdaten ohne Betriebstage");
+    }
+    view({
+      validities: [{ ...validity, days: { ...validity.days, validCount: 1, periodDays: 1 } }],
+    });
+    const head = document.querySelector(".journey-head") as HTMLElement;
+    expect(within(head).getByText("1 Betriebstag (1 Tag im Zeitraum)")).toBeTruthy();
+  });
+
+  it("zeigt die Legende der Frame-Farben nur einmal, auch bei offener Aufbau-Übersicht", () => {
+    view({}, true);
+    (document.querySelector(".structure") as HTMLDetailsElement).open = true;
+    expect(document.querySelectorAll(".legend").length).toBe(1);
+  });
+
+  it("zeigt die Legende ohne „Herkunft zeigen“ nur in der Aufbau-Übersicht", () => {
+    view({}, false);
+    expect(document.querySelectorAll(".legend").length).toBe(1);
+    expect(document.querySelector(".structure .legend")).not.toBeNull();
+  });
+
   it("zeigt das Abzeichen der Produktkategorie in der Überschrift, wenn sie vorliegt", () => {
     const category: CategoryInfo = {
       role: "journey",

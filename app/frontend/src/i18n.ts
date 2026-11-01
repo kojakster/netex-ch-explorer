@@ -10,9 +10,16 @@ export type Params = Readonly<Record<string, string | number>>;
 export const MESSAGES: Readonly<Record<string, Messages>> = { "de-CH": deCH, en };
 export const DEFAULT_LANGUAGE = "de-CH";
 
-/** Setzt die Parameter in den Text des Schlüssels ein; fehlt der Schlüssel, erscheint er selbst. */
+/** Endung des Schlüssels mit dem Text für die Einzahl (`count` ist genau 1). */
+export const SINGULAR_SUFFIX = ".one";
+
+/**
+ * Setzt die Parameter in den Text des Schlüssels ein; fehlt der Schlüssel, erscheint er selbst.
+ * Ist der Parameter `count` genau 1 und gibt es `<Schlüssel>.one`, gilt dieser Text (Einzahl).
+ */
 export function translate(messages: Messages, key: string, params: Params = {}): string {
-  const template = messages[key];
+  const singular = String(params.count) === "1" ? messages[`${key}${SINGULAR_SUFFIX}`] : undefined;
+  const template = singular ?? messages[key];
   if (template === undefined) {
     return key;
   }

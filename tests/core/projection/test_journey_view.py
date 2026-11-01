@@ -629,3 +629,13 @@ def test_operator_reference_without_target_gives_the_reason() -> None:
     )
     operator = scenario.view().operator
     assert (operator.status, operator.text) == (LookupStatus.NOT_RESOLVED, "nirgends")
+
+
+def test_operator_reference_ignores_an_object_of_another_type_with_the_same_id() -> None:
+    """Aufgelöst wird über (ID, Typ): eine `Authority` mit derselben ID ist kein Betreiber."""
+    scenario = Scenario(
+        journey_extra="<OperatorRef ref='op'/>",
+        extra="<Authority id='op'><Name>Falsch</Name></Authority><Operator id='anderer'/>",
+    )
+    operator = scenario.view().operator
+    assert (operator.status, operator.text) == (LookupStatus.NOT_RESOLVED, "op")

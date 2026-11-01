@@ -130,3 +130,40 @@ def test_missing_parts_are_marked() -> None:
     assert journeys["t1"].train_numbers[0].element is not None
     assert journeys["j4"].line.text == "Linie vier"
     assert journeys["j4"].first_stop.status is LookupStatus.ABSENT
+
+
+def test_category_reference_ignores_an_object_of_another_type_with_the_same_id() -> None:
+    """Aufgelöst wird über (ID, Typ): ein `Operator` mit derselben ID ist kein Ziel."""
+    index = open_dataset(
+        [
+            SourceFile(
+                "t",
+                b"<R><ServiceJourney id='j'><TypeOfProductCategoryRef ref='x'/>"
+                b"</ServiceJourney><Operator id='x'><ShortName>FALSCH</ShortName></Operator>"
+                b"<TypeOfProductCategory id='y'/></R>",
+            )
+        ],
+        (),
+        REF_TARGETS,
+    ).index
+    [journey] = list_journeys(index)
+    assert journey.category.status is LookupStatus.NOT_RESOLVED
+    assert journey.category.text == "x"
+
+
+def test_category_without_short_name_is_absent_not_invented() -> None:
+    index = open_dataset(
+        [
+            SourceFile(
+                "t",
+                b"<R><ServiceJourney id='j'><TypeOfProductCategoryRef ref='x'/>"
+                b"</ServiceJourney><TypeOfProductCategory id='x'><Name>Nur Name</Name>"
+                b"</TypeOfProductCategory></R>",
+            )
+        ],
+        (),
+        REF_TARGETS,
+    ).index
+    [journey] = list_journeys(index)
+    assert journey.category.status is LookupStatus.ABSENT
+    assert journey.category.text is None

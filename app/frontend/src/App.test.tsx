@@ -106,6 +106,15 @@ describe("App", () => {
 });
 
 describe("App mit Datensatz", () => {
+  it("kehrt von der Hilfe zur Hauptansicht zurück, wenn ein Beispiel gewählt wird", async () => {
+    render(<App dataSource={source()} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Hilfe" }));
+    expect(screen.getByText("Durchgeführte Prüfungen")).toBeTruthy();
+    await chooseExample("ch20_three_stops.xml");
+    expect(await screen.findByRole("tab", { name: "Fahrten" })).toBeTruthy();
+    expect(screen.queryByText("Durchgeführte Prüfungen")).toBeNull();
+  });
+
   it("öffnet ein Beispiel, zeigt Fahrten und führt über Objekt zur XML-Stelle", async () => {
     const getObjectXml = vi.fn(source().getObjectXml);
     render(<App dataSource={source({ getObjectXml })} />);

@@ -426,3 +426,23 @@ Code-Review über `0edce54..3ff2d0c`; alle 10 Funde behoben in `65fa1e9`. Festle
 | 10 Origin-Test prüft nur `!= 403` | prüft `== 404` | `test_origin_check_uses_the_port_the_server_runs_on` |
 
 Nachweis: `scripts/check.py` grün; `scripts/test.py` 825 Tests bestanden (Guide b7ac158, XSD 73b337e); Vitest 163 Tests; E2E zweimal bestanden (je rund 19 s), der zweite Lauf, während eine Instanz auf Port 8765 mit hochgeladener Datei lief: `work/8765/` blieb erhalten, nach dem Beenden war `work/` leer.
+
+### Überarbeitung der Oberfläche (01.11.2026)
+
+Gegenstand: Commits `0124ec8`, `baf26d3`, `0e92ae4` (Teile A bis C) samt Kern-Erweiterung (`category` der Fahrtenliste, `operator` der Fahrtansicht). Festlegungen: [decisions.md](decisions.md) „Überarbeitung der Oberfläche“ und „Review der Oberflächen-Überarbeitung“.
+
+**Code-Review und Sicherheits-Review** über `b740215..HEAD`.
+
+| Fund | Behebung | Test |
+|---|---|---|
+| Legende der Frame-Farben doppelt (Herkunft zeigen + aufgeklappte Aufbau-Übersicht) | `StructureOverview` zeigt die Legende nur ohne „Herkunft zeigen“ | `JourneyView.test.tsx`, `StructureOverview.test.tsx` |
+| Zähltexte ohne Einzahl („1 Betriebstage“, „1 Meldungen, davon Fehler“, „1 Blätter“, „1 Treffer“, Meldungen des Kerns) | Konvention `<Schlüssel>.one` in `translate`, Texte de-CH/en | `i18n.test.ts`, `ExampleList.test.tsx`, `JourneyView.test.tsx`, `test_help_texts.py` |
+| Datensatz-Wahl in der Kopfzeile ändert in der Hilfe nichts sichtbar (Ansicht blieb „Hilfe“) | `openDataset` setzt die Ansicht auf die Hauptansicht | `App.test.tsx` |
+| Reiter links ohne Tastaturbedienung (alle mit Tab erreichbar, keine Pfeiltasten) | Rollender Tabindex, Pfeiltasten/Pos1/Ende | `SidebarTabs.test.tsx` |
+| Kern: Auflösung von `category`/`operator` über (ID, Typ) nicht durch Test belegt | Verhalten war schon richtig; Tests ergänzt (gleiche ID, anderer Typ ⇒ nicht aufgelöst; Kategorie ohne `ShortName` ⇒ fehlt, nichts erfunden) | `test_journeys.py`, `test_journey_view.py` |
+
+Sicherheit: kein `dangerouslySetInnerHTML`, kein `innerHTML`, kein `setAttribute`; `style` nur über React (CSSOM) mit Farben aus `config/` (CSP `style-src 'self'` bleibt streng, keine Inline-Styles im HTML); die neuen API-Felder `category` und `operator` sind Texte aus der Datei (gleiche Umwandlung wie bisherige Angaben), es gibt keine neuen Eingaben und keine neuen Endpunkte. Keine konkreten Funde.
+
+Verloren gegangene Funktionen gegenüber vorher: keine gefunden (Verlauf, Objektansicht, Suche, Diagnosen mit Sprung, Rechenkette, Herkunftskette, XML-Markierung, Datei öffnen, Prüfen inkl. „Trotzdem als CH 2.0 prüfen“, Guide-Status, Sprachwechsel sind erreichbar; „Geöffnete Dateien“ und „Prüfen“ stehen im Reiter „Prüfung“).
+
+Nachweis: `scripts/check.py` grün; pytest 835 Tests, Abdeckung `app/core` 98 %; Vitest 234 Tests; E2E siehe Commit-Nachricht und Rückmeldung (`npm run e2e`).

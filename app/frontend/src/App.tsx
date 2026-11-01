@@ -192,6 +192,7 @@ export function App({ dataSource }: AppProps) {
     setPositionTarget(null);
     setDetailsOpen(false);
     setSidebarTab("journeys");
+    setView("main");
     openRequest.current += 1;
     const request = openRequest.current;
     open()

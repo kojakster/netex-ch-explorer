@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { OriginContext } from "../origin";
 import { JOURNEY_VIEW } from "../testData";
 import type { JourneyViewInfo } from "../types";
 import { StructureOverview } from "./StructureOverview";
@@ -8,15 +9,31 @@ const COLORS = [
   { key: "TimetableFrame", background: "#0057B8", text: "#FFFFFF" },
 ];
 
-function renderOverview(journey: JourneyViewInfo = JOURNEY_VIEW, selected: string | null = null) {
+function renderOverview(
+  journey: JourneyViewInfo = JOURNEY_VIEW,
+  selected: string | null = null,
+  showOrigin = false,
+) {
   const onSelect = vi.fn();
   render(
-    <StructureOverview journey={journey} colors={COLORS} selected={selected} onSelect={onSelect} />,
+    <OriginContext.Provider value={showOrigin}>
+      <StructureOverview
+        journey={journey}
+        colors={COLORS}
+        selected={selected}
+        onSelect={onSelect}
+      />
+    </OriginContext.Provider>,
   );
   return onSelect;
 }
 
 describe("StructureOverview", () => {
+  it("zeigt die Legende nicht, wenn „Herkunft zeigen“ sie schon zeigt", () => {
+    renderOverview(JOURNEY_VIEW, null, true);
+    expect(screen.queryByRole("region", { name: "Frame-Farben" })).toBeNull();
+  });
+
   it("ist eingeklappt und trägt die Frage als Überschrift", () => {
     renderOverview();
     const details = screen.getByText("Wie ist diese Fahrt aufgebaut?").closest("details");

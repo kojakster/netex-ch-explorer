@@ -38,6 +38,36 @@ describe("ExampleList", () => {
   });
 });
 
+describe("ExampleList: Einzahl und Mehrzahl", () => {
+  const counted = (result: "notes" | "errors", count: number): ExampleInfo => ({
+    ...BASE,
+    result,
+    counts: result === "notes" ? { info: count } : { error: count },
+  });
+
+  it("schreibt 1 Hinweis und 2 Hinweise", () => {
+    const { rerender } = render(
+      <ExampleList examples={[counted("notes", 1)]} selected={null} onOpen={() => undefined} />,
+    );
+    expect(screen.getByText("1 Hinweis")).toBeTruthy();
+    rerender(
+      <ExampleList examples={[counted("notes", 2)]} selected={null} onOpen={() => undefined} />,
+    );
+    expect(screen.getByText("2 Hinweise")).toBeTruthy();
+  });
+
+  it("schreibt 1 Meldung und 3 Meldungen", () => {
+    const { rerender } = render(
+      <ExampleList examples={[counted("errors", 1)]} selected={null} onOpen={() => undefined} />,
+    );
+    expect(screen.getByText("1 Meldung (Fehler)")).toBeTruthy();
+    rerender(
+      <ExampleList examples={[counted("errors", 3)]} selected={null} onOpen={() => undefined} />,
+    );
+    expect(screen.getByText("3 Meldungen, davon Fehler")).toBeTruthy();
+  });
+});
+
 describe("exampleStatusSymbol", () => {
   it("hat für jedes Ergebnis ein Symbol, solange geprüft wird keines", () => {
     const results = ["clean", "notes", "errors", "check_failed", "unreadable"] as const;

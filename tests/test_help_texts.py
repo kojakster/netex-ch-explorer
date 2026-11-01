@@ -137,6 +137,7 @@ def test_default_colors_are_distinct() -> None:
 _FRONTEND_SOURCE = PROJECT_ROOT / "app" / "frontend" / "src"
 _TEMPLATE_KEY = re.compile(r"`([a-z][A-Za-z]*\.[^`]*\$\{[^`]*)`")
 _PLACEHOLDER = re.compile(r"\$\{[^}]*\}")
+_PLACEHOLDER_NAME = re.compile(r"\{(\w+)\}")
 
 
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
@@ -214,16 +215,37 @@ def _mentions(text: str, key: str) -> bool:
     return text == key or f'"{key}"' in text
 
 
+def _is_singular_of_existing(key: str, messages: dict[str, str]) -> bool:
+    """`<Schlüssel>.one` ist der Einzahltext eines vorhandenen Schlüssels."""
+    return key.endswith(".one") and key.removesuffix(".one") in messages
+
+
+def test_singular_texts_belong_to_a_key_and_keep_its_placeholders() -> None:
+    """Jeder Einzahltext hat einen Grundschlüssel und nennt höchstens dessen Platzhalter."""
+    for language in SUPPORTED_LANGUAGES:
+        messages = load_messages(language)
+        singulars = [key for key in messages if key.endswith(".one")]
+        assert singulars
+        for key in singulars:
+            base = key.removesuffix(".one")
+            assert base in messages, key
+            assert set(_PLACEHOLDER_NAME.findall(messages[key])) <= set(
+                _PLACEHOLDER_NAME.findall(messages[base])
+            ), key
+
+
 def test_no_unused_texts() -> None:
     """Jeder Schlüssel der Sprachdateien wird gebraucht: im Code als Text, als Schlüssel einer
     Aufzählung bzw. Liste (Hilfeseiten-Test) oder über einen zusammengesetzten Schlüssel."""
     texts = _source_texts()
     patterns = _key_patterns(texts)
     required = required_keys()
+    messages = load_messages(SUPPORTED_LANGUAGES[0])
     unused = sorted(
         key
-        for key in load_messages(SUPPORTED_LANGUAGES[0])
+        for key in messages
         if key not in required
+        and not _is_singular_of_existing(key, messages)
         and not any(_mentions(text, key) for text in texts)
         and not any(pattern.match(key) for pattern in patterns)
     )

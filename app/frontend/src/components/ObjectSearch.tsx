@@ -60,7 +60,7 @@ export function ObjectSearch({ dataset, onSelect }: ObjectSearchProps) {
         <>
           <p className="search-count">
             {t("search.count", {
-              total,
+              count: total,
               from: total === 0 ? 0 : offset + 1,
               to: Math.min(offset + PAGE_SIZE, total),
             })}

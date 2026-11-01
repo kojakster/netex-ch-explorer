@@ -45,7 +45,7 @@ describe("GuideStatusBox", () => {
     expect(screen.getByText("b7ac158").getAttribute("title")).toBe(GUIDE.commit);
     expect(screen.getByText("73b337e")).toBeTruthy();
     expect(screen.getByText("mit diesem Stand getestet")).toBeTruthy();
-    expect(screen.getByText("1 Blätter gelesen")).toBeTruthy();
+    expect(screen.getByText("1 Blatt gelesen")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Guide: ok" }));
     expect(screen.queryByText("next")).toBeNull();
   });

@@ -25,6 +25,20 @@ describe("translate", () => {
     expect(translate({ k: "a {x} b" }, "k")).toBe("a {x} b");
   });
 
+  it("wählt bei count 1 den Einzahltext, sonst den Mehrzahltext", () => {
+    const messages = { k: "{count} Tage", "k.one": "{count} Tag" };
+    expect(translate(messages, "k", { count: 1 })).toBe("1 Tag");
+    expect(translate(messages, "k", { count: "1" })).toBe("1 Tag");
+    expect(translate(messages, "k", { count: 0 })).toBe("0 Tage");
+    expect(translate(messages, "k", { count: 2 })).toBe("2 Tage");
+    expect(translate(messages, "k", { count: "?" })).toBe("? Tage");
+    expect(translate(messages, "k")).toBe("{count} Tage");
+  });
+
+  it("nimmt bei count 1 den Mehrzahltext, wenn es keinen Einzahltext gibt", () => {
+    expect(translate({ k: "{count}×" }, "k", { count: 1 })).toBe("1×");
+  });
+
   it("zeigt bei fehlendem Schlüssel den Schlüssel selbst", () => {
     expect(translate({}, "fehlt.ganz")).toBe("fehlt.ganz");
   });
@@ -45,6 +59,27 @@ describe("Sprachdateien", () => {
       for (const value of Object.values(messages)) {
         expect(value.trim()).not.toBe("");
       }
+    }
+  });
+
+  it("haben Einzahltexte nur zu vorhandenen Schlüsseln, gleich in allen Sprachen", () => {
+    const singulars = reference.filter((key) => key.endsWith(".one"));
+    expect(singulars.length).toBeGreaterThan(0);
+    for (const key of singulars) {
+      expect(reference, key).toContain(key.slice(0, -".one".length));
+    }
+  });
+
+  it("nennen deutsche und englische Zähltexte Einzahl und Mehrzahl richtig", () => {
+    const expected: Record<string, [string, string]> = {
+      "de-CH": ["1 Betriebstag (1 Tag im Zeitraum)", "2 Betriebstage (7 Tage im Zeitraum)"],
+      en: ["1 operating day (1 day in the period)", "2 operating days (7 days in the period)"],
+    };
+    for (const [language, [one, many]] of Object.entries(expected)) {
+      const messages = messagesFor(language);
+      const days = (count: number) => translate(messages, "unit.days", { count });
+      expect(translate(messages, "header.days", { count: 1, period: days(1) })).toBe(one);
+      expect(translate(messages, "header.days", { count: 2, period: days(7) })).toBe(many);
     }
   });
 

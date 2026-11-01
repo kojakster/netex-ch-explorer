@@ -160,7 +160,10 @@ function HeaderDays({ journey, ...source }: SourceProps & { journey: JourneyView
             </Sourced>
             {" · "}
             <Sourced element={days.validDayBits ?? days.condition} {...source}>
-              {t("header.days", { count: days.validCount ?? "?", period: days.periodDays ?? "?" })}
+              {t("header.days", {
+                count: days.validCount ?? "?",
+                period: t("unit.days", { count: days.periodDays ?? "?" }),
+              })}
             </Sourced>
           </span>
         );

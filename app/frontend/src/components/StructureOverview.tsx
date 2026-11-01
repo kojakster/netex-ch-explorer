@@ -1,5 +1,6 @@
 import { colorOf } from "../colors";
 import { useI18n } from "../i18n";
+import { useShowOrigin } from "../origin";
 import { buildStructure, type StructureBox, type StructureRow } from "../structure";
 import type { JourneyViewInfo } from "../types";
 import { FrameLegend } from "./FrameLegend";
@@ -72,11 +73,13 @@ export function StructureOverview({
   ...source
 }: SourceProps & { journey: JourneyViewInfo }) {
   const { t } = useI18n();
+  // Mit „Herkunft zeigen“ steht die Legende schon oben in der Fahrtansicht; nur einmal zeigen.
+  const showOrigin = useShowOrigin();
   return (
     <details className="structure">
       <summary>{t("structure.title")}</summary>
       <p className="note">{t("structure.intro")}</p>
-      <FrameLegend colors={source.colors} />
+      {!showOrigin && <FrameLegend colors={source.colors} />}
       {buildStructure(journey).map((row) => (
         <Row key={row.id} row={row} {...source} />
       ))}
