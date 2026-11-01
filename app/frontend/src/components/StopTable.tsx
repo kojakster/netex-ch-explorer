@@ -48,12 +48,11 @@ function accessKey(stop: StopInfo): AccessKey {
   return boarding === "false" && alighting === "false" ? "none" : "unknown";
 }
 
-/** StopPlace und Quay des Halts mit ihrer Herkunft (nur mit „Herkunft zeigen“). */
+/** StopPlace des Halts mit seiner Herkunft (nur mit „Herkunft zeigen“); die Kante steht in der Spalte Gleis/Kante. */
 function Places({ stop, ...source }: SourceProps & { stop: StopInfo }) {
   const { t } = useI18n();
   const place = stop.stopPlace;
-  const quay = stop.quay;
-  if (place.status === "external_or_unloaded" && quay.status === "external_or_unloaded") {
+  if (place.status === "external_or_unloaded" && stop.quay.status === "external_or_unloaded") {
     return (
       <div className="stop-places lookup-missing">
         {t("stop.notInFile")} <code>{place.text}</code>
@@ -65,10 +64,6 @@ function Places({ stop, ...source }: SourceProps & { stop: StopInfo }) {
       <dt>{t("stop.stopPlace")}</dt>
       <dd>
         <ValueText value={place} {...source} />
-      </dd>
-      <dt>{t("stop.quay")}</dt>
-      <dd>
-        <ValueText value={quay} {...source} />
       </dd>
     </dl>
   );
@@ -180,6 +175,9 @@ export function StopTable({ journey, selectedTime, onSelectTime, ...source }: St
               </td>
               <td className="platform-cell">
                 <ValueText value={stop.quay} {...source} />
+                {showOrigin && stop.quay.element !== null && (
+                  <span className="flag-name"> {t("stop.quayName")}</span>
+                )}
               </td>
               <td className="notes-cell">
                 <StopNotes stop={stop} guideCommit={journey.guideCommit} {...source} />

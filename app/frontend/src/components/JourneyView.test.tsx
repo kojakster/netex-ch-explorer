@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { vi } from "vitest";
 import { I18nContext, messagesFor, translate } from "../i18n";
 import { OriginContext } from "../origin";
 import { JOURNEY_VIEW } from "../testData";
@@ -21,7 +22,10 @@ import { OperatingDays } from "./OperatingDays";
 import { StopTable } from "./StopTable";
 import { TimeCell } from "./TimeCell";
 
-const COLORS = [{ key: "ServiceFrame", background: "#1B8A2F", text: "#000000" }];
+const COLORS = [
+  { key: "ServiceFrame", background: "#1B8A2F", text: "#000000" },
+  { key: "SiteFrame", background: "#8A1B6F", text: "#ffffff" },
+];
 
 function withLanguage(language: string, children: React.ReactNode) {
   const messages = messagesFor(language);
@@ -451,11 +455,51 @@ describe("StopTable ohne und mit „Herkunft zeigen“", () => {
   it("zeigt mit „Herkunft zeigen“ StopPlace, Quay und die Werte von ForBoarding/ForAlighting", () => {
     render(table(true));
     expect(screen.getAllByText("Haltestelle (StopPlace)")).toHaveLength(3);
-    expect(screen.getAllByText("Kante (Quay)")).toHaveLength(3);
+    expect(screen.queryByText("Kante (Quay)")).toBeNull();
     expect(screen.getAllByText("ForBoarding").length).toBeGreaterThan(0);
     expect((document.querySelector(".stop-name") as HTMLElement).style.borderLeftColor).not.toBe(
       "",
     );
+  });
+
+  it("zeigt in der Spalte Gleis/Kante mit „Herkunft zeigen“ Frame-Farbe und Quay, ohne bleibt sie ruhig", () => {
+    const { rerender } = render(table(true));
+    const cells = document.querySelectorAll(".platform-cell");
+    expect(cells.length).toBe(3);
+    for (const cell of cells) {
+      expect(cell.textContent).toContain("Quay");
+      expect((cell.querySelector(".sourced") as HTMLElement).style.borderLeftColor).not.toBe("");
+    }
+    rerender(table(false));
+    for (const cell of document.querySelectorAll(".platform-cell")) {
+      expect(cell.textContent).not.toContain("Quay");
+      expect(cell.querySelector(".sourced-plain")).not.toBeNull();
+    }
+  });
+
+  it("öffnet den Quay-Wert in beiden Modi die Herkunft", () => {
+    const stop = JOURNEY_VIEW.stops[0];
+    if (stop === undefined || stop.quay.element === null) {
+      throw new Error("Testdaten ohne Quay");
+    }
+    for (const showOrigin of [true, false]) {
+      const onSelect = vi.fn();
+      const { unmount } = render(
+        <OriginContext.Provider value={showOrigin}>
+          <StopTable
+            journey={JOURNEY_VIEW}
+            selectedTime={null}
+            onSelectTime={() => undefined}
+            {...PROPS}
+            onSelect={onSelect}
+          />
+        </OriginContext.Provider>,
+      );
+      const button = document.querySelector(".platform-cell .sourced") as HTMLElement;
+      fireEvent.click(button);
+      expect(onSelect).toHaveBeenCalledWith(stop.quay.element.id);
+      unmount();
+    }
   });
 
   it("nennt die Spalte „Gleis“ bei rail, „Kante“ bei anderem Modus und „Gleis/Kante“ ohne TransportMode", () => {
