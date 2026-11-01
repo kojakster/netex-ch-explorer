@@ -10,6 +10,7 @@ import type {
   JourneyViewInfo,
   ObjectDetail,
   ObjectInfo,
+  ObjectTreeResult,
   ReferenceInfo,
   StepInfo,
   StopInfo,
@@ -587,6 +588,62 @@ export const JOURNEY_VIEW: JourneyViewInfo = {
   ],
 };
 
+function treeObject(id: number, name: string, xmlId: string, colorKey: string | null): ObjectInfo {
+  return {
+    ...JOURNEY_OBJECT,
+    id: `SYNTHETICDATASET01.${id}`,
+    name,
+    xmlId,
+    label: null,
+    colorKey,
+    notRelevant: colorKey === "notRelevant",
+  };
+}
+
+/** Objektliste: ein Frame mit Objekt und Unterobjekt, ein Frame ohne Inhalt, ein Objekt ausserhalb. */
+export const OBJECT_TREE: ObjectTreeResult = {
+  entries: [
+    {
+      object: treeObject(1, "TimetableFrame", "ch:1:TimetableFrame:SYN", "TimetableFrame"),
+      isFrame: true,
+      depth: 0,
+      matches: true,
+    },
+    {
+      object: {
+        ...treeObject(2, "StopPlace", "ch:1:sloid:SYN1", "TimetableFrame"),
+        label: "Spiez",
+      },
+      isFrame: false,
+      depth: 1,
+      matches: true,
+    },
+    {
+      object: treeObject(3, "Quay", "ch:1:sloid:SYN1:0:8", "TimetableFrame"),
+      isFrame: false,
+      depth: 2,
+      matches: false,
+    },
+    {
+      object: treeObject(4, "SiteFacilitySet", "ch:1:sfs:SYN", "notRelevant"),
+      isFrame: false,
+      depth: 1,
+      matches: true,
+    },
+  ],
+  outside: [
+    {
+      object: treeObject(5, "Loose", "ch:1:loose", null),
+      isFrame: false,
+      depth: 0,
+      matches: true,
+    },
+  ],
+  total: 5,
+  shown: 5,
+  truncated: false,
+};
+
 /** Synthetische Datenquelle; einzelne Aufrufe lassen sich ersetzen. */
 export function fakeSource(overrides: Partial<DataSource> = {}): DataSource {
   return {
@@ -598,7 +655,7 @@ export function fakeSource(overrides: Partial<DataSource> = {}): DataSource {
     closeDataset: () => Promise.resolve(),
     getJourneys: () => Promise.resolve(JOURNEYS),
     getJourney: () => Promise.resolve(JOURNEY_VIEW),
-    searchObjects: () => Promise.resolve({ total: 1, items: [JOURNEY_OBJECT] }),
+    getObjectTree: () => Promise.resolve(OBJECT_TREE),
     getDiagnostics: () => Promise.resolve([]),
     getObject: (id) => Promise.resolve(id === TARGET_OBJECT.id ? TARGET_DETAIL : DETAIL),
     getObjectXml: () => Promise.resolve(XML),

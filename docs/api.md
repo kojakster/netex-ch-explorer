@@ -178,9 +178,17 @@ Schritte (immer in dieser Reihenfolge): `xsd` (lxml gegen `xsd/xsd/NeTEx_publica
 
 Fahrten (`ServiceJourney`, `TemplateServiceJourney`) mit `trainNumbers`, `departureTime`, `departureDayOffset`, `line`, `firstStop`, `lastStop`, `category` (`ShortName` der `TypeOfProductCategory` der Fahrt, Abzeichen in der Liste). Jede Angabe: `{ "status": "found | absent | not_resolved | ambiguous | external_or_unloaded", "text": "…", "objectId": "…" }`. `text` ist bei `not_resolved`/`ambiguous` die gesuchte Referenz; `objectId` zeigt auf die Herkunft (Element der Angabe bzw. die Referenz).
 
-### `GET /api/datasets/{id}/objects?type=&q=&limit=&offset=`
+### `GET /api/datasets/{id}/objects?type=&q=`
 
-Einfache Objektsuche: `type` = Elementname, `q` = Teiltext in ID oder Name (ohne Gross-/Kleinschreibung, höchstens 200 Zeichen), `limit` 1–200 (Standard 50), `offset` ≥ 0. Antwort `{ "total": 3, "items": [Objekt, …] }`.
+Objekte (Elemente mit `id`) nach Frames gegliedert. `type` = Elementname, `q` = Teiltext in ID oder Name (ohne Gross-/Kleinschreibung, höchstens 200 Zeichen). Antwort:
+
+```json
+{ "entries": [{ "object": Objekt, "isFrame": true, "depth": 0, "matches": true }, …],
+  "outside": [{ "object": Objekt, "isFrame": false, "depth": 0, "matches": true }, …],
+  "total": 47, "shown": 47, "truncated": false }
+```
+
+`entries` und `outside` stehen in Vorordnung (Dokumentreihenfolge); `depth` ist die Einrückung. In `entries` sind Frames Kopfzeilen (`isFrame`), verschachtelte Frames eine Ebene tiefer, ihre Objekte darunter, ein Objekt unter seinem nächsten übergeordneten Objekt bzw. Frame (Elemente ohne `id` gliedern nicht). `outside` enthält Objekte ausserhalb jedes Frames. Bei aktivem Filter kommen die Vorfahren eines Treffers zum Zusammenhang hinzu (`matches: false`). Pro Antwort höchstens 5000 Treffer (`MAX_TREE_OBJECTS` in `app/core/object_tree.py`, Frames eingeschlossen); `total` zählt alle Treffer, `shown` die zurückgegebenen, `truncated` meldet die Kürzung. Der Baum entsteht mit wenigen Abfragen je Verschachtelungsebene, nicht je Objekt.
 
 ### `GET /api/objects/{id}`
 

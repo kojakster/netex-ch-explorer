@@ -14,6 +14,7 @@ from app.core.guide.links import GuideLinks, guide_url
 from app.core.index.dataset_index import ElementRow, FileSummary, IndexedDiagnostic
 from app.core.index.references import ResolveStatus
 from app.core.messages import MessageKey, Severity
+from app.core.object_tree import ObjectTree, TreeEntry
 from app.core.projection.common import Lookup, LookupStatus
 from app.core.projection.journeys import JourneySummary
 from app.core.provenance import ChainLink, LinkKind
@@ -170,11 +171,27 @@ class DatasetOut(ApiModel):
     validation: ValidationOut | None
 
 
-class ObjectSearchOut(ApiModel):
-    """Antwort der einfachen Objektsuche."""
+class ObjectTreeEntryOut(ApiModel):
+    """Ein Eintrag des Objektbaums: Objekt, Einrückungsebene und ob es selbst ein Treffer ist."""
 
+    object: ObjectOut
+    is_frame: bool
+    depth: int
+    matches: bool
+
+
+class ObjectTreeOut(ApiModel):
+    """Antwort der Objektliste: Frames mit ihren Objekten und Objekte ausserhalb von Frames.
+
+    Beide Listen stehen in Vorordnung; `depth` gibt die Einrückung an. `total` sind alle Treffer,
+    `shown` die zurückgegebenen (`truncated`: gekürzt auf `shown`).
+    """
+
+    entries: list[ObjectTreeEntryOut]
+    outside: list[ObjectTreeEntryOut]
     total: int
-    items: list[ObjectOut]
+    shown: int
+    truncated: bool
 
 
 class PropertyReferenceOut(ApiModel):
@@ -339,6 +356,28 @@ class Converter:
             frame=frame_ref,
             color_key=color_key(element, frame),
             not_relevant=element.not_relevant,
+        )
+
+    def object_tree(self, tree: ObjectTree) -> ObjectTreeOut:
+        """Objektbaum mit Kurzangaben je Eintrag."""
+
+        def entries(items: list[TreeEntry]) -> list[ObjectTreeEntryOut]:
+            return [
+                ObjectTreeEntryOut(
+                    object=self.object(item.element),
+                    is_frame=item.element.is_frame,
+                    depth=item.depth,
+                    matches=item.matches,
+                )
+                for item in items
+            ]
+
+        return ObjectTreeOut(
+            entries=entries(tree.entries),
+            outside=entries(tree.outside),
+            total=tree.total,
+            shown=tree.shown,
+            truncated=tree.truncated,
         )
 
     def dataset(self) -> DatasetOut:

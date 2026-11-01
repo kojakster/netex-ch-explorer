@@ -99,18 +99,28 @@ def test_journeys(client: TestClient) -> None:
     assert journey["category"]["text"] == "SYN"
 
 
-def test_search_detail_and_xml(client: TestClient) -> None:
+def matches(client: TestClient, dataset_id: str, **params: str) -> list[dict[str, Any]]:
+    """Treffer der Objektliste (ohne Vorfahren zum Zusammenhang) als Objekt-Kurzangaben."""
+    tree = client.get(f"/api/datasets/{dataset_id}/objects", params=params).json()
+    return [e["object"] for e in [*tree["entries"], *tree["outside"]] if e["matches"]]
+
+
+def test_object_tree_detail_and_xml(client: TestClient) -> None:
     dataset_id = open_example(client)["id"]
-    search = client.get(
+    tree = client.get(
         f"/api/datasets/{dataset_id}/objects", params={"type": "Quay", "q": "SYN2"}
     ).json()
-    assert search["total"] == 1
-    [quay] = search["items"]
-    assert (quay["name"], quay["xmlId"], quay["colorKey"]) == (
-        "Quay",
-        "ch:1:sloid:SYN2:0:1",
-        "SiteFrame",
-    )
+    assert (tree["total"], tree["shown"], tree["truncated"]) == (1, 1, False)
+    assert tree["outside"] == []
+    shape = [(e["object"]["name"], e["isFrame"], e["depth"], e["matches"]) for e in tree["entries"]]
+    assert shape == [
+        ("CompositeFrame", True, 0, False),
+        ("SiteFrame", True, 1, False),
+        ("StopPlace", False, 2, False),
+        ("Quay", False, 3, True),
+    ]
+    quay = tree["entries"][-1]["object"]
+    assert (quay["xmlId"], quay["colorKey"]) == ("ch:1:sloid:SYN2:0:1", "SiteFrame")
     assert quay["frame"]["name"] == "SiteFrame"
     detail = client.get(f"/api/objects/{quay['id']}").json()
     assert detail["path"].endswith("/StopPlace[2]/quays/Quay")
@@ -125,17 +135,16 @@ def test_search_detail_and_xml(client: TestClient) -> None:
     assert child["text"][child["focusFrom"] : child["focusTo"]] == "<PublicCode>2</PublicCode>"
 
 
-def test_search_limits(client: TestClient) -> None:
+def test_object_tree_without_filter_and_limits(client: TestClient) -> None:
     dataset_id = open_example(client)["id"]
     url = f"/api/datasets/{dataset_id}/objects"
-    assert client.get(url, params={"limit": 201}).status_code == 422
-    assert client.get(url, params={"offset": -1}).status_code == 422
+    tree = client.get(url).json()
+    assert tree["total"] == tree["shown"] > 6
+    assert tree["entries"][0]["object"]["name"] == "CompositeFrame"
+    assert all(entry["matches"] for entry in tree["entries"])
     assert client.get(url, params={"q": "x" * 201}).status_code == 422
-    assert client.get(url, params={"offset": 10**20}).status_code == 422
     xml_url = f"/api/datasets/{dataset_id}/xml"
     assert client.get(xml_url, params={"file": 10**20, "line": 1}).status_code == 422
-    page = client.get(url, params={"limit": 5, "offset": 5}).json()
-    assert len(page["items"]) == 5
 
 
 def test_diagnostics_and_xml_at_position(client: TestClient) -> None:
@@ -218,9 +227,7 @@ def test_xml_offsets_for_browser_with_crlf(tmp_path: Path, synthetic_guide: Path
     )
     client = TestClient(create_app(runtime, None), base_url=BASE_URL)
     dataset_id = open_example(client)["id"]
-    [quay] = client.get(
-        f"/api/datasets/{dataset_id}/objects", params={"type": "Quay", "q": "SYN3"}
-    ).json()["items"]
+    [quay] = matches(client, dataset_id, type="Quay", q="SYN3")
     window = client.get(f"/api/objects/{quay['id']}/xml").json()
     assert "\r" not in window["text"]
     utf16 = window["text"].encode("utf-16-le")
@@ -230,10 +237,7 @@ def test_xml_offsets_for_browser_with_crlf(tmp_path: Path, synthetic_guide: Path
 
 def test_object_references_and_provenance(client: TestClient) -> None:
     data = open_example(client)
-    quays = client.get(
-        f"/api/datasets/{data['id']}/objects", params={"type": "Quay", "q": "SYN1"}
-    ).json()["items"]
-    quay = quays[0]
+    quay = matches(client, data["id"], type="Quay", q="SYN1")[0]
     detail = client.get(f"/api/objects/{quay['id']}").json()
     assert detail["reference"] is None
     assert detail["referencesTruncated"] is False
@@ -256,9 +260,7 @@ def test_object_references_and_provenance(client: TestClient) -> None:
 
 def test_property_reference_and_reference_element(client: TestClient) -> None:
     data = open_example(client)
-    assignments = client.get(
-        f"/api/datasets/{data['id']}/objects", params={"type": "PassengerStopAssignment"}
-    ).json()["items"]
+    assignments = matches(client, data["id"], type="PassengerStopAssignment")
     detail = client.get(f"/api/objects/{assignments[0]['id']}").json()
     refs = {p["name"]: p["reference"] for p in detail["properties"] if p["reference"]}
     assert set(refs) == {"ScheduledStopPointRef", "StopPlaceRef", "QuayRef"}
@@ -362,9 +364,7 @@ def test_journey_view_not_computable_time(client: TestClient) -> None:
 
 def test_journey_view_of_unknown_or_other_elements_is_not_found(client: TestClient) -> None:
     data = open_example(client)
-    quay = client.get(
-        f"/api/datasets/{data['id']}/objects", params={"type": "Quay", "limit": 1}
-    ).json()["items"][0]
+    quay = matches(client, data["id"], type="Quay")[0]
     assert client.get(f"/api/journeys/{quay['id']}").status_code == 404
     assert client.get(f"/api/journeys/{data['id']}.99999").status_code == 404
     assert client.get("/api/journeys/ungueltig").status_code == 404

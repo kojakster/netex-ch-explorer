@@ -19,6 +19,7 @@ class Feature(StrEnum):
     EXAMPLE_SELECTION = "example_selection"
     JOURNEY_LIST = "journey_list"
     OBJECT_SEARCH = "object_search"
+    COLUMN_RESIZE = "column_resize"
     OBJECT_DETAIL = "object_detail"
     XML_VIEW = "xml_view"
     DIAGNOSTICS_LIST = "diagnostics_list"

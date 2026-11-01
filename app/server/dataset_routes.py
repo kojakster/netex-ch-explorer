@@ -19,6 +19,7 @@ from app.core.explorer import element_xml_window, object_detail, position_xml_wi
 from app.core.guide.examples import Example, example_path
 from app.core.intake import Upload, receive
 from app.core.messages import Severity
+from app.core.object_tree import build_object_tree
 from app.core.projection.journey_view import build_journey_view, is_journey
 from app.core.projection.journeys import list_journeys
 from app.core.provenance import provenance_chain
@@ -29,7 +30,7 @@ from app.server.dataset_schemas import (
     DiagnosticOut,
     JourneyOut,
     ObjectDetailOut,
-    ObjectSearchOut,
+    ObjectTreeOut,
     OpenDatasetIn,
     XmlWindowOut,
 )
@@ -37,8 +38,6 @@ from app.server.datasets import DatasetRegistry, parse_object_id
 from app.server.journey_schemas import JourneyConverter, JourneyViewOut
 from app.server.runtime import Runtime
 
-MAX_SEARCH_LIMIT: Final = 200
-DEFAULT_SEARCH_LIMIT: Final = 50
 MAX_QUERY_LENGTH: Final = 200
 # Obergrenzen, damit sehr grosse Zahlen eine Eingabefehler-Antwort ergeben (SQLite: 64 Bit).
 MAX_NUMBER: Final = 1_000_000_000
@@ -200,18 +199,15 @@ def dataset_router(runtime: Runtime, registry: DatasetRegistry) -> APIRouter:
         return [journeys.journey(journey) for journey in list_journeys(dataset.index)]
 
     @router.get("/datasets/{dataset_id}/objects")
-    def search_objects(
+    def get_object_tree(
         target: LeasedDataset,
         object_type: Annotated[str | None, Query(alias="type", max_length=MAX_QUERY_LENGTH)] = None,
         q: Annotated[str | None, Query(max_length=MAX_QUERY_LENGTH)] = None,
-        limit: Annotated[int, Query(ge=1, le=MAX_SEARCH_LIMIT)] = DEFAULT_SEARCH_LIMIT,
-        offset: Annotated[int, Query(ge=0, le=MAX_NUMBER)] = 0,
-    ) -> ObjectSearchOut:
-        """Einfache Objektsuche nach Typ und Teiltext in ID oder Name, seitenweise."""
+    ) -> ObjectTreeOut:
+        """Objekte nach Typ und Teiltext in ID oder Name, nach Frames gegliedert."""
         dataset_id, dataset = target
-        objects = converter(dataset_id, dataset)
-        total, rows = dataset.index.search_objects(object_type, q, limit, offset)
-        return ObjectSearchOut(total=total, items=[objects.object(row) for row in rows])
+        tree = build_object_tree(dataset.index, object_type, q)
+        return converter(dataset_id, dataset).object_tree(tree)
 
     @router.get("/datasets/{dataset_id}/diagnostics")
     def get_diagnostics(

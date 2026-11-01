@@ -9,7 +9,7 @@ import type {
   JourneyInfo,
   JourneyViewInfo,
   ObjectDetail,
-  ObjectSearchResult,
+  ObjectTreeResult,
   SearchParams,
   XmlWindow,
 } from "./types";
@@ -24,7 +24,7 @@ export interface DataSource {
   closeDataset(datasetId: string): Promise<void>;
   getJourneys(datasetId: string): Promise<JourneyInfo[]>;
   getJourney(journeyId: string): Promise<JourneyViewInfo>;
-  searchObjects(datasetId: string, params: SearchParams): Promise<ObjectSearchResult>;
+  getObjectTree(datasetId: string, params: SearchParams): Promise<ObjectTreeResult>;
   getDiagnostics(datasetId: string): Promise<DiagnosticInfo[]>;
   getObject(objectId: string): Promise<ObjectDetail>;
   getObjectXml(objectId: string): Promise<XmlWindow>;
@@ -147,18 +147,15 @@ export class HttpDataSource implements DataSource {
     return requestJson<JourneyViewInfo>(this.fetcher, `api/journeys/${enc(journeyId)}`);
   }
 
-  searchObjects(datasetId: string, params: SearchParams): Promise<ObjectSearchResult> {
-    const query = new URLSearchParams({
-      limit: String(params.limit),
-      offset: String(params.offset),
-    });
+  getObjectTree(datasetId: string, params: SearchParams): Promise<ObjectTreeResult> {
+    const query = new URLSearchParams();
     if (params.type) {
       query.set("type", params.type);
     }
     if (params.q) {
       query.set("q", params.q);
     }
-    return requestJson<ObjectSearchResult>(
+    return requestJson<ObjectTreeResult>(
       this.fetcher,
       `api/datasets/${enc(datasetId)}/objects?${query.toString()}`,
     );

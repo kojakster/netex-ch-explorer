@@ -611,6 +611,22 @@ class DatasetIndex:
             row = self._db.execute(_ELEMENT_SELECT + " WHERE e.id = ?", (element_id,)).fetchone()
         return None if row is None else _row_to_element(row)
 
+    def elements_by_ids(self, element_ids: Sequence[int]) -> dict[int, ElementRow]:
+        """Mehrere Elemente über ihre Index-Nummern mit wenigen Abfragen (fehlende fehlen)."""
+        found: dict[int, ElementRow] = {}
+        ids = list(dict.fromkeys(element_ids))
+        for start in range(0, len(ids), _MAX_PLACEHOLDERS):
+            batch = ids[start : start + _MAX_PLACEHOLDERS]
+            placeholders = ", ".join("?" * len(batch))
+            with self._lock:
+                rows = self._db.execute(
+                    _ELEMENT_SELECT + f" WHERE e.id IN ({placeholders})", batch
+                ).fetchall()
+            for row in rows:
+                element = _row_to_element(row)
+                found[element.id] = element
+        return found
+
     def children(self, element_id: int) -> list[ElementRow]:
         """Direkte Kindelemente in Dokumentreihenfolge."""
         with self._lock:

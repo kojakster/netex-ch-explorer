@@ -159,9 +159,23 @@ export interface DatasetInfo {
   validation: ValidationInfo | null;
 }
 
-export interface ObjectSearchResult {
+/** Ein Eintrag der Objektliste: Frame (Kopfzeile) oder Objekt, mit Einrückungsebene. */
+export interface ObjectTreeEntry {
+  object: ObjectInfo;
+  isFrame: boolean;
+  depth: number;
+  /** `false` bei Vorfahren, die bei aktivem Filter nur den Zusammenhang zeigen. */
+  matches: boolean;
+}
+
+export interface ObjectTreeResult {
+  /** Frames mit ihren Objekten in Vorordnung. */
+  entries: ObjectTreeEntry[];
+  /** Objekte ausserhalb jedes Frames in Vorordnung. */
+  outside: ObjectTreeEntry[];
   total: number;
-  items: ObjectInfo[];
+  shown: number;
+  truncated: boolean;
 }
 
 export type ReferenceStatus = "resolved" | "unresolved" | "ambiguous" | "external_or_unloaded";
@@ -271,8 +285,6 @@ export interface XmlWindow {
 export interface SearchParams {
   type?: string;
   q?: string;
-  limit: number;
-  offset: number;
 }
 
 // Fahrtansicht (`GET /api/journeys/{id}`)

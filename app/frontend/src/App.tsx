@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type DataSource } from "./api";
+import {
+  columnLayout,
+  DETAILS_LIMITS,
+  DETAILS_STORAGE_KEY,
+  SIDEBAR_LIMITS,
+  SIDEBAR_STORAGE_KEY,
+  useStoredWidth,
+  useViewportWidth,
+} from "./columnResize";
 import { CalculationChain } from "./components/CalculationChain";
 import { DatasetPanel } from "./components/DatasetPanel";
 import { DatasetPicker } from "./components/DatasetPicker";
@@ -10,9 +19,10 @@ import { HelpPage } from "./components/HelpPage";
 import { JourneyList } from "./components/JourneyList";
 import { JourneyView } from "./components/JourneyView";
 import { LanguageSwitch } from "./components/LanguageSwitch";
-import { ObjectSearch } from "./components/ObjectSearch";
+import { ObjectTree } from "./components/ObjectTree";
 import { ObjectView } from "./components/ObjectView";
 import { ProvenanceChain } from "./components/ProvenanceChain";
+import { ResizeHandle } from "./components/ResizeHandle";
 import { type SidebarTab, SidebarTabs } from "./components/SidebarTabs";
 import { StartPage } from "./components/StartPage";
 import { XmlPanel, type XmlTarget } from "./components/XmlPanel";
@@ -97,6 +107,25 @@ export function App({ dataSource }: AppProps) {
   const journeys = useLoad(datasetId, () => dataSource.getJourneys(datasetId ?? ""));
   const isJourney = journeys.data?.some((item) => item.object.id === objectId) ?? false;
   const showDetails = detailsOpen && (selection !== null || positionTarget !== null);
+  const [storedSidebar, setSidebarWidth, resetSidebarWidth] = useStoredWidth(
+    SIDEBAR_STORAGE_KEY,
+    SIDEBAR_LIMITS,
+  );
+  const [storedDetails, setDetailsWidth, resetDetailsWidth] = useStoredWidth(
+    DETAILS_STORAGE_KEY,
+    DETAILS_LIMITS,
+  );
+  const columns = columnLayout(
+    useViewportWidth(),
+    dataset !== null,
+    showDetails,
+    storedSidebar,
+    storedDetails,
+  );
+  const columnWidths = {
+    "--sidebar-width": `${columns.sidebar.width}px`,
+    "--details-width": `${columns.details.width}px`,
+  } as CSSProperties;
   const centerView: CenterView = selection?.view ?? "object";
   const journeyKey = centerView === "journey" ? objectId : null;
   const journeyLoad = useLoad(journeyKey, () => dataSource.getJourney(journeyKey ?? ""));
@@ -368,6 +397,7 @@ export function App({ dataSource }: AppProps) {
           {appInfo !== null && view === "main" && (
             <div
               className={`layout${dataset === null ? " layout-start" : ""}${showDetails ? " layout-details" : ""}`}
+              style={columnWidths}
             >
               {dataset !== null && (
                 <aside className="sidebar">
@@ -385,7 +415,11 @@ export function App({ dataSource }: AppProps) {
                       />
                     )}
                     {sidebarTab === "objects" && (
-                      <ObjectSearch dataset={dataset} onSelect={selectObject} />
+                      <ObjectTree
+                        dataset={dataset}
+                        colors={appInfo.frameColors}
+                        onSelect={selectObject}
+                      />
                     )}
                     {sidebarTab === "check" && (
                       <>
@@ -406,6 +440,17 @@ export function App({ dataSource }: AppProps) {
                     )}
                   </SidebarTabs>
                 </aside>
+              )}
+              {dataset !== null && columns.sidebar.handle && (
+                <ResizeHandle
+                  labelKey="resize.sidebar"
+                  width={columns.sidebar.width}
+                  min={SIDEBAR_LIMITS.min}
+                  max={columns.sidebar.max}
+                  columnOnLeft
+                  onChange={setSidebarWidth}
+                  onReset={resetSidebarWidth}
+                />
               )}
               <main className="content">
                 {datasetErrorKey !== null && <p role="alert">{t(datasetErrorKey)}</p>}
@@ -485,6 +530,17 @@ export function App({ dataSource }: AppProps) {
                   </>
                 )}
               </main>
+              {showDetails && columns.details.handle && (
+                <ResizeHandle
+                  labelKey="resize.details"
+                  width={columns.details.width}
+                  min={DETAILS_LIMITS.min}
+                  max={columns.details.max}
+                  columnOnLeft={false}
+                  onChange={setDetailsWidth}
+                  onReset={resetDetailsWidth}
+                />
+              )}
               {showDetails && (
                 <aside className="xml-column" aria-label={t("details.title")}>
                   <div className="details-bar">

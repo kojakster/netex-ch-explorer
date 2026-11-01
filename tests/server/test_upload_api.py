@@ -428,7 +428,7 @@ def test_html_in_xml_values_is_returned_as_data(client: TestClient) -> None:
     response = client.get(f"/api/datasets/{data['id']}/objects", params={"type": "Operator"})
     assert response.headers["Content-Type"] == "application/json"
     assert response.headers["X-Content-Type-Options"] == "nosniff"
-    [operator] = response.json()["items"]
+    [operator] = [e["object"] for e in response.json()["entries"] if e["matches"]]
     assert operator["label"] == "<img src=x onerror=alert(1)><script>alert(2)</script>"
 
 
