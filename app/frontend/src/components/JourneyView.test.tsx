@@ -458,7 +458,7 @@ describe("StopTable ohne und mit „Herkunft zeigen“", () => {
     );
   });
 
-  it("nennt die Spalte „Gleis“ bei rail der Fahrt und sonst „Kante“", () => {
+  it("nennt die Spalte „Gleis“ bei rail, „Kante“ bei anderem Modus und „Gleis/Kante“ ohne TransportMode", () => {
     const { rerender } = render(table(false));
     expect(screen.getByRole("columnheader", { name: "Gleis" })).toBeTruthy();
     const bus = {
@@ -486,8 +486,9 @@ describe("StopTable ohne und mit „Herkunft zeigen“", () => {
     };
     rerender(table(false, lineRail));
     expect(screen.getByRole("columnheader", { name: "Gleis" })).toBeTruthy();
+    // Kein TransportMode in den Daten: keine Annahme.
     rerender(table(false, { ...JOURNEY_VIEW, transports: [] }));
-    expect(screen.getByRole("columnheader", { name: "Kante" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Gleis/Kante" })).toBeTruthy();
   });
 
   it("beginnt die Haltelinie am ersten und endet sie am letzten Halt", () => {

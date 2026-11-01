@@ -17,13 +17,17 @@ const RAIL_MODE = "rail";
 
 /**
  * Bezeichnung der Kante: „Gleis“ bei `TransportMode` `rail` der Fahrt, fehlt er, der Linie;
- * sonst „Kante“. Der Wert selbst ist immer der `PublicCode` der `Quay`.
+ * anderer bekannter Wert „Kante“, kein TransportMode in den Daten „Gleis/Kante“ (keine Annahme).
+ * Der Wert selbst ist immer der `PublicCode` der `Quay`.
  */
-export function platformKey(journey: JourneyViewInfo): "rail" | "other" {
+export function platformKey(journey: JourneyViewInfo): "rail" | "other" | "unknown" {
   const owners = ["journey", "line"].map((role) =>
     journey.transports.find((transport) => transport.role === role),
   );
   const mode = owners.find((transport) => transport?.mode.status === "found")?.mode.text;
+  if (mode === undefined || mode === null) {
+    return "unknown";
+  }
   return mode === RAIL_MODE ? "rail" : "other";
 }
 
