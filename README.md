@@ -142,7 +142,7 @@ Das Skript baut die Oberfläche, wenn sie fehlt oder veraltet ist (beim ersten S
 
 **Beenden:** im Terminal-Fenster, in dem der Server läuft, **Ctrl+C** drücken. Danach ist der Port wieder frei; Die Dateien im Arbeitsordner des Servers (`work/<Port>/`) werden beim Beenden und, falls der Server abgestürzt ist, beim nächsten Start auf demselben Port gelöscht; Ordner anderer Ports (laufende Server) bleiben unberührt. Das Schliessen des Browser-Tabs beendet den Server nicht.
 
-Nach dem Start lädt das Tool im Hintergrund die XSD des Guides (rund 17 Sekunden) und prüft die Beispiele; die Guide-Status-Box zeigt „XSD wird geladen …", solange das läuft. Danach zeigt die Beispielliste den Status jedes Beispiels (XML-Syntax, XSD, Guide-Regeln, Kernregeln, Referenzen).
+Nach dem Start lädt das Tool im Hintergrund die XSD des Guides (rund 17 Sekunden) und prüft die Beispiele; der Guide-Status in der Kopfzeile zeigt (aufgeklappt) „XSD wird geladen …", solange das läuft. Danach zeigt die Beispielliste den Status jedes Beispiels (XML-Syntax, XSD, Guide-Regeln, Kernregeln, Referenzen).
 
 ### 6. Funktion prüfen (optional)
 
@@ -162,7 +162,7 @@ git pull
 git submodule update --init --depth 1
 ```
 
-Danach die Anwendung neu starten. Die Guide-Status-Box meldet „weicht vom zuletzt getesteten Stand ab“, bis `scripts/test.py` mit dem neuen Stand gelaufen ist. Die Dateien im Guide-Ordner nie von Hand ändern.
+Danach die Anwendung neu starten. Der Guide-Status in der Kopfzeile (Punkt „Guide: Abweichung“) meldet aufgeklappt „weicht vom zuletzt getesteten Stand ab“, bis `scripts/test.py` mit dem neuen Stand gelaufen ist. Die Dateien im Guide-Ordner nie von Hand ändern.
 
 ### VS-Code-Workspace
 
@@ -172,19 +172,19 @@ In VS Code **Datei → Arbeitsbereich aus Datei öffnen…** wählen und `netex-
 
 Kurzanleitung für den ersten Test (die Hilfeseite der Anwendung erklärt alle Funktionen, Farben und Prüfungen ausführlicher):
 
-1. **Beispiel wählen.** Nach dem Start steht links die Liste „Beispiele des Guides“. Beispiel `01_NeTEx_Spiez_Interlaken_Ost.xml` anklicken. Jedes Beispiel zeigt seinen Prüfstatus (✔ ohne Meldungen, ℹ/⚠ mit Hinweisen oder Fehlern, ✖ nicht lesbar). Solange die Guide-Status-Box „XSD wird geladen …“ zeigt (rund 17 Sekunden), fehlen die Status der Beispiele; das Öffnen funktioniert trotzdem.
-2. **Fahrt öffnen.** Unter „Fahrten“ die Fahrt (`ServiceJourney`) anklicken. Die Mitte zeigt sie als Fahrplan: Kopf mit Zugnummer, Linie, Verkehrsmittel und Betriebstagen, darunter die Halte mit Ein-/Aussteigen, Ankunft, Abfahrt und Angeboten. Zeiten, die nicht in der Datei stehen, sind als „berechnet“ gekennzeichnet; ein Klick auf die Zeit zeigt die Rechenkette.
-3. **Halt anklicken.** Ein Klick auf einen Halt (z. B. „Interlaken West“) wählt die Angabe. **Rechts** erscheint die **Herkunftskette** als farbige Kästchen (z. B. `ServiceFrame` → `ScheduledStopPoint` → `Name`); jedes Kästchen ist anklickbar. Darunter steht der **XML-Ausschnitt** mit der exakt markierten Stelle (hier `<Name lang="de">Interlaken West</Name>`) und, am Rand, dem Frame mit seiner Farbe.
-4. **Objekt ansehen.** Oben in der Mitte zwischen „Fahrt“ und „Objekt“ umschalten. „Objekt“ zeigt Typ, ID, Frame, Datei mit Zeile und Spalte, Inhalt und die Verweise vor und zurück (farbig nach dem Frame des Ziels, jeder anklickbar). Mit der **Objektsuche** (Typ, Teil der ID oder des Namens) lässt sich jedes Objekt der Datei finden. „Zurück im Verlauf“ und „Vor im Verlauf“ führen zu früheren Auswahlen.
-5. **Farben.** Jeder Frame hat eine feste Farbe (Legende links, immer mit Frame-Name); Grau heisst „für den Fahrplan nicht relevant“. Die Farben stehen in `config/frame-colors.json` und lassen sich ohne Codeänderung anpassen.
+1. **Beispiel wählen.** Nach dem Start erklärt die Startseite die Bedienung in drei Schritten und listet die Beispiele des Guides mit Beschreibung; Beispiel `01_NeTEx_Spiez_Interlaken_Ost.xml` ist als Einstieg hervorgehoben. Ein Beispiel lässt sich dort anklicken oder jederzeit in der Kopfzeile unter „Datensatz“ wählen. Jedes Beispiel zeigt seinen Prüfstatus (✔ ohne Meldungen, ℹ/⚠ mit Hinweisen oder Fehlern, ✖ nicht lesbar). Der Punkt „Guide: ok / Abweichung / Fehler“ in der Kopfzeile klappt per Klick den Guide-Stand auf; solange dort „XSD wird geladen …“ steht (rund 17 Sekunden), fehlen die Status der Beispiele; das Öffnen funktioniert trotzdem.
+2. **Fahrt öffnen.** Links im Reiter „Fahrten“ die Fahrt (`ServiceJourney`) anklicken: eine Zeile pro Fahrt mit Produktkategorie und Zugnummer, darunter Abfahrt und Strecke. Der Hauptbereich zeigt sie als Fahrplan: Kopf mit Zugnummer, Linie, Verkehrsmittel und Betriebstagen, darunter die Halte mit Ein-/Aussteigen, Ankunft, Abfahrt und Angeboten. Zeiten, die nicht in der Datei stehen, sind als „berechnet“ gekennzeichnet; ein Klick auf die Zeit zeigt die Rechenkette.
+3. **Halt anklicken.** Ein Klick auf eine Angabe (z. B. den Halt „Interlaken West“) wählt sie. **Rechts** erscheint dann die Spalte „Herkunft und XML“ mit der **Herkunftskette** als farbige Kästchen (z. B. `ServiceFrame` → `ScheduledStopPoint` → `Name`; jedes Kästchen ist anklickbar) und dem **XML-Ausschnitt** mit der exakt markierten Stelle (hier `<Name lang="de">Interlaken West</Name>`) und, am Rand, dem Frame mit seiner Farbe. „Schliessen“ hebt die Auswahl auf; der Hauptbereich nutzt dann die ganze Breite.
+4. **Objekt ansehen.** Oben im Hauptbereich zwischen „Fahrt“ und „Objekt“ umschalten. „Objekt“ zeigt Typ, ID, Frame, Datei mit Zeile und Spalte, Inhalt und die Verweise vor und zurück (farbig nach dem Frame des Ziels, jeder anklickbar). Im Reiter „Objekte“ links lässt sich jedes Objekt der Datei suchen (Typ, Teil der ID oder des Namens). „Zurück im Verlauf“ und „Vor im Verlauf“ führen zu früheren Auswahlen.
+5. **Farben.** Jeder Frame hat eine feste Farbe; die Legende steht dort, wo Farben sichtbar sind (rechte Spalte), immer mit Frame-Name. Grau heisst „für den Fahrplan nicht relevant“. Die Farben stehen in `config/frame-colors.json` und lassen sich ohne Codeänderung anpassen.
 6. **Eigene Datei öffnen und prüfen:** siehe unten.
-7. **Hilfe.** Oben rechts öffnet „Hilfe“ die Hilfeseite: Funktionen, Frame-Farben und Grau-Liste, durchgeführte und nicht durchgeführte Prüfungen (mit Quelle bzw. Stand), die Schweizer Kernregeln, Schweregrade (⚠ Fehler, △ Warnung, ℹ Hinweis) und der Guide-Stand. Oben rechts lässt sich die Sprache (Deutsch/English) umschalten.
+7. **Hilfe.** Oben rechts öffnet „Hilfe“ die Hilfeseite: Funktionen, Frame-Farben und Grau-Liste, durchgeführte und nicht durchgeführte Prüfungen (mit Quelle bzw. Stand), die Schweizer Kernregeln, Schweregrade (⚠ Fehler, △ Warnung, ℹ Hinweis) und der Guide-Stand. Daneben lässt sich die Sprache (Deutsch/English) umschalten.
 
 ### Eigene Dateien öffnen und prüfen
 
-1. In der linken Spalte **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/<Port>/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
-2. Unter **Geöffnete Dateien** steht je Datei die erkannte Version mit Begründung (Namensraum, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur). Nur Dateien, die als CH-Profil 2.0 erkannt sind, werden geprüft; andere (z. B. NeTEx 1.10) bleiben im Explorer ansehbar.
-3. **Prüfen** startet XSD-Prüfung, die Regeln von `general_rules.sch` und die Kernregeln. Befunde erscheinen unter **Diagnosen**, getrennt nach Art, mit Schweregrad, Stelle (Klick markiert sie im XML) und Link auf das Guide-Kapitel im geprüften Commit.
+1. In der Kopfzeile **Datei öffnen …** wählen und im Dialog eine XML-Datei, mehrere XML-Dateien oder eine ZIP-Datei auswählen. Es gibt keine Pfadeingabe; die Dateien gehen nur an den lokalen Server und liegen im Ordner `work/<Port>/` (nicht versioniert), bis ein anderer Datensatz geöffnet wird oder der Server neu startet.
+2. Im Reiter **Prüfung** links steht unter **Geöffnete Dateien** je Datei die erkannte Version mit Begründung (Namensraum, `version`-Attribut, `schemaLocation`, Kommentare, Dateiname, Struktur). Nur Dateien, die als CH-Profil 2.0 erkannt sind, werden geprüft; andere (z. B. NeTEx 1.10) bleiben im Explorer ansehbar.
+3. **Prüfen** startet XSD-Prüfung, die Regeln von `general_rules.sch` und die Kernregeln. Befunde erscheinen im selben Reiter unter **Diagnosen** (die Beschriftung des Reiters nennt danach ihre Anzahl), getrennt nach Art, mit Schweregrad, Stelle (Klick markiert sie im XML) und Link auf das Guide-Kapitel im geprüften Commit.
    Ist die Version einer Datei mehrdeutig oder unbekannt, wird sie nicht geprüft; der Knopf **Trotzdem als CH 2.0 prüfen** erzwingt die Prüfung auf ausdrücklichen Wunsch, das Ergebnis vermerkt „als CH 2.0 geprüft auf Wunsch, Version nicht erkannt“. Eine erkannte andere Version (z. B. 1.10) wird nie so geprüft.
 4. Abgewiesene Dateien (falscher Typ, zu gross, unsichere ZIP-Einträge …) erscheinen als Diagnosen der Art „Datei“. Die Grenzwerte stehen in `config/settings.json` (`zipLimits`).
 

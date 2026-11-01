@@ -176,7 +176,7 @@ Schritte (immer in dieser Reihenfolge): `xsd` (lxml gegen `xsd/xsd/NeTEx_publica
 
 ### `GET /api/datasets/{id}/journeys`
 
-Fahrten (`ServiceJourney`, `TemplateServiceJourney`) mit `trainNumbers`, `departureTime`, `departureDayOffset`, `line`, `firstStop`, `lastStop`. Jede Angabe: `{ "status": "found | absent | not_resolved | ambiguous | external_or_unloaded", "text": "…", "objectId": "…" }`. `text` ist bei `not_resolved`/`ambiguous` die gesuchte Referenz; `objectId` zeigt auf die Herkunft (Element der Angabe bzw. die Referenz).
+Fahrten (`ServiceJourney`, `TemplateServiceJourney`) mit `trainNumbers`, `departureTime`, `departureDayOffset`, `line`, `firstStop`, `lastStop`, `category` (`ShortName` der `TypeOfProductCategory` der Fahrt, Abzeichen in der Liste). Jede Angabe: `{ "status": "found | absent | not_resolved | ambiguous | external_or_unloaded", "text": "…", "objectId": "…" }`. `text` ist bei `not_resolved`/`ambiguous` die gesuchte Referenz; `objectId` zeigt auf die Herkunft (Element der Angabe bzw. die Referenz).
 
 ### `GET /api/datasets/{id}/objects?type=&q=&limit=&offset=`
 

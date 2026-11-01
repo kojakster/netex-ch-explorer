@@ -2,6 +2,9 @@ import { useI18n } from "../i18n";
 import { OK_SYMBOL, SEVERITY_SYMBOLS, UNREADABLE_SYMBOL } from "../symbols";
 import type { ExampleInfo } from "../types";
 
+// Das einfache Einstiegsbeispiel erkennt die Oberfläche am Dateinamen-Präfix, nicht am Titel.
+const START_PREFIX = "01_";
+
 interface ExampleListProps {
   examples: readonly ExampleInfo[];
   selected: string | null;
@@ -12,7 +15,8 @@ function messageCount(example: ExampleInfo): number {
   return (example.counts.error ?? 0) + (example.counts.warning ?? 0) + (example.counts.info ?? 0);
 }
 
-function statusSymbol(example: ExampleInfo): string {
+/** Symbol des Prüfstatus eines Beispiels; leer, solange es noch geprüft wird. */
+export function exampleStatusSymbol(example: ExampleInfo): string {
   switch (example.result) {
     case null:
       return "";
@@ -28,7 +32,7 @@ function statusSymbol(example: ExampleInfo): string {
   }
 }
 
-/** Auswahl der Guide-Beispiele mit Status pro Beispiel (Symbol und Text). */
+/** Beispiele des Guides mit Beschreibung und Status pro Beispiel (Symbol und Text). */
 export function ExampleList({ examples, selected, onOpen }: ExampleListProps) {
   const { t } = useI18n();
   return (
@@ -38,18 +42,20 @@ export function ExampleList({ examples, selected, onOpen }: ExampleListProps) {
       <ul>
         {examples.map((example) => {
           const count = messageCount(example);
+          const start = example.name.startsWith(START_PREFIX);
           return (
             <li key={example.name}>
               <button
                 type="button"
-                className={example.name === selected ? "example selected" : "example"}
+                className={`example${example.name === selected ? " selected" : ""}${start ? " example-start" : ""}`}
                 onClick={() => onOpen(example.name)}
                 aria-pressed={example.name === selected}
               >
+                {start && <span className="example-hint">{t("examples.startHere")}</span>}
                 <span className="example-name">{example.name}</span>
                 {example.title !== null && <span className="example-title">{example.title}</span>}
                 <span className="example-status">
-                  <span aria-hidden="true">{statusSymbol(example)}</span>{" "}
+                  <span aria-hidden="true">{exampleStatusSymbol(example)}</span>{" "}
                   {example.result === null
                     ? t("examples.pending")
                     : t(`examples.result.${example.result}`, { count })}

@@ -2,19 +2,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type DataSource } from "./api";
 import { CalculationChain } from "./components/CalculationChain";
 import { DatasetPanel } from "./components/DatasetPanel";
+import { DatasetPicker } from "./components/DatasetPicker";
 import { DiagnosticList } from "./components/DiagnosticList";
-import { ExampleList } from "./components/ExampleList";
 import { FrameLegend } from "./components/FrameLegend";
 import { GuideStatusBox } from "./components/GuideStatusBox";
 import { HelpPage } from "./components/HelpPage";
-import { IssueList } from "./components/IssueList";
 import { JourneyList } from "./components/JourneyList";
 import { JourneyView } from "./components/JourneyView";
 import { LanguageSwitch } from "./components/LanguageSwitch";
 import { ObjectSearch } from "./components/ObjectSearch";
 import { ObjectView } from "./components/ObjectView";
-import { OpenFiles } from "./components/OpenFiles";
 import { ProvenanceChain } from "./components/ProvenanceChain";
+import { type SidebarTab, SidebarTabs } from "./components/SidebarTabs";
+import { StartPage } from "./components/StartPage";
 import { XmlPanel, type XmlTarget } from "./components/XmlPanel";
 import { DataSourceContext, LOAD_ERROR_KEY, useLoad } from "./data";
 import {
@@ -49,6 +49,12 @@ interface AppProps {
   dataSource: DataSource;
 }
 
+/** Anzahl aller Befunde der Prüfung (alle Schweregrade). */
+function findingCount(dataset: DatasetInfo): number {
+  const counts = dataset.diagnosticCounts;
+  return counts.error + counts.warning + counts.info;
+}
+
 function errorKeyOf(error: unknown): string {
   return error instanceof ApiError ? error.key : LOAD_ERROR_KEY;
 }
@@ -70,9 +76,13 @@ export function App({ dataSource }: AppProps) {
   // Zählt die abgeschlossenen Validierungen des offenen Datensatzes (Schlüssel für die Diagnosen).
   const [validationRuns, setValidationRuns] = useState(0);
   const [history, setHistory] = useState(EMPTY_HISTORY);
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>("journeys");
+  // Die rechte Spalte (Rechenkette, Herkunft, XML) erscheint erst, wenn etwas gewählt ist.
+  const [detailsOpen, setDetailsOpen] = useState(false);
   // Stelle einer Diagnose; ersetzt die Markierung der Auswahl, bis wieder etwas gewählt wird.
   const [positionTarget, setPositionTarget] = useState<XmlTarget | null>(null);
   const selection = currentSelection(history);
+  const settingsIssues = appInfo?.issues ?? [];
   const objectId = selection?.objectId ?? null;
   const selectedElement = selection?.elementId ?? null;
   const xmlTarget: XmlTarget | null =
@@ -84,6 +94,7 @@ export function App({ dataSource }: AppProps) {
   const datasetId = dataset?.id ?? null;
   const journeys = useLoad(datasetId, () => dataSource.getJourneys(datasetId ?? ""));
   const isJourney = journeys.data?.some((item) => item.object.id === objectId) ?? false;
+  const showDetails = detailsOpen && (selection !== null || positionTarget !== null);
   const centerView: CenterView = selection?.view ?? "object";
   const journeyKey = centerView === "journey" ? objectId : null;
   const journeyLoad = useLoad(journeyKey, () => dataSource.getJourney(journeyKey ?? ""));
@@ -177,6 +188,8 @@ export function App({ dataSource }: AppProps) {
     setValidationRuns(0);
     setHistory(EMPTY_HISTORY);
     setPositionTarget(null);
+    setDetailsOpen(false);
+    setSidebarTab("journeys");
     openRequest.current += 1;
     const request = openRequest.current;
     open()
@@ -235,12 +248,23 @@ export function App({ dataSource }: AppProps) {
     timeId: string | null = null,
   ) => {
     setPositionTarget(null);
+    setDetailsOpen(true);
     setHistory((previous) => visit(previous, { objectId: id, elementId, view, timeId }));
   };
 
   const selectObject = (id: string) => navigate(id);
 
-  const openJourney = (id: string) => navigate(id, id, "journey");
+  /** Öffnet die Fahrt aus der Liste: ruhige Fahrplanansicht, die rechte Spalte bleibt zu. */
+  const openJourney = (id: string) => {
+    navigate(id, id, "journey");
+    setDetailsOpen(false);
+  };
+
+  /** Hebt die Auswahl auf: die rechte Spalte verschwindet, der Hauptbereich wird breiter. */
+  const closeDetails = () => {
+    setPositionTarget(null);
+    setDetailsOpen(false);
+  };
 
   /** Wählt eine Angabe in der Fahrtansicht; die Rechenkette einer Zeit bleibt nicht stehen. */
   const selectJourneyElement = (elementId: string) => {
@@ -296,6 +320,7 @@ export function App({ dataSource }: AppProps) {
 
   const showDiagnostic = (diagnostic: DiagnosticInfo) => {
     if (dataset !== null && diagnostic.line !== null) {
+      setDetailsOpen(true);
       setPositionTarget({
         kind: "position",
         datasetId: dataset.id,
@@ -312,7 +337,16 @@ export function App({ dataSource }: AppProps) {
         <div className="app">
           <header className="app-header">
             <h1>{t("app.title")}</h1>
+            {appInfo !== null && guide !== null && (
+              <DatasetPicker
+                examples={guide.examples}
+                selected={exampleName}
+                onOpenExample={openExample}
+                onOpenFiles={openFiles}
+              />
+            )}
             <nav>
+              {guide !== null && <GuideStatusBox guide={guide} settingsIssues={settingsIssues} />}
               {appInfo && <LanguageSwitch languages={appInfo.languages} onChange={setLanguage} />}
               <button type="button" onClick={() => setView("help")} disabled={appInfo === null}>
                 {t("app.help")}
@@ -324,95 +358,99 @@ export function App({ dataSource }: AppProps) {
               {t(errorKey)}
             </p>
           )}
-          {errorKey === null && appInfo === null && <p>{t("app.loading")}</p>}
+          {errorKey === null && appInfo === null && <p className="page-note">{t("app.loading")}</p>}
           {appInfo !== null && view === "help" && (
             <HelpPage appInfo={appInfo} guide={guide} onBack={() => setView("main")} />
           )}
           {appInfo !== null && view === "main" && (
-            <div className="layout">
-              <aside className="sidebar">
-                {guide !== null && <GuideStatusBox guide={guide} />}
-                {appInfo.issues.length > 0 && (
-                  <section className="settings-issues" aria-label={t("settings.title")}>
-                    <h2>{t("settings.title")}</h2>
-                    <IssueList issues={appInfo.issues} />
-                  </section>
-                )}
-                <FrameLegend colors={appInfo.frameColors} onHelp={() => setView("help")} />
-                <OpenFiles onOpen={openFiles} />
-                {guide !== null && (
-                  <ExampleList
-                    examples={guide.examples}
-                    selected={exampleName}
-                    onOpen={openExample}
-                  />
-                )}
+            <div
+              className={`layout${dataset === null ? " layout-start" : ""}${showDetails ? " layout-details" : ""}`}
+            >
+              {dataset !== null && (
+                <aside className="sidebar">
+                  <SidebarTabs
+                    active={sidebarTab}
+                    onChange={setSidebarTab}
+                    findingCount={dataset.validation === null ? null : findingCount(dataset)}
+                  >
+                    {sidebarTab === "journeys" && (
+                      <JourneyList
+                        journeys={journeys.data}
+                        errorKey={journeys.errorKey}
+                        selected={centerView === "journey" ? objectId : null}
+                        onOpenJourney={openJourney}
+                      />
+                    )}
+                    {sidebarTab === "objects" && (
+                      <ObjectSearch dataset={dataset} onSelect={selectObject} />
+                    )}
+                    {sidebarTab === "check" && (
+                      <>
+                        <DatasetPanel
+                          dataset={dataset}
+                          validating={validatingId === dataset.id}
+                          validationErrorKey={
+                            validationError?.id === dataset.id ? validationError.key : null
+                          }
+                          onValidate={validate}
+                        />
+                        <DiagnosticList
+                          datasetId={dataset.id}
+                          refreshKey={`run${validationRuns}`}
+                          onShow={showDiagnostic}
+                        />
+                      </>
+                    )}
+                  </SidebarTabs>
+                </aside>
+              )}
+              <main className="content">
                 {datasetErrorKey !== null && <p role="alert">{t(datasetErrorKey)}</p>}
                 {opening && datasetErrorKey === null && <p>{t("app.loading")}</p>}
-                {dataset !== null && (
-                  <>
-                    <DatasetPanel
-                      dataset={dataset}
-                      validating={validatingId === dataset.id}
-                      validationErrorKey={
-                        validationError?.id === dataset.id ? validationError.key : null
-                      }
-                      onValidate={validate}
-                    />
-                    <JourneyList
-                      journeys={journeys.data}
-                      errorKey={journeys.errorKey}
-                      onSelect={selectObject}
-                      onOpenJourney={openJourney}
-                    />
-                    <ObjectSearch dataset={dataset} onSelect={selectObject} />
-                    <DiagnosticList
-                      datasetId={dataset.id}
-                      refreshKey={`run${validationRuns}`}
-                      onShow={showDiagnostic}
-                    />
-                  </>
+                {dataset === null && !opening && guide !== null && (
+                  <StartPage examples={guide.examples} onOpenExample={openExample} />
                 )}
-              </aside>
-              <main className="content">
-                {objectId === null ? (
-                  <p className="hint">{t(dataset === null ? "app.empty" : "app.selectObject")}</p>
-                ) : (
+                {dataset !== null && objectId === null && (
+                  <p className="hint">{t("app.selectObject")}</p>
+                )}
+                {objectId !== null && (
                   <>
-                    <nav className="history" aria-label={t("feature.navigation_history.title")}>
-                      <button
-                        type="button"
-                        onClick={() => stepHistory(goBack)}
-                        disabled={!canGoBack(history)}
-                      >
-                        ← {t("nav.back")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => stepHistory(goForward)}
-                        disabled={!canGoForward(history)}
-                      >
-                        {t("nav.forward")} →
-                      </button>
-                    </nav>
-                    {isJourney && (
-                      <nav className="view-tabs" aria-label={t("view.title")}>
+                    <div className="content-bar">
+                      <nav className="history" aria-label={t("feature.navigation_history.title")}>
                         <button
                           type="button"
-                          aria-pressed={centerView === "journey"}
-                          onClick={() => switchView("journey")}
+                          onClick={() => stepHistory(goBack)}
+                          disabled={!canGoBack(history)}
                         >
-                          {t("view.journey")}
+                          ← {t("nav.back")}
                         </button>
                         <button
                           type="button"
-                          aria-pressed={centerView === "object"}
-                          onClick={() => switchView("object")}
+                          onClick={() => stepHistory(goForward)}
+                          disabled={!canGoForward(history)}
                         >
-                          {t("view.object")}
+                          {t("nav.forward")} →
                         </button>
                       </nav>
-                    )}
+                      {isJourney && (
+                        <nav className="view-tabs" aria-label={t("view.title")}>
+                          <button
+                            type="button"
+                            aria-pressed={centerView === "journey"}
+                            onClick={() => switchView("journey")}
+                          >
+                            {t("view.journey")}
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={centerView === "object"}
+                            onClick={() => switchView("object")}
+                          >
+                            {t("view.object")}
+                          </button>
+                        </nav>
+                      )}
+                    </div>
                     {centerView === "journey" && journeyLoad.errorKey !== null && (
                       <p role="alert">{t(journeyLoad.errorKey)}</p>
                     )}
@@ -423,8 +461,8 @@ export function App({ dataSource }: AppProps) {
                       <JourneyView
                         journey={journeyLoad.data}
                         colors={appInfo.frameColors}
-                        selected={positionTarget === null ? selectedElement : null}
-                        selectedTime={selection?.timeId ?? null}
+                        selected={showDetails && positionTarget === null ? selectedElement : null}
+                        selectedTime={showDetails ? (selection?.timeId ?? null) : null}
                         onSelect={selectJourneyElement}
                         onSelectTime={selectTime}
                         onShowDiagnostic={showDiagnostic}
@@ -434,7 +472,7 @@ export function App({ dataSource }: AppProps) {
                       <ObjectView
                         objectId={objectId}
                         colors={appInfo.frameColors}
-                        selectedElement={selectedElement}
+                        selectedElement={showDetails ? selectedElement : null}
                         onSelectElement={selectElement}
                         onNavigate={navigate}
                       />
@@ -442,25 +480,34 @@ export function App({ dataSource }: AppProps) {
                   </>
                 )}
               </main>
-              <aside className="xml-column">
-                {positionTarget === null &&
-                  selection?.timeId != null &&
-                  journeyLoad.data !== null && (
-                    <CalculationChain
-                      journey={journeyLoad.data}
-                      timeId={selection.timeId}
-                      colors={appInfo.frameColors}
-                      selected={selectedElement}
-                      onSelect={selectCalculationElement}
-                    />
-                  )}
-                <ProvenanceChain
-                  elementId={positionTarget === null ? selectedElement : null}
-                  colors={appInfo.frameColors}
-                  onSelect={selectLink}
-                />
-                <XmlPanel target={xmlTarget} colors={appInfo.frameColors} />
-              </aside>
+              {showDetails && (
+                <aside className="xml-column" aria-label={t("details.title")}>
+                  <div className="details-bar">
+                    <h2>{t("details.title")}</h2>
+                    <button type="button" onClick={closeDetails}>
+                      {t("details.close")}
+                    </button>
+                  </div>
+                  {positionTarget === null &&
+                    selection?.timeId != null &&
+                    journeyLoad.data !== null && (
+                      <CalculationChain
+                        journey={journeyLoad.data}
+                        timeId={selection.timeId}
+                        colors={appInfo.frameColors}
+                        selected={selectedElement}
+                        onSelect={selectCalculationElement}
+                      />
+                    )}
+                  <ProvenanceChain
+                    elementId={positionTarget === null ? selectedElement : null}
+                    colors={appInfo.frameColors}
+                    onSelect={selectLink}
+                  />
+                  <XmlPanel target={xmlTarget} colors={appInfo.frameColors} />
+                  <FrameLegend colors={appInfo.frameColors} onHelp={() => setView("help")} />
+                </aside>
+              )}
             </div>
           )}
         </div>

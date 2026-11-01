@@ -47,6 +47,31 @@ def test_three_stops() -> None:
     assert journey.last_stop.text == "Synthetisch C"
     assert journey.first_stop.element is not None
     assert journey.first_stop.element.name == "Name"
+    assert (journey.category.status, journey.category.text) == (LookupStatus.FOUND, "SYN")
+    assert journey.category.element is not None
+    assert journey.category.element.name == "ShortName"
+
+
+def test_category_absent_without_reference() -> None:
+    [journey] = list_journeys(index_of("ch20_calls.xml"))
+    assert journey.category.status is LookupStatus.ABSENT
+
+
+def test_category_reference_without_target() -> None:
+    index = open_dataset(
+        [
+            SourceFile(
+                "t",
+                b"<R><ServiceJourney id='j'><TypeOfProductCategoryRef ref='x'/>"
+                b"</ServiceJourney><TypeOfProductCategory id='y'/></R>",
+            )
+        ],
+        (),
+        REF_TARGETS,
+    ).index
+    [journey] = list_journeys(index)
+    assert journey.category.status is LookupStatus.NOT_RESOLVED
+    assert journey.category.text == "x"
 
 
 def test_midnight_without_day_offset() -> None:

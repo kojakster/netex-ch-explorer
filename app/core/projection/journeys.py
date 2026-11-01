@@ -7,6 +7,7 @@ Belege in docs/mapping.md:
 - Erster/letzter Halt: erstes/letztes `StopPointInJourneyPattern` in XML-Reihenfolge →
   `ScheduledStopPointRef` → `ScheduledStopPoint` (H2, H4). Angezeigt wird der Name des
   `ScheduledStopPoint` aus der Datei.
+- Produktkategorie: `TypeOfProductCategoryRef` → `TypeOfProductCategory/ShortName` der Fahrt.
 - Abfahrt: `DepartureTime`, `DepartureDayOffset` unverändert, falls vorhanden (Z2, M2).
 
 Nichts wird ergänzt: Fehlt eine Angabe oder lässt sie sich nicht auflösen, steht der Grund da.
@@ -42,6 +43,8 @@ class JourneySummary:
     line: Lookup
     first_stop: Lookup
     last_stop: Lookup
+    category: Lookup
+    """`ShortName` der `TypeOfProductCategory` der Fahrt (Abzeichen in der Liste)."""
 
 
 def train_number(index: DatasetIndex, ref: ElementRow) -> Lookup:
@@ -89,6 +92,17 @@ def stop_name(index: DatasetIndex, point: ElementRow | None) -> Lookup:
     return Lookup(LookupStatus.ABSENT, None, stop)
 
 
+def category_short_name(index: DatasetIndex, journey: ElementRow) -> Lookup:
+    """`ShortName` der `TypeOfProductCategory`, auf die die Fahrt verweist (sonst der Grund)."""
+    ref = child(index, journey, "TypeOfProductCategoryRef")
+    if ref is None:
+        return ABSENT
+    target, problem = follow(index, ref)
+    if target is None:
+        return problem or ABSENT
+    return text_of(child(index, target, "ShortName"))
+
+
 def journey_summary(index: DatasetIndex, journey: ElementRow) -> JourneySummary:
     """Fasst eine Fahrt für die Liste zusammen."""
     pattern, pattern_problem = follow(index, child(index, journey, "ServiceJourneyPatternRef"))
@@ -108,6 +122,7 @@ def journey_summary(index: DatasetIndex, journey: ElementRow) -> JourneySummary:
         line=line,
         first_stop=first,
         last_stop=last,
+        category=category_short_name(index, journey),
     )
 
 

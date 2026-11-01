@@ -26,7 +26,6 @@ export function ObjectSearch({ dataset, onSelect }: ObjectSearchProps) {
   const total = data?.total ?? 0;
   return (
     <section className="object-search" aria-label={t("search.title")}>
-      <h2>{t("search.title")}</h2>
       <div className="search-fields">
         <label htmlFor={typeId}>{t("search.type")}</label>
         <select
@@ -70,8 +69,11 @@ export function ObjectSearch({ dataset, onSelect }: ObjectSearchProps) {
             {data.items.map((item) => (
               <li key={item.id}>
                 <button type="button" className="link-button" onClick={() => onSelect(item.id)}>
-                  <span className="object-type">{item.name}</span> <code>{item.xmlId}</code>
-                  {item.label !== null && <span className="object-label">{item.label}</span>}
+                  <span className="object-line">
+                    <span className="object-type">{item.name}</span>
+                    {item.label !== null && <span className="object-label">{item.label}</span>}
+                  </span>
+                  {item.xmlId !== null && <code className="object-id">{item.xmlId}</code>}
                 </button>
               </li>
             ))}

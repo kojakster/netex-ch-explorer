@@ -13,10 +13,8 @@ export function OpenFiles({ onOpen }: OpenFilesProps) {
   const { t } = useI18n();
   const input = useRef<HTMLInputElement>(null);
   return (
-    <section className="open-files" aria-label={t("openFiles.title")}>
-      <h2>{t("openFiles.title")}</h2>
-      <p>{t("openFiles.hint")}</p>
-      <button type="button" onClick={() => input.current?.click()}>
+    <>
+      <button type="button" title={t("openFiles.hint")} onClick={() => input.current?.click()}>
         {t("openFiles.button")}
       </button>
       <input
@@ -35,6 +33,6 @@ export function OpenFiles({ onOpen }: OpenFilesProps) {
           }
         }}
       />
-    </section>
+    </>
   );
 }

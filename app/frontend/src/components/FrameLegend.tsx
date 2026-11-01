@@ -4,10 +4,11 @@ import { FrameSwatch } from "./FrameLabel";
 
 interface FrameLegendProps {
   colors: readonly FrameColor[];
-  onHelp: () => void;
+  /** Mit Verweis auf die Hilfeseite, wenn angegeben. */
+  onHelp?: (() => void) | undefined;
 }
 
-/** Immer sichtbare Farblegende der Frames mit Verweis auf die Hilfeseite. */
+/** Kleine Farblegende der Frames; sie steht dort, wo Frame-Farben sichtbar sind. */
 export function FrameLegend({ colors, onHelp }: FrameLegendProps) {
   const { t } = useI18n();
   return (
@@ -20,9 +21,11 @@ export function FrameLegend({ colors, onHelp }: FrameLegendProps) {
           </li>
         ))}
       </ul>
-      <button type="button" className="link-button" onClick={onHelp}>
-        {t("legend.explain")}
-      </button>
+      {onHelp !== undefined && (
+        <button type="button" className="link-button" onClick={onHelp}>
+          {t("legend.explain")}
+        </button>
+      )}
     </section>
   );
 }

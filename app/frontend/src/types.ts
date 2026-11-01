@@ -233,6 +233,8 @@ export interface JourneyInfo {
   line: LookupInfo;
   firstStop: LookupInfo;
   lastStop: LookupInfo;
+  /** `ShortName` der Produktkategorie der Fahrt (Abzeichen in der Liste). */
+  category: LookupInfo;
 }
 
 export interface DiagnosticInfo {

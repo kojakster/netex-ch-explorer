@@ -43,9 +43,12 @@ test("Beispiel 01: Halt anklicken führt zur richtigen XML-Stelle und zum richti
   await page.goto("/");
   await page.getByText(EXAMPLE_FILE, { exact: true }).click();
 
-  // Fahrt öffnen
-  await page.locator(".journey-table tbody tr").first().getByRole("button").first().click();
+  // Fahrt öffnen (Liste links, eine Fahrt pro Zeile)
+  await page.locator(".journey-item").first().click();
   await expect(page.locator(".journey-view")).toBeVisible();
+
+  // Die rechte Spalte erscheint erst, wenn eine Angabe gewählt ist.
+  await expect(page.locator(".xml-column")).toHaveCount(0);
 
   // Halt anklicken
   await page.locator(".stop-table").getByText(STOP_NAME, { exact: true }).first().click();

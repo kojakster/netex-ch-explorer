@@ -209,6 +209,7 @@ export const JOURNEYS: JourneyInfo[] = [
       text: "ch:1:sloid:SYN9:0:1",
       objectId: "SYNTHETICDATASET01.80",
     },
+    category: { status: "found", text: "SYN", objectId: "SYNTHETICDATASET01.41" },
   },
 ];
 

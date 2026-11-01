@@ -249,6 +249,7 @@ class JourneyOut(ApiModel):
     line: LookupOut
     first_stop: LookupOut
     last_stop: LookupOut
+    category: LookupOut
 
 
 class DiagnosticOut(ApiModel):
@@ -437,6 +438,7 @@ class Converter:
             line=self._lookup(journey.line),
             first_stop=self._lookup(journey.first_stop),
             last_stop=self._lookup(journey.last_stop),
+            category=self._lookup(journey.category),
         )
 
     def _chapter(self, params: dict[str, str | int]) -> str | None:

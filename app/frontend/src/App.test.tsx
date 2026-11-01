@@ -5,29 +5,66 @@ import {
   APP_INFO,
   DATASET,
   GUIDE,
+  JOURNEYS,
   fakeSource as source,
   TARGET_OBJECT,
   VALIDATED_DATASET,
 } from "./testData";
-import type { DatasetInfo } from "./types";
+import type { DatasetInfo, ExampleInfo, JourneyInfo } from "./types";
+
+/** Wählt ein Beispiel in der Auswahlliste der Kopfzeile. */
+async function chooseExample(name: string) {
+  fireEvent.change(await screen.findByLabelText("Datensatz"), { target: { value: name } });
+}
+
+/** Klappt die Angaben des Guide-Status in der Kopfzeile auf. */
+async function openGuideStatus() {
+  fireEvent.click(await screen.findByRole("button", { name: /^Guide:/ }));
+}
+
+/** Wartet, bis die Fahrtenliste die synthetische Fahrt zeigt, und öffnet sie. */
+async function clickJourney() {
+  fireEvent.click(await screen.findByRole("button", { name: /Synthetisch A/ }));
+}
 
 describe("App", () => {
-  it("zeigt nach dem Laden Guide-Status und Legende", async () => {
+  it("zeigt in der Kopfzeile den Guide-Status als Punkt mit Kurztext und klappt die Angaben auf", async () => {
     render(<App dataSource={source()} />);
-    expect(await screen.findByText("Guide-Stand")).toBeTruthy();
-    expect(screen.getByText("Frame-Farben")).toBeTruthy();
+    const status = await screen.findByRole("button", { name: "Guide: ok" });
+    expect(status.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByText("Guide-Stand")).toBeNull();
+    fireEvent.click(status);
+    expect(screen.getByText("Guide-Stand")).toBeTruthy();
+    expect(status.getAttribute("aria-expanded")).toBe("true");
   });
 
-  it("öffnet die Hilfe aus der Legende und kehrt zurück", async () => {
+  it("zeigt auf der Startseite die Anleitung und die Beispiele, Beispiel 01 hervorgehoben", async () => {
+    const guide = {
+      ...GUIDE,
+      examples: [
+        { ...(GUIDE.examples[0] as ExampleInfo), name: "01_einfach.xml", title: "Einfache Fahrt" },
+        ...GUIDE.examples,
+      ],
+    };
+    render(<App dataSource={source({ getGuide: () => Promise.resolve(guide) })} />);
+    expect(await screen.findByText("So beginnen Sie")).toBeTruthy();
+    expect(screen.getByText(/Links eine Fahrt anklicken/)).toBeTruthy();
+    expect(screen.getByText("Einfache Fahrt")).toBeTruthy();
+    expect(screen.getAllByText("Hier beginnen: einfache Zugfahrt").length).toBe(1);
+    expect(screen.queryByRole("tablist")).toBeNull();
+  });
+
+  it("öffnet die Hilfe aus der Kopfzeile und kehrt zurück", async () => {
     render(<App dataSource={source()} />);
-    fireEvent.click(await screen.findByText("Was bedeuten die Farben?"));
+    fireEvent.click(await screen.findByRole("button", { name: "Hilfe" }));
     expect(screen.getByText("Durchgeführte Prüfungen")).toBeTruthy();
     fireEvent.click(screen.getByText("Zurück"));
-    expect(screen.getByText("Guide-Stand")).toBeTruthy();
+    expect(screen.getByText("So beginnen Sie")).toBeTruthy();
   });
 
   it("schaltet die Sprache um", async () => {
     render(<App dataSource={source()} />);
+    await openGuideStatus();
     fireEvent.change(await screen.findByLabelText("Sprache"), { target: { value: "en" } });
     expect(screen.getByText("Guide version")).toBeTruthy();
     expect(document.documentElement.lang).toBe("en");
@@ -45,6 +82,9 @@ describe("App", () => {
       ],
     };
     render(<App dataSource={source({ getAppInfo: () => Promise.resolve(info) })} />);
+    const status = await screen.findByRole("button", { name: "Guide: Abweichung" });
+    expect(screen.queryByText(/config\/settings.json fehlt/)).toBeNull();
+    fireEvent.click(status);
     expect(await screen.findByText(/config\/settings.json fehlt/)).toBeTruthy();
   });
 
@@ -69,10 +109,10 @@ describe("App mit Datensatz", () => {
   it("öffnet ein Beispiel, zeigt Fahrten und führt über Objekt zur XML-Stelle", async () => {
     const getObjectXml = vi.fn(source().getObjectXml);
     render(<App dataSource={source({ getObjectXml })} />);
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
-    expect(await screen.findByText("Synthetische Linie")).toBeTruthy();
+    await chooseExample("ch20_three_stops.xml");
+    expect(await screen.findByText("SYN")).toBeTruthy();
     expect(screen.getByText(/ch:1:sloid:SYN9:0:1: nicht in dieser Datei aufgelöst/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "ServiceJourney" }));
+    await clickJourney();
     fireEvent.click(await screen.findByRole("button", { name: "Objekt" }));
     expect(await screen.findByText(/TimetableFrame\/vehicleJourneys/)).toBeTruthy();
     expect(getObjectXml).toHaveBeenCalledWith("SYNTHETICDATASET01.100");
@@ -80,14 +120,23 @@ describe("App mit Datensatz", () => {
     expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.104");
   });
 
-  it("zeigt Zugnummer und DepartureDayOffset mit Herkunft", async () => {
-    const getObjectXml = vi.fn(source().getObjectXml);
-    render(<App dataSource={source({ getObjectXml })} />);
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
-    fireEvent.click(await screen.findByRole("button", { name: "(DepartureDayOffset 0)" }));
-    expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.105");
-    fireEvent.click(screen.getByRole("button", { name: "1" }));
-    expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.110");
+  it("zeigt in der Liste Produktkategorie und Zugnummer, den Tag nur bei Verschiebung", async () => {
+    const shifted: JourneyInfo = {
+      ...(JOURNEYS[0] as JourneyInfo),
+      departureDayOffset: { status: "found" as const, text: "1", objectId: "x" },
+    };
+    const { unmount } = render(<App dataSource={source()} />);
+    await chooseExample("ch20_three_stops.xml");
+    const item = await screen.findByRole("button", { name: /Synthetisch A/ });
+    expect(within(item).getByText("SYN").className).toContain("badge");
+    expect(item.textContent).not.toContain("DepartureDayOffset");
+    expect(item.textContent).not.toContain("+1");
+    unmount();
+    render(<App dataSource={source({ getJourneys: () => Promise.resolve([shifted]) })} />);
+    await chooseExample("ch20_three_stops.xml");
+    expect((await screen.findByRole("button", { name: /Synthetisch A/ })).textContent).toContain(
+      "+1",
+    );
   });
 
   it("verwirft die Antwort einer älteren Öffnung", async () => {
@@ -102,9 +151,9 @@ describe("App mit Datensatz", () => {
       .mockResolvedValueOnce(second);
     const getJourneys = vi.fn(source().getJourneys);
     render(<App dataSource={source({ openExample, getJourneys })} />);
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
-    fireEvent.click(screen.getByText("broken_xml.xml"));
-    await screen.findByText("Synthetische Linie");
+    await chooseExample("ch20_three_stops.xml");
+    await chooseExample("broken_xml.xml");
+    await screen.findByRole("button", { name: /Synthetisch A/ });
     await act(async () => {
       resolveFirst(DATASET);
     });
@@ -136,7 +185,7 @@ describe("App mit Datensatz", () => {
         dataSource={source({ openExample: () => Promise.reject(new ApiError("error.not_found")) })}
       />,
     );
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
+    await chooseExample("ch20_three_stops.xml");
     expect((await screen.findByRole("alert")).textContent).toContain("Nicht gefunden");
   });
 });
@@ -144,8 +193,8 @@ describe("App mit Datensatz", () => {
 describe("App mit Referenzen und Herkunft", () => {
   async function openJourney(overrides = {}) {
     render(<App dataSource={source(overrides)} />);
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
-    fireEvent.click(await screen.findByRole("button", { name: "ServiceJourney" }));
+    await chooseExample("ch20_three_stops.xml");
+    await clickJourney();
     fireEvent.click(await screen.findByRole("button", { name: "Objekt" }));
     await screen.findByText("Verweist auf");
   }
@@ -204,16 +253,54 @@ describe("App mit Referenzen und Herkunft", () => {
     };
     await openJourney({ getDiagnostics: () => Promise.resolve([diagnostic]) });
     expect(screen.getAllByRole("button", { name: /^TimetableFrame/ }).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("tab", { name: "Prüfung" }));
     fireEvent.click(await screen.findByRole("button", { name: /Zeile 53/ }));
     expect(await screen.findByText("Eine Angabe wählen, um ihre Herkunft zu sehen.")).toBeTruthy();
+  });
+});
+
+describe("rechte Spalte", () => {
+  it("erscheint erst bei einer Auswahl, zeigt die Legende und lässt sich schliessen", async () => {
+    render(<App dataSource={source()} />);
+    await chooseExample("ch20_three_stops.xml");
+    await clickJourney();
+    await screen.findByText("Halte und Zeiten");
+    // Die Fahrt aus der Liste zu öffnen wählt noch keine Angabe: nur der Hauptbereich.
+    expect(screen.queryByRole("complementary", { name: "Herkunft und XML" })).toBeNull();
+    const table = document.querySelector(".stop-table") as HTMLElement;
+    fireEvent.click(within(table).getByText("Synthetisch A"));
+    const column = await screen.findByRole("complementary", { name: "Herkunft und XML" });
+    expect(within(column).getByText("Frame-Farben")).toBeTruthy();
+    expect(document.querySelector(".layout-details")).not.toBeNull();
+    fireEvent.click(within(column).getByRole("button", { name: "Schliessen" }));
+    expect(screen.queryByRole("complementary", { name: "Herkunft und XML" })).toBeNull();
+    expect(document.querySelector(".layout-details")).toBeNull();
+    expect(screen.getByText("Halte und Zeiten")).toBeTruthy();
+  });
+
+  it("verweist aus der Legende auf die Hilfe", async () => {
+    render(<App dataSource={source()} />);
+    await chooseExample("ch20_three_stops.xml");
+    await clickJourney();
+    await screen.findByText("Halte und Zeiten");
+    const table = document.querySelector(".stop-table") as HTMLElement;
+    fireEvent.click(within(table).getByText("Synthetisch A"));
+    fireEvent.click(await screen.findByText("Was bedeuten die Farben?"));
+    expect(screen.getByText("Durchgeführte Prüfungen")).toBeTruthy();
+  });
+
+  it("zeigt den Reiter Prüfung mit der Anzahl der Befunde erst nach dem Prüfen", async () => {
+    render(<App dataSource={source({ openExample: () => Promise.resolve(VALIDATED_DATASET) })} />);
+    await chooseExample("ch20_three_stops.xml");
+    expect(await screen.findByRole("tab", { name: "Prüfung (1)" })).toBeTruthy();
   });
 });
 
 describe("App mit Fahrtansicht", () => {
   async function openJourneyView(overrides = {}) {
     render(<App dataSource={source(overrides)} />);
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
-    fireEvent.click(await screen.findByRole("button", { name: "ServiceJourney" }));
+    await chooseExample("ch20_three_stops.xml");
+    await clickJourney();
     await screen.findByText("Halte und Zeiten");
   }
 
@@ -324,10 +411,13 @@ describe("App mit Fahrtansicht", () => {
 describe("App mit eigenen Dateien und Prüfung", () => {
   const files = [new File(["<a/>"], "eigene.xml")];
 
-  async function chooseFiles(dataSource = source()) {
+  async function chooseFiles(dataSource = source(), openCheck = true) {
     render(<App dataSource={dataSource} />);
     const input = (await screen.findByLabelText("Dateien auswählen")) as HTMLInputElement;
     fireEvent.change(input, { target: { files } });
+    if (openCheck) {
+      fireEvent.click(await screen.findByRole("tab", { name: "Prüfung" }));
+    }
   }
 
   it("öffnet eigene Dateien über den Dialog und zeigt die Versionserkennung", async () => {
@@ -335,7 +425,8 @@ describe("App mit eigenen Dateien und Prüfung", () => {
     await chooseFiles(source({ openFiles }));
     expect(await screen.findByText("Erkannt: CH-Profil 2.0 (Entwurf)")).toBeTruthy();
     expect(openFiles).toHaveBeenCalledWith(files);
-    expect(await screen.findByText("Synthetische Linie")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Fahrten" }));
+    expect(await screen.findByRole("button", { name: /Synthetisch A/ })).toBeTruthy();
   });
 
   it("startet die Prüfung und lädt die Diagnosen neu", async () => {
@@ -395,6 +486,7 @@ describe("App mit eigenen Dateien und Prüfung", () => {
     expect(await screen.findByText("Prüfung läuft …")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Dateien auswählen"), { target: { files } });
     await vi.waitFor(() => expect(openFiles).toHaveBeenCalledTimes(2));
+    fireEvent.click(await screen.findByRole("tab", { name: "Prüfung" }));
     expect(await screen.findByText("Noch nicht geprüft.")).toBeTruthy();
     await act(async () => {
       resolveValidation(VALIDATED_DATASET);
@@ -420,6 +512,7 @@ describe("App mit eigenen Dateien und Prüfung", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
     fireEvent.change(screen.getByLabelText("Dateien auswählen"), { target: { files } });
     await vi.waitFor(() => expect(openFiles).toHaveBeenCalledTimes(2));
+    fireEvent.click(await screen.findByRole("tab", { name: "Prüfung" }));
     await act(async () => {
       rejectValidation(new ApiError("error.internal"));
     });
@@ -451,8 +544,8 @@ describe("App mit eigenen Dateien und Prüfung", () => {
     const closeDataset = vi.fn(() => Promise.resolve());
     const openFiles = vi.fn(() => Promise.resolve({ ...DATASET, id: "SYNTHETICDATASET02" }));
     render(<App dataSource={source({ closeDataset, openFiles })} />);
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
-    await screen.findByText("Synthetische Linie");
+    await chooseExample("ch20_three_stops.xml");
+    await screen.findByRole("button", { name: /Synthetisch A/ });
     fireEvent.change(screen.getByLabelText("Dateien auswählen"), { target: { files } });
     await vi.waitFor(() => expect(openFiles).toHaveBeenCalled());
     expect(closeDataset).toHaveBeenCalledWith(DATASET.id);
@@ -469,9 +562,9 @@ describe("App mit eigenen Dateien und Prüfung", () => {
       .mockReturnValueOnce(first)
       .mockResolvedValue({ ...DATASET, id: "SYNTHETICDATASET02" });
     render(<App dataSource={source({ openExample, closeDataset })} />);
-    fireEvent.click(await screen.findByText("ch20_three_stops.xml"));
-    fireEvent.click(screen.getByText("broken_xml.xml"));
-    await screen.findByText("Synthetische Linie");
+    await chooseExample("ch20_three_stops.xml");
+    await chooseExample("broken_xml.xml");
+    await screen.findByRole("button", { name: /Synthetisch A/ });
     await act(async () => {
       resolveFirst({ ...DATASET, id: "SYNTHETICDATASET01" });
     });
@@ -480,7 +573,7 @@ describe("App mit eigenen Dateien und Prüfung", () => {
 
   it("meldet einen Fehler beim Öffnen eigener Dateien", async () => {
     const openFiles = () => Promise.reject(new ApiError("error.payload_too_large"));
-    await chooseFiles(source({ openFiles }));
+    await chooseFiles(source({ openFiles }), false);
     expect((await screen.findByRole("alert")).textContent).toContain("grösser als erlaubt");
   });
 });
@@ -500,6 +593,7 @@ describe("App während die XSD geladen wird", () => {
     };
     const getGuide = vi.fn().mockResolvedValueOnce(pending).mockResolvedValue(GUIDE);
     render(<App dataSource={source({ getGuide })} />);
+    await openGuideStatus();
     expect(await screen.findByText("XSD wird geladen …")).toBeTruthy();
     expect(screen.getAllByText(/wird geprüft …/).length).toBe(2);
     await act(async () => {
@@ -518,6 +612,7 @@ describe("App während die XSD geladen wird", () => {
       .mockResolvedValueOnce(pending)
       .mockRejectedValue(new ApiError("error.internal"));
     render(<App dataSource={source({ getGuide })} />);
+    await openGuideStatus();
     await screen.findByText("XSD wird geladen …");
     for (let attempt = 1; attempt < 5; attempt += 1) {
       await act(async () => {
@@ -541,6 +636,7 @@ describe("App während die XSD geladen wird", () => {
       .mockRejectedValueOnce(new ApiError("error.internal"))
       .mockResolvedValue(GUIDE);
     render(<App dataSource={source({ getGuide })} />);
+    await openGuideStatus();
     await screen.findByText("XSD wird geladen …");
     await act(async () => {
       await vi.advanceTimersByTimeAsync(2100);

@@ -96,6 +96,7 @@ def test_journeys(client: TestClient) -> None:
     assert journey["trainNumbers"][0]["text"] == "1"
     assert journey["line"]["status"] == "found"
     assert journey["lastStop"]["text"] == "Synthetisch C"
+    assert journey["category"]["text"] == "SYN"
 
 
 def test_search_detail_and_xml(client: TestClient) -> None:

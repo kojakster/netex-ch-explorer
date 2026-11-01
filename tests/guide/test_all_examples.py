@@ -82,3 +82,4 @@ def test_example_01_journey(guide_path: Path) -> None:
     assert journey.departure_time.text == "10:35:00"
     assert (journey.first_stop.status, journey.first_stop.text) == (LookupStatus.FOUND, "Spiez")
     assert journey.last_stop.text == "Interlaken Ost"
+    assert journey.category.text == "RE"
