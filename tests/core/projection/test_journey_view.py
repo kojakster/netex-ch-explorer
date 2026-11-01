@@ -28,6 +28,9 @@ def test_header_of_three_stops() -> None:
     assert view.line.text == "Synthetische Linie"
     assert view.pattern.text == "ch:1:ServiceJourneyPattern:SYN1"
     assert view.time_demand_type.text == "ch:1:TimeDemandType:SYN1"
+    assert (view.operator.status, view.operator.text) == (LookupStatus.FOUND, "Synthetische Bahn")
+    assert view.operator.element is not None
+    assert view.operator.element.name == "Name"
     assert [(t.role, t.mode.text, t.submode.status) for t in view.transports] == [
         ("journey", "rail", LookupStatus.ABSENT),
         ("line", "rail", LookupStatus.ABSENT),
@@ -596,3 +599,33 @@ def test_notice_without_end_point_ends_at_the_start_point() -> None:
     assert (single.start_position, single.end_position) == (2, 2)
     assert single.end_ref is None
     assert (span.start_position, span.end_position) == (1, 3)
+
+
+def test_operator_is_absent_without_reference() -> None:
+    assert Scenario().view().operator.status is LookupStatus.ABSENT
+
+
+def test_operator_name_comes_from_the_file() -> None:
+    scenario = Scenario(
+        journey_extra="<OperatorRef ref='op'/>",
+        extra="<Operator id='op'><Name>Betreiber Test</Name></Operator>",
+    )
+    operator = scenario.view().operator
+    assert (operator.status, operator.text) == (LookupStatus.FOUND, "Betreiber Test")
+
+
+def test_operator_without_name_keeps_the_object_as_source() -> None:
+    scenario = Scenario(journey_extra="<OperatorRef ref='op'/>", extra="<Operator id='op'/>")
+    operator = scenario.view().operator
+    assert operator.status is LookupStatus.ABSENT
+    assert operator.element is not None
+    assert operator.element.name == "Operator"
+
+
+def test_operator_reference_without_target_gives_the_reason() -> None:
+    scenario = Scenario(
+        journey_extra="<OperatorRef ref='nirgends'/>",
+        extra="<Operator id='op'><Name>X</Name></Operator>",
+    )
+    operator = scenario.view().operator
+    assert (operator.status, operator.text) == (LookupStatus.NOT_RESOLVED, "nirgends")

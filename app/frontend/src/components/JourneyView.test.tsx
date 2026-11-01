@@ -1,12 +1,15 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { I18nContext, messagesFor, translate } from "../i18n";
+import { OriginContext } from "../origin";
 import { JOURNEY_VIEW } from "../testData";
 import type {
   CategoryInfo,
+  DiagnosticInfo,
   JourneyViewInfo,
   MasterInfo,
   NoticeInfo,
   TimeInfo,
+  TransportInfo,
   ValidityInfo,
 } from "../types";
 import { CalculationChain } from "./CalculationChain";
@@ -92,14 +95,26 @@ describe("TimeCell", () => {
     expect(screen.getByText("00:17")).toBeTruthy();
     const marker = screen.getByText("+1");
     expect(marker.getAttribute("title")).toContain("Tageswechsel berechnet");
-    expect(screen.getByText("berechnet")).toBeTruthy();
+    // Berechnete Zeiten tragen ein Symbol mit Beschriftung, keine Textzeile.
+    const symbol = screen.getByRole("img", { name: "berechnet" });
+    expect(symbol.textContent).toBe("Σ");
+    expect(screen.queryByText("berechnet")).toBeNull();
+  });
+
+  it("setzt die Abfahrt fett und die Ankunft normal", () => {
+    const { rerender } = render(
+      <TimeCell time={base} selectedTime={null} onSelect={() => undefined} />,
+    );
+    expect(screen.getByRole("button").className).not.toContain("time-strong");
+    rerender(<TimeCell time={base} selectedTime={null} onSelect={() => undefined} strong />);
+    expect(screen.getByRole("button").className).toContain("time-strong");
   });
 
   it("zeigt „−1“ und lässt bei ausdrücklicher Zeit die Markierung weg", () => {
     const explicit: TimeInfo = { ...base, status: "explicit", dayOffset: -1, offsetOrigin: null };
     render(<TimeCell time={explicit} selectedTime="arrival-2" onSelect={() => undefined} />);
     expect(screen.getByText("−1").getAttribute("title")).toBeNull();
-    expect(screen.queryByText("berechnet")).toBeNull();
+    expect(screen.queryByRole("img", { name: "berechnet" })).toBeNull();
     expect(screen.getByRole("button").className).toContain("selected");
   });
 
@@ -236,7 +251,7 @@ describe("StopTable", () => {
     expect(screen.getAllByText(/Haltestelle nicht in dieser Datei/)).toHaveLength(3);
   });
 
-  it("fasst Ein-/Aussteigen zusammen und zeigt Bedarfshalt und StopUse mit Stammdaten", () => {
+  it("sagt Ein-/Aussteigen nur in Worten, wenn es eingeschränkt ist, und zeigt Bedarfshalt und StopUse", () => {
     const first = JOURNEY_VIEW.stops[0];
     const second = JOURNEY_VIEW.stops[1];
     if (first === undefined || second === undefined) {
@@ -261,11 +276,16 @@ describe("StopTable", () => {
       },
       { ...second, forBoarding: flag("?"), forAlighting: flag("true") },
     ];
-    render(table({ ...JOURNEY_VIEW, stops }));
+    render(
+      <OriginContext.Provider value={false}>
+        {table({ ...JOURNEY_VIEW, stops })}
+      </OriginContext.Provider>,
+    );
     const rows = screen.getAllByRole("row");
-    expect(
-      within(rows[1] as HTMLElement).getByText("weder Einsteigen noch Aussteigen"),
-    ).toBeTruthy();
+    expect(within(rows[1] as HTMLElement).getByText("kein Ein-/Aussteigen")).toBeTruthy();
+    // Uneingeschränktes Ein- und Aussteigen und die Werte ForBoarding/ForAlighting bleiben weg.
+    expect(within(rows[2] as HTMLElement).queryByText("Ein- und Aussteigen")).toBeNull();
+    expect(screen.queryByText("ForBoarding")).toBeNull();
     expect(within(rows[2] as HTMLElement).getByText("Bedarfshalt")).toBeTruthy();
     expect(within(rows[2] as HTMLElement).getByText("Default")).toBeTruthy();
     expect(
@@ -393,9 +413,189 @@ describe("keine verschachtelten Knöpfe", () => {
         selectedTime={null}
         onSelectTime={() => undefined}
         onShowDiagnostic={() => undefined}
+        showOrigin
+        onShowOriginChange={() => undefined}
         {...PROPS}
       />,
     );
     expect(container.querySelector("button button")).toBeNull();
+  });
+});
+
+describe("StopTable ohne und mit „Herkunft zeigen“", () => {
+  function table(showOrigin: boolean, journey: JourneyViewInfo = JOURNEY_VIEW) {
+    return (
+      <OriginContext.Provider value={showOrigin}>
+        <StopTable
+          journey={journey}
+          selectedTime={null}
+          onSelectTime={() => undefined}
+          {...PROPS}
+        />
+      </OriginContext.Provider>
+    );
+  }
+
+  it("zeigt in der Normalansicht keine Zusatzzeilen und keine Farbbalken", () => {
+    render(table(false));
+    expect(screen.queryByText("Haltestelle (StopPlace)")).toBeNull();
+    expect(screen.queryByText("ForBoarding")).toBeNull();
+    const names = document.querySelectorAll(".stop-name");
+    expect(names.length).toBe(3);
+    for (const name of names) {
+      expect(name.className).toContain("sourced-plain");
+      expect((name as HTMLElement).style.borderLeftColor).toBe("");
+    }
+  });
+
+  it("zeigt mit „Herkunft zeigen“ StopPlace, Quay und die Werte von ForBoarding/ForAlighting", () => {
+    render(table(true));
+    expect(screen.getAllByText("Haltestelle (StopPlace)")).toHaveLength(3);
+    expect(screen.getAllByText("Kante (Quay)")).toHaveLength(3);
+    expect(screen.getAllByText("ForBoarding").length).toBeGreaterThan(0);
+    expect((document.querySelector(".stop-name") as HTMLElement).style.borderLeftColor).not.toBe(
+      "",
+    );
+  });
+
+  it("nennt die Spalte „Gleis“ bei rail der Fahrt und sonst „Kante“", () => {
+    const { rerender } = render(table(false));
+    expect(screen.getByRole("columnheader", { name: "Gleis" })).toBeTruthy();
+    const bus = {
+      ...JOURNEY_VIEW,
+      transports: JOURNEY_VIEW.transports.map((transport) => ({
+        ...transport,
+        mode: { ...transport.mode, text: "bus" },
+      })),
+    };
+    rerender(table(false, bus));
+    expect(screen.getByRole("columnheader", { name: "Kante" })).toBeTruthy();
+    // Fehlt der TransportMode der Fahrt, gilt der der Linie.
+    const lineRail: JourneyViewInfo = {
+      ...JOURNEY_VIEW,
+      transports: [
+        {
+          ...(JOURNEY_VIEW.transports[0] as TransportInfo),
+          mode: { status: "absent", text: null, element: null },
+        },
+        {
+          ...(JOURNEY_VIEW.transports[0] as TransportInfo),
+          role: "line",
+        },
+      ],
+    };
+    rerender(table(false, lineRail));
+    expect(screen.getByRole("columnheader", { name: "Gleis" })).toBeTruthy();
+    rerender(table(false, { ...JOURNEY_VIEW, transports: [] }));
+    expect(screen.getByRole("columnheader", { name: "Kante" })).toBeTruthy();
+  });
+
+  it("beginnt die Haltelinie am ersten und endet sie am letzten Halt", () => {
+    render(table(false));
+    const rows = document.querySelectorAll(".stop-row");
+    expect(rows[0]?.className).toContain("stop-first");
+    expect(rows[2]?.className).toContain("stop-last");
+    expect(rows[1]?.className).not.toMatch(/stop-first|stop-last/);
+    expect(document.querySelectorAll(".line-cell").length).toBe(3);
+  });
+});
+
+describe("JourneyView als Fahrplananzeige", () => {
+  function view(overrides: Partial<JourneyViewInfo> = {}, showOrigin = false) {
+    const onShowOriginChange = vi.fn();
+    const onSelect = vi.fn();
+    render(
+      <JourneyView
+        journey={{ ...JOURNEY_VIEW, ...overrides }}
+        selectedTime={null}
+        onSelectTime={() => undefined}
+        onShowDiagnostic={() => undefined}
+        showOrigin={showOrigin}
+        onShowOriginChange={onShowOriginChange}
+        colors={COLORS}
+        selected={null}
+        onSelect={onSelect}
+      />,
+    );
+    return { onShowOriginChange, onSelect };
+  }
+
+  it("zeigt im Kopf Zugnummer, Von → Nach, Betreiber, Gültigkeit und Betriebstage", () => {
+    view();
+    const head = document.querySelector(".journey-head") as HTMLElement;
+    expect(within(head).getByRole("heading").textContent).toContain("1");
+    expect(within(head).getByText("Synthetisch A")).toBeTruthy();
+    expect(within(head).getByText("Synthetisch C")).toBeTruthy();
+    expect(within(head).getByText("Synthetische Bahn")).toBeTruthy();
+    expect(within(head).getByText("Gültig 13.12.2026 bis 19.12.2026")).toBeTruthy();
+    expect(within(head).getByText("5 Betriebstage (7 Tage im Zeitraum)")).toBeTruthy();
+  });
+
+  it("zeigt das Abzeichen der Produktkategorie in der Überschrift, wenn sie vorliegt", () => {
+    const category: CategoryInfo = {
+      role: "journey",
+      ref: (JOURNEY_VIEW.validities[0] as ValidityInfo).ref,
+      target: (JOURNEY_VIEW.validities[0] as ValidityInfo).ref,
+      problem: null,
+      shortName: { status: "found", text: "RE", element: JOURNEY_VIEW.journey },
+      names: [],
+      master: null,
+    };
+    view({ categories: [category] });
+    expect(within(screen.getByRole("heading", { level: 2 })).getByText("RE").className).toContain(
+      "badge",
+    );
+  });
+
+  it("kennzeichnet fehlende Angaben im Kopf, statt etwas zu ergänzen", () => {
+    view({
+      trainNumbers: [],
+      validities: [],
+      operator: { status: "absent", text: null, element: null },
+      stops: [],
+    });
+    const head = document.querySelector(".journey-head") as HTMLElement;
+    expect(within(head).getAllByText("nicht in der Datei").length).toBe(2);
+    expect(within(head).getByText(/Keine Betriebstage in der Datei/)).toBeTruthy();
+    expect(head.querySelector(".journey-route")).toBeNull();
+  });
+
+  it("zeigt Warnungen und Hinweise der Fahrt als Abzeichen, die zu den Befunden springen", () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const diagnostics = [
+      { ...(JOURNEY_VIEW.diagnostics[0] as DiagnosticInfo), severity: "warning" as const },
+      { ...(JOURNEY_VIEW.diagnostics[0] as DiagnosticInfo), severity: "warning" as const },
+      { ...(JOURNEY_VIEW.diagnostics[0] as DiagnosticInfo), severity: "info" as const },
+    ];
+    view({ diagnostics });
+    expect(screen.getByRole("button", { name: /Warnung 2/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Fehler/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Hinweis 1/ }));
+    expect(scroll).toHaveBeenCalled();
+  });
+
+  it("schaltet „Herkunft zeigen“ und zeigt dann die Legende der Frame-Farben", () => {
+    const { onShowOriginChange } = view();
+    expect(screen.queryByText("Frame-Farben")).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Herkunft zeigen" }));
+    expect(onShowOriginChange).toHaveBeenCalledWith(true);
+  });
+
+  it("zeigt mit eingeschalteter Herkunft die Legende und die Farbbalken", () => {
+    view({}, true);
+    expect(screen.getByText("Frame-Farben")).toBeTruthy();
+    expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("klappt alle übrigen Angaben unter „Weitere Angaben“ ein, mit Bezeichnung und NeTEx-Name", () => {
+    view();
+    const more = screen.getByText("Weitere Angaben").closest("details") as HTMLDetailsElement;
+    expect(more.open).toBe(false);
+    expect(within(more).getByText(/Fahrtmuster/)).toBeTruthy();
+    expect(within(more).getByText("· ServiceJourneyPattern")).toBeTruthy();
+    expect(within(more).getByText("· TimeDemandType")).toBeTruthy();
+    expect(within(more).getByText("Teilstrecken")).toBeTruthy();
+    expect(within(more).getByText("Synthetischer Hinweis")).toBeTruthy();
   });
 });

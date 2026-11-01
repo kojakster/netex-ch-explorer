@@ -26,6 +26,7 @@ class Feature(StrEnum):
     PROVENANCE_CHAIN = "provenance_chain"
     NAVIGATION_HISTORY = "navigation_history"
     JOURNEY_VIEW = "journey_view"
+    SHOW_ORIGIN = "show_origin"
     CALCULATED_TIMES = "calculated_times"
     MIDNIGHT = "midnight"
     OPERATING_DAYS = "operating_days"

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { colorOf } from "../colors";
 import { useI18n } from "../i18n";
+import { useShowOrigin } from "../origin";
 import type { FrameColor, ObjectInfo, ValueInfo } from "../types";
 
 interface SourcedProps {
@@ -26,10 +27,12 @@ export function Sourced({
   children,
 }: SourcedProps) {
   const { t } = useI18n();
+  const showOrigin = useShowOrigin();
   if (element === null) {
     return <span className={className}>{children}</span>;
   }
-  const color = colorOf(element, colors);
+  // Ohne „Herkunft zeigen“ bleibt die Angabe anklickbar, trägt aber keinen Farbbalken.
+  const color = showOrigin ? colorOf(element, colors) : null;
   const style = color === null ? undefined : { borderLeftColor: color.background };
   const title = t("sourced.title", {
     element: element.name,
@@ -40,7 +43,7 @@ export function Sourced({
   return (
     <button
       type="button"
-      className={`sourced ${className}${selected === element.id ? " selected" : ""}`}
+      className={`sourced${showOrigin ? "" : " sourced-plain"} ${className}${selected === element.id ? " selected" : ""}`}
       style={style}
       title={title}
       onClick={() => onSelect(element.id)}

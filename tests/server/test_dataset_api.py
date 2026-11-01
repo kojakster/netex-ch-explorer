@@ -301,6 +301,8 @@ def test_journey_view_stops_times_and_chain(client: TestClient) -> None:
     assert [number["text"] for number in view["trainNumbers"]] == ["1"]
     assert view["line"]["text"] == "Synthetische Linie"
     assert view["line"]["element"]["colorKey"] == "ServiceFrame"
+    assert view["operator"]["text"] == "Synthetische Bahn"
+    assert view["operator"]["element"]["name"] == "Name"
     first, second, third = view["stops"]
     assert [stop["stopPoint"]["text"] for stop in view["stops"]] == [
         "Synthetisch A",

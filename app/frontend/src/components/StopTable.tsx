@@ -1,4 +1,5 @@
 import { useI18n } from "../i18n";
+import { useShowOrigin } from "../origin";
 import type { JourneyViewInfo, StopInfo, TimeInfo } from "../types";
 import { Facilities } from "./Facilities";
 import { MasterText } from "./MasterText";
@@ -12,7 +13,23 @@ interface StopTableProps extends SourceProps {
   onSelectTime: (time: TimeInfo, stop: StopInfo) => void;
 }
 
-function accessKey(stop: StopInfo): string {
+const RAIL_MODE = "rail";
+
+/**
+ * Bezeichnung der Kante: „Gleis“ bei `TransportMode` `rail` der Fahrt, fehlt er, der Linie;
+ * sonst „Kante“. Der Wert selbst ist immer der `PublicCode` der `Quay`.
+ */
+export function platformKey(journey: JourneyViewInfo): "rail" | "other" {
+  const owners = ["journey", "line"].map((role) =>
+    journey.transports.find((transport) => transport.role === role),
+  );
+  const mode = owners.find((transport) => transport?.mode.status === "found")?.mode.text;
+  return mode === RAIL_MODE ? "rail" : "other";
+}
+
+type AccessKey = "both" | "boardingOnly" | "alightingOnly" | "none" | "unknown";
+
+function accessKey(stop: StopInfo): AccessKey {
   const boarding = stop.forBoarding.text;
   const alighting = stop.forAlighting.text;
   if (boarding === "true" && alighting === "true") {
@@ -27,6 +44,7 @@ function accessKey(stop: StopInfo): string {
   return boarding === "false" && alighting === "false" ? "none" : "unknown";
 }
 
+/** StopPlace und Quay des Halts mit ihrer Herkunft (nur mit „Herkunft zeigen“). */
 function Places({ stop, ...source }: SourceProps & { stop: StopInfo }) {
   const { t } = useI18n();
   const place = stop.stopPlace;
@@ -52,44 +70,62 @@ function Places({ stop, ...source }: SourceProps & { stop: StopInfo }) {
   );
 }
 
-function Access({
+/** Hinweise zum Halt: Einschränkung des Ein-/Aussteigens in Worten, Bedarfshalt, Verwendung des Halts. */
+function StopNotes({
   stop,
   guideCommit,
   ...source
 }: SourceProps & { stop: StopInfo; guideCommit: string | null }) {
   const { t } = useI18n();
+  const showOrigin = useShowOrigin();
+  const access = accessKey(stop);
   const flags = [stop.forBoarding, stop.forAlighting, stop.requestStop].filter(
     (value) => value.element !== null,
   );
   return (
     <>
-      <div className="stop-access">{t(`stop.access.${accessKey(stop)}`)}</div>
+      {(showOrigin || access !== "both") && (
+        <div className={access === "unknown" ? "stop-access lookup-missing" : "stop-access"}>
+          {t(`stop.access.${access}`)}
+        </div>
+      )}
       {stop.requestStop.text === "true" && (
         <div className="stop-request">{t("stop.requestStop")}</div>
       )}
-      <div className="stop-flags">
-        {flags.map((value) => (
-          <Sourced key={value.element?.id} element={value.element} {...source} className="flag">
-            <span className="flag-name">{value.element?.name}</span>=<code>{value.text}</code>
-          </Sourced>
-        ))}
-        {stop.stopUse !== null && (
-          <span className="flag-use">
-            <Sourced element={stop.stopUse.element} {...source} className="flag">
-              <span className="flag-name">{stop.stopUse.element.name}</span>=
-              <code>{stop.stopUse.code}</code>
-            </Sourced>{" "}
-            <MasterText master={stop.stopUse.master} guideCommit={guideCommit} compact />
-          </span>
-        )}
-      </div>
+      {!showOrigin && stop.stopUse !== null && (
+        <div className="stop-use">
+          <Sourced element={stop.stopUse.element} {...source}>
+            <code>{stop.stopUse.code}</code>
+          </Sourced>{" "}
+          <MasterText master={stop.stopUse.master} guideCommit={guideCommit} compact />
+        </div>
+      )}
+      {showOrigin && (
+        <div className="stop-flags">
+          {flags.map((value) => (
+            <Sourced key={value.element?.id} element={value.element} {...source} className="flag">
+              <span className="flag-name">{value.element?.name}</span>=<code>{value.text}</code>
+            </Sourced>
+          ))}
+          {stop.stopUse !== null && (
+            <span className="flag-use">
+              <Sourced element={stop.stopUse.element} {...source} className="flag">
+                <span className="flag-name">{stop.stopUse.element.name}</span>=
+                <code>{stop.stopUse.code}</code>
+              </Sourced>{" "}
+              <MasterText master={stop.stopUse.master} guideCommit={guideCommit} compact />
+            </span>
+          )}
+        </div>
+      )}
     </>
   );
 }
 
-/** Der Fahrplan der Fahrt: Halt, Ein-/Aussteigen, Ankunft, Abfahrt und Angebote je Teilstrecke. */
+/** Der Fahrplan der Fahrt: an | ab | Halt mit Haltelinie | Gleis/Kante | Hinweis. */
 export function StopTable({ journey, selectedTime, onSelectTime, ...source }: StopTableProps) {
   const { t } = useI18n();
+  const showOrigin = useShowOrigin();
   if (journey.stops.length === 0) {
     return (
       <p className="lookup-missing">
@@ -97,44 +133,52 @@ export function StopTable({ journey, selectedTime, onSelectTime, ...source }: St
       </p>
     );
   }
+  const lastPosition = journey.stops.length;
   return (
     <div className="table-scroll">
       <table className="stop-table">
         <thead>
           <tr>
-            <th>{t("stops.stop")}</th>
-            <th>{t("stops.access")}</th>
             <th>{t("stops.arrival")}</th>
             <th>{t("stops.departure")}</th>
-            <th>{t("stops.offers")}</th>
+            <th className="line-head" />
+            <th>{t("stops.stop")}</th>
+            <th>{t(`stops.platform.${platformKey(journey)}`)}</th>
+            <th>{t("stops.notes")}</th>
           </tr>
         </thead>
         <tbody>
-          {journey.stops.map((stop) => (
-            <tr key={stop.point.id}>
-              <td>
-                <span className="stop-number">{stop.position}</span>{" "}
-                <ValueText value={stop.stopPoint} {...source} className="stop-name" />
-                <Places stop={stop} {...source} />
-              </td>
-              <td>
-                <Access stop={stop} guideCommit={journey.guideCommit} {...source} />
-              </td>
-              <td>
+          {journey.stops.map((stop, row) => (
+            <tr
+              key={stop.point.id}
+              className={`stop-row${row === 0 ? " stop-first" : ""}${row === lastPosition - 1 ? " stop-last" : ""}`}
+            >
+              <td className="time-col">
                 <TimeCell
                   time={stop.arrival}
                   selectedTime={selectedTime}
                   onSelect={(time) => onSelectTime(time, stop)}
                 />
               </td>
-              <td>
+              <td className="time-col">
                 <TimeCell
                   time={stop.departure}
                   selectedTime={selectedTime}
                   onSelect={(time) => onSelectTime(time, stop)}
+                  strong
                 />
               </td>
-              <td>
+              <td aria-hidden="true" className="line-cell" />
+              <td className="stop-cell">
+                <span className="stop-number">{stop.position}</span>{" "}
+                <ValueText value={stop.stopPoint} {...source} className="stop-name" />
+                {showOrigin && <Places stop={stop} {...source} />}
+              </td>
+              <td className="platform-cell">
+                <ValueText value={stop.quay} {...source} />
+              </td>
+              <td className="notes-cell">
+                <StopNotes stop={stop} guideCommit={journey.guideCommit} {...source} />
                 {stop.partNumbers.map((number) => {
                   const part = journey.parts.find((item) => item.number === number);
                   return (

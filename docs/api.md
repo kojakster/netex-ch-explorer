@@ -258,7 +258,7 @@ Fahrtansicht einer `ServiceJourney` oder `TemplateServiceJourney`. `{id}` ist di
 {
   "journey": Objekt,
   "guideCommit": "b7ac158…",
-  "pattern": Angabe, "timeDemandType": Angabe,
+  "pattern": Angabe, "timeDemandType": Angabe, "operator": Angabe,
   "trainNumbers": [Angabe], "line": Angabe,
   "privateCodes": [{ "codeType": "sjyid", "value": "…", "element": Objekt }],
   "transports": [{ "owner": Objekt, "role": "journey | line", "mode": Angabe, "submodeType": "RailSubmode", "submode": Angabe }],

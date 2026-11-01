@@ -6,20 +6,26 @@ interface TimeCellProps {
   time: TimeInfo | null;
   selectedTime: string | null;
   onSelect: (time: TimeInfo) => void;
+  /** Die Abfahrt steht fett, die Ankunft normal. */
+  strong?: boolean;
 }
 
-/** Eine Zeit im Fahrplan: „berechnet“ gekennzeichnet, mit „+1“/„−1“; ein Klick zeigt die Rechenkette. */
-export function TimeCell({ time, selectedTime, onSelect }: TimeCellProps) {
+/** Symbol für berechnete Zeiten (Summe aus DepartureTime, RunTime und WaitTime). */
+export const CALCULATED_SYMBOL = "Σ";
+
+/** Eine Zeit im Fahrplan: berechnete Zeiten mit Symbol, „+1“/„−1“ nur bei anderem Tag; ein Klick zeigt die Rechenkette. */
+export function TimeCell({ time, selectedTime, onSelect, strong = false }: TimeCellProps) {
   const { t } = useI18n();
   if (time === null) {
     return <span className="time-none">{"–"}</span>;
   }
   const selected = selectedTime === time.id ? " selected" : "";
+  const weight = strong ? " time-strong" : "";
   if (time.status === "not_computable" || time.clock === null) {
     return (
       <button
         type="button"
-        className={`time-button time-failed${selected}`}
+        className={`time-button time-failed${weight}${selected}`}
         onClick={() => onSelect(time)}
       >
         <span className="time-missing">{t("time.notComputable")}</span>
@@ -31,7 +37,11 @@ export function TimeCell({ time, selectedTime, onSelect }: TimeCellProps) {
   }
   const marker = dayMarker(time.dayOffset);
   return (
-    <button type="button" className={`time-button${selected}`} onClick={() => onSelect(time)}>
+    <button
+      type="button"
+      className={`time-button${weight}${selected}`}
+      onClick={() => onSelect(time)}
+    >
       <span className="time-value">{trimSeconds(time.clock)}</span>
       {marker !== "" && (
         <span
@@ -41,7 +51,11 @@ export function TimeCell({ time, selectedTime, onSelect }: TimeCellProps) {
           {marker}
         </span>
       )}
-      {time.status === "computed" && <span className="time-calc">{t("time.calculated")}</span>}
+      {time.status === "computed" && (
+        <span className="time-calc" role="img" aria-label={t("time.calculated")}>
+          {CALCULATED_SYMBOL}
+        </span>
+      )}
     </button>
   );
 }

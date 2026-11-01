@@ -424,6 +424,7 @@ export const JOURNEY_VIEW: JourneyViewInfo = {
     "ch:1:SJP:SYN",
   ),
   timeDemandType: found(element(141, "TimeDemandType", "ServiceFrame", "tdt"), "tdt"),
+  operator: found(element(142, "Name", "ResourceFrame"), "Synthetische Bahn"),
   trainNumbers: [found(element(110, "ForAdvertisement", "TimetableFrame"), "1")],
   privateCodes: [],
   line: found(element(40, "PublicCode", "ServiceFrame"), "Synthetische Linie"),

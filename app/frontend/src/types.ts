@@ -467,6 +467,8 @@ export interface JourneyViewInfo {
   guideCommit: string | null;
   pattern: ValueInfo;
   timeDemandType: ValueInfo;
+  /** Betreiber (`OperatorRef` der Fahrt) mit Name aus der Datei. */
+  operator: ValueInfo;
   trainNumbers: ValueInfo[];
   privateCodes: PrivateCodeInfo[];
   line: ValueInfo;

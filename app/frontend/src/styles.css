@@ -851,22 +851,110 @@ input {
   font-weight: 600;
 }
 
-/* Fahrtansicht */
-.journey-view h2 {
-  font-size: 1.15rem;
-  margin: 0 0 0.5rem;
-}
-
+/* Fahrtansicht: Kopf */
 .journey-view h3 {
   font-size: 1rem;
   margin: 1.2rem 0 0.4rem;
 }
 
+.journey-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.journey-head-main {
+  min-width: 0;
+  flex: 1 1 24rem;
+}
+
+.journey-head h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.badge-large {
+  padding: 0.05rem 0.55rem;
+  font-size: 0.6em;
+  border-radius: 4px;
+}
+
+.journey-number-large {
+  font-weight: 700;
+}
+
+.journey-route {
+  margin: 0.2rem 0 0;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
+
+.journey-facts-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1.25rem;
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.92em;
+}
+
+.journey-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.count-badge {
+  border-radius: 999px;
+  font-weight: 600;
+  background: var(--surface);
+}
+
+.count-error {
+  border-color: var(--severity-error);
+  color: var(--severity-error);
+}
+
+.count-warning {
+  border-color: var(--severity-warning);
+  color: var(--severity-warning);
+}
+
+.count-info {
+  border-color: var(--severity-info);
+  color: var(--severity-info);
+}
+
+.origin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.origin-switch {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.origin-switch input {
+  vertical-align: middle;
+}
+
+/* Fahrtansicht: weitere Angaben */
 .journey-facts {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
   gap: 0.3rem 0.9rem;
-  margin: 0;
+  margin: 0.5rem 0 0;
 }
 
 .journey-facts dt {
@@ -875,6 +963,50 @@ input {
 
 .journey-facts dd {
   margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.netex-name {
+  font-size: 0.8em;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.more-details {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+
+.more-details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.2rem 0;
+}
+
+.findings {
+  margin-top: 1.25rem;
+}
+
+.findings .issue {
+  padding: 0.35rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left-width: 5px;
+  border-radius: 3px;
+}
+
+.findings .issue-info {
+  border-left-color: var(--severity-info);
+}
+
+.findings .issue-warning {
+  border-left-color: var(--severity-warning);
+}
+
+.findings .issue-error {
+  border-left-color: var(--severity-error);
 }
 
 /* Angabe mit Herkunft: Frame-Farbe am linken Rand */
@@ -890,6 +1022,11 @@ input {
   color: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.sourced-plain {
+  border-left: none;
+  padding: 0 0.15rem;
 }
 
 .sourced:hover {
@@ -959,30 +1096,121 @@ input {
   font-style: italic;
 }
 
-/* Halte */
-.stop-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.92em;
+/* Halte: die Fahrplantafel (Rahmen und Schatten nur hier und in der rechten Spalte) */
+.timetable {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding: 0.25rem 0.75rem;
 }
 
-.stop-table th,
+.timetable-note {
+  margin: 0.4rem 0 0;
+}
+
+.stop-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.stop-table th {
+  text-align: left;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border-strong);
+}
+
 .stop-table td {
   text-align: left;
   vertical-align: top;
-  padding: 0.35rem 0.4rem;
+  padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border);
+}
+
+.stop-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stop-table .time-col {
+  width: 5.5rem;
+  white-space: nowrap;
+}
+
+.stop-table .line-head,
+.stop-table .line-cell {
+  width: 1.75rem;
+  padding: 0;
+  position: relative;
+}
+
+/* Haltelinie: Punkte, durch eine Linie verbunden; sie beginnt am ersten und endet am letzten Halt */
+.line-cell::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: -1px;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--accent);
+}
+
+.stop-first .line-cell::before {
+  top: 1.05rem;
+}
+
+.stop-last .line-cell::before {
+  bottom: auto;
+  height: 1.05rem;
+}
+
+.stop-first.stop-last .line-cell::before {
+  display: none;
+}
+
+.line-cell::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0.75rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-left: -0.35rem;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: var(--surface);
 }
 
 .stop-number {
   display: inline-block;
-  min-width: 1.4em;
+  min-width: 1.2em;
   color: var(--muted);
+  font-size: 0.8em;
+}
+
+.stop-cell {
+  min-width: 10rem;
+  overflow-wrap: anywhere;
+}
+
+.platform-cell {
+  min-width: 5rem;
+  overflow-wrap: anywhere;
+}
+
+.notes-cell {
+  min-width: 8rem;
+  overflow-wrap: anywhere;
+  font-size: 0.92em;
 }
 
 .stop-places {
   display: grid;
-  grid-template-columns: max-content 1fr;
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 0.1rem 0.5rem;
   margin: 0.2rem 0 0;
   font-size: 0.88em;
@@ -1011,7 +1239,8 @@ input {
 /* Zeiten */
 .time-button {
   display: inline-flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
   align-items: baseline;
   gap: 0.3rem;
   background: none;
@@ -1026,23 +1255,35 @@ input {
 
 .time-button:hover,
 .time-button.selected {
-  border-color: var(--focus);
+  border-color: var(--accent);
+}
+
+.time-button.selected {
+  background: var(--accent-soft);
 }
 
 .time-value {
-  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
+.time-strong .time-value {
+  font-weight: 700;
+}
+
 .day-marker {
-  font-size: 0.85em;
+  font-size: 0.8em;
   font-weight: 600;
+  vertical-align: super;
 }
 
 .time-calc {
-  font-size: 0.78em;
-  font-style: italic;
+  font-size: 0.8em;
   color: var(--muted);
+}
+
+.time-none {
+  color: var(--muted);
+  padding: 0.1rem 0.3rem;
 }
 
 .time-missing {
@@ -1053,11 +1294,13 @@ input {
   display: block;
   font-size: 0.85em;
   color: var(--muted);
+  white-space: normal;
 }
 
 .time-failed {
   flex-direction: column;
   align-items: flex-start;
+  white-space: normal;
 }
 
 /* Betriebstage, Angebote, Teilstrecken, Hinweise */

@@ -76,6 +76,8 @@ export function App({ dataSource }: AppProps) {
   // Zählt die abgeschlossenen Validierungen des offenen Datensatzes (Schlüssel für die Diagnosen).
   const [validationRuns, setValidationRuns] = useState(0);
   const [history, setHistory] = useState(EMPTY_HISTORY);
+  // Schalter „Herkunft zeigen“ der Fahrtansicht; er bleibt beim Wechsel zwischen Fahrten.
+  const [showOrigin, setShowOrigin] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>("journeys");
   // Die rechte Spalte (Rechenkette, Herkunft, XML) erscheint erst, wenn etwas gewählt ist.
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -466,6 +468,8 @@ export function App({ dataSource }: AppProps) {
                         onSelect={selectJourneyElement}
                         onSelectTime={selectTime}
                         onShowDiagnostic={showDiagnostic}
+                        showOrigin={showOrigin}
+                        onShowOriginChange={setShowOrigin}
                       />
                     )}
                     {centerView === "object" && (

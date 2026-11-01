@@ -142,6 +142,8 @@ class JourneyView:
     pattern: Lookup
     """Das `ServiceJourneyPattern` (Herkunft der Haltefolge) oder der Grund, warum es fehlt."""
     time_demand_type: Lookup
+    operator: Lookup
+    """Betreiber (`OperatorRef` der Fahrt): Name aus der Datei oder der Grund, warum er fehlt."""
     train_numbers: list[Lookup]
     private_codes: list[PrivateCodeView]
     line: Lookup
@@ -462,6 +464,7 @@ def build_journey_view(
     stops = _stop_views(index, points, timing.stops, _part_numbers(parts, len(points)), table)
     line, line_object = _line(index, pattern)
     demand, demand_problem = follow_child(index, journey, "TimeDemandTypeRef")
+    operator, operator_problem = follow_child(index, journey, "OperatorRef")
     own_validities = validities(index, journey)
     findings = list(timing.findings)
     order = _order_finding(points)
@@ -486,6 +489,11 @@ def build_journey_view(
         journey=journey,
         pattern=_lookup_of(pattern, pattern_problem),
         time_demand_type=_lookup_of(demand, demand_problem),
+        operator=(
+            _named(operator, operator_problem, _name_of(index, operator))
+            if operator is not None
+            else operator_problem or ABSENT
+        ),
         train_numbers=train_numbers_of(index, journey),
         private_codes=_private_codes(index, journey),
         line=line,

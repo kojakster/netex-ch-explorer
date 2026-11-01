@@ -275,6 +275,7 @@ class JourneyViewOut(ApiModel):
     guide_commit: str | None
     pattern: ValueOut
     time_demand_type: ValueOut
+    operator: ValueOut
     train_numbers: list[ValueOut]
     private_codes: list[PrivateCodeOut]
     line: ValueOut
@@ -525,6 +526,7 @@ class JourneyConverter:
             guide_commit=self._guide_commit,
             pattern=self.value(view.pattern),
             time_demand_type=self.value(view.time_demand_type),
+            operator=self.value(view.operator),
             train_numbers=[self.value(number) for number in view.train_numbers],
             private_codes=[self._private_code(code) for code in view.private_codes],
             line=self.value(view.line),

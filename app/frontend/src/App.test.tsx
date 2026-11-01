@@ -264,7 +264,7 @@ describe("rechte Spalte", () => {
     render(<App dataSource={source()} />);
     await chooseExample("ch20_three_stops.xml");
     await clickJourney();
-    await screen.findByText("Halte und Zeiten");
+    await screen.findByRole("region", { name: "Halte und Zeiten" });
     // Die Fahrt aus der Liste zu öffnen wählt noch keine Angabe: nur der Hauptbereich.
     expect(screen.queryByRole("complementary", { name: "Herkunft und XML" })).toBeNull();
     const table = document.querySelector(".stop-table") as HTMLElement;
@@ -275,14 +275,14 @@ describe("rechte Spalte", () => {
     fireEvent.click(within(column).getByRole("button", { name: "Schliessen" }));
     expect(screen.queryByRole("complementary", { name: "Herkunft und XML" })).toBeNull();
     expect(document.querySelector(".layout-details")).toBeNull();
-    expect(screen.getByText("Halte und Zeiten")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Halte und Zeiten" })).toBeTruthy();
   });
 
   it("verweist aus der Legende auf die Hilfe", async () => {
     render(<App dataSource={source()} />);
     await chooseExample("ch20_three_stops.xml");
     await clickJourney();
-    await screen.findByText("Halte und Zeiten");
+    await screen.findByRole("region", { name: "Halte und Zeiten" });
     const table = document.querySelector(".stop-table") as HTMLElement;
     fireEvent.click(within(table).getByText("Synthetisch A"));
     fireEvent.click(await screen.findByText("Was bedeuten die Farben?"));
@@ -301,22 +301,28 @@ describe("App mit Fahrtansicht", () => {
     render(<App dataSource={source(overrides)} />);
     await chooseExample("ch20_three_stops.xml");
     await clickJourney();
-    await screen.findByText("Halte und Zeiten");
+    await screen.findByRole("region", { name: "Halte und Zeiten" });
   }
 
-  it("öffnet die Fahrt als Fahrplan mit Kopf, Zeiten und Markierung „berechnet“", async () => {
+  it("öffnet die Fahrt als Fahrplananzeige mit Kopf, Zeiten und Symbol für berechnete Zeiten", async () => {
     await openJourneyView();
     expect(screen.getByRole("button", { name: "Fahrt" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getAllByText("Synthetisch A").length).toBeGreaterThan(0);
+    // Uneingeschränktes Ein- und Aussteigen steht nicht in Worten; nur Einschränkungen.
     expect(screen.getByText("nur Einsteigen")).toBeTruthy();
-    expect(screen.getAllByText("Ein- und Aussteigen").length).toBeGreaterThan(0);
     expect(screen.getByText("nur Aussteigen")).toBeTruthy();
-    expect(screen.getAllByText("berechnet").length).toBe(2);
+    expect(screen.queryByText("Ein- und Aussteigen")).toBeNull();
+    expect(screen.getAllByRole("img", { name: "berechnet" }).length).toBe(2);
     expect(screen.getAllByText("08:00").length).toBeGreaterThan(0);
     // Ankunft und Abfahrt am zweiten Halt, dazu das Ende der Teilstrecke.
     expect(screen.getAllByText("08:10").length).toBe(3);
-    expect(screen.getByText("14.12.2026")).toBeTruthy();
-    expect(screen.getByText(/7 Tage im Zeitraum, 5 Betriebstage/)).toBeTruthy();
+    expect(screen.getByText("Gültig 13.12.2026 bis 19.12.2026")).toBeTruthy();
+    expect(screen.getByText(/5 Betriebstage \(7 Tage im Zeitraum\)/)).toBeTruthy();
+    // Ohne „Herkunft zeigen“ keine Zusatzzeilen; mit dem Schalter erscheinen sie.
+    expect(screen.queryByText("ForBoarding")).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Herkunft zeigen" }));
+    expect(screen.getAllByText("ForBoarding").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Haltestelle (StopPlace)").length).toBe(3);
   });
 
   it("zeigt „nicht berechenbar“ mit Grund statt einer Uhrzeit", async () => {
@@ -330,7 +336,7 @@ describe("App mit Fahrtansicht", () => {
 
   it("zeigt Teilstrecke, Angebot mit Stammdaten und Hinweis in allen Sprachen", async () => {
     await openJourneyView();
-    expect(screen.getByText("Teilstrecken (JourneyPart)")).toBeTruthy();
+    expect(screen.getByText("Teilstrecken")).toBeTruthy();
     expect(screen.getAllByText("bistro").length).toBeGreaterThan(0);
     expect(screen.getAllByText("WS · Bistro").length).toBeGreaterThan(0);
     expect(screen.getByText("Synthetischer Hinweis")).toBeTruthy();
@@ -388,9 +394,9 @@ describe("App mit Fahrtansicht", () => {
     await openJourneyView();
     fireEvent.click(screen.getByRole("button", { name: "Objekt" }));
     expect(await screen.findByText("Verweist auf")).toBeTruthy();
-    expect(screen.queryByText("Halte und Zeiten")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Halte und Zeiten" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Zurück im Verlauf/ }));
-    expect(await screen.findByText("Halte und Zeiten")).toBeTruthy();
+    expect(await screen.findByRole("region", { name: "Halte und Zeiten" })).toBeTruthy();
   });
 
   it("zeigt die Diagnosen der Fahrt mit Stelle", async () => {
