@@ -410,3 +410,19 @@ Aus den Testberichten der Phasen 0–4, [open-points.md](open-points.md) und [de
 - Guide-Status nur beim Start; Prüfung vor Ende des XSD-Ladens wartet bis zu 17 s; kein Commit-Datum des Guides; `pip-audit`/`npm audit` brauchen Internet; Skriptpaket über 500 kB (CodeMirror); einige SQLite-Datensätze der Tests bleiben ungeschlossen (`ResourceWarning`, harmlos).
 - **Windows: nicht getestet** (Start-Skript, Prüfbefehl, E2E-Test, Beenden des Servers).
 - Offen beim Benutzer: Glossar Englisch/Deutsch (offener Punkt 2); Bestätigung der technischen Festlegungen „Umsetzung Phase 5“; Entscheid, ob der E2E-Test in den Git-Hook soll.
+
+### Review durch Opus und Korrekturen (01.11.2026)
+
+Code-Review über `0edce54..3ff2d0c`; alle 10 Funde behoben in `65fa1e9`. Festlegungen: [decisions.md](decisions.md) „Korrekturen aus dem Review von Phase 5“.
+
+| Fund | Behebung | Test |
+|---|---|---|
+| 1 `create_app` leert gemeinsames `work/` | Arbeitsordner je Port (`work/<port>/`), Aufräumen beim Beenden; `start.py` bricht bei belegtem Port ab | `test_each_port_has_its_own_work_folder`, `test_close_*`, `test_port_is_free_*` |
+| 2 E2E wartet nicht auf XSD/Beispiele | Abfrage von `/api/guide` bis `examplesReady` (120 s) | E2E |
+| 3 `guidePath()` ohne Standardwert | Standard `../netexRealisationGuideSwitzerland` | E2E |
+| 4–6 Guide-Stand dupliziert, „fehlt <Commit>“, ungestylt | gemeinsame Komponente `GuideFacts` (Status-Box und Hilfeseite), Stil `.guide-facts` | `HelpPage.test.tsx` (Kurz-Commit, fehlende XSD ohne Commit) |
+| 7 Dev-Proxy-Port | `NETEX_API_PORT`, README (Tests und Prüfbefehl) | – (Konfiguration) |
+| 8–9 Erkennung ungenutzter Schlüssel | nur Zeichenketten des Anwendungscodes (`ast` ohne Docstrings; TypeScript ohne Kommentare, ohne Tests) | `test_comments_and_docstrings_do_not_count_as_use` |
+| 10 Origin-Test prüft nur `!= 403` | prüft `== 404` | `test_origin_check_uses_the_port_the_server_runs_on` |
+
+Nachweis: `scripts/check.py` grün; `scripts/test.py` 825 Tests bestanden (Guide b7ac158, XSD 73b337e); Vitest 163 Tests; E2E zweimal bestanden (je rund 19 s), der zweite Lauf, während eine Instanz auf Port 8765 mit hochgeladener Datei lief: `work/8765/` blieb erhalten, nach dem Beenden war `work/` leer.
