@@ -1111,6 +1111,7 @@ input {
 
 .stop-table {
   width: 100%;
+  min-width: 40rem;
   border-collapse: separate;
   border-spacing: 0;
 }
@@ -1194,17 +1195,17 @@ input {
 
 .stop-cell {
   min-width: 10rem;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .platform-cell {
   min-width: 5rem;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .notes-cell {
   min-width: 8rem;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   font-size: 0.92em;
 }
 
@@ -1301,6 +1302,110 @@ input {
   flex-direction: column;
   align-items: flex-start;
   white-space: normal;
+}
+
+/* Aufbau-Übersicht */
+.structure {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+
+.structure > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.2rem 0;
+}
+
+.struct-row {
+  margin: 1rem 0;
+}
+
+.struct-row h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+}
+
+.struct-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.struct-step {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.struct-step + .struct-step::before {
+  content: "→";
+  padding: 0 0.5rem;
+  color: var(--muted);
+}
+
+.struct-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.struct-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  min-width: 7rem;
+  max-width: 16rem;
+  padding: 0.3rem 0.6rem;
+  border: 2px solid transparent;
+  border-radius: 5px;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.struct-object:hover {
+  border-color: var(--text);
+}
+
+.struct-object.selected {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.struct-derived,
+.struct-missing {
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border-strong);
+}
+
+.struct-missing {
+  border-style: dashed;
+  font-style: italic;
+}
+
+.struct-name {
+  font-weight: 700;
+}
+
+.struct-detail,
+.struct-frame {
+  font-size: 0.78em;
+}
+
+.struct-frame {
+  opacity: 0.9;
+}
+
+.struct-text {
+  font-size: 0.88em;
 }
 
 /* Betriebstage, Angebote, Teilstrecken, Hinweise */

@@ -11,6 +11,15 @@ describe("HelpPage", () => {
     expect(screen.getByText("SiteFacilitySet")).toBeTruthy();
   });
 
+  it("erklärt die Aufbau-Übersicht und nennt, wo die Legende der Farben steht", () => {
+    render(<HelpPage appInfo={APP_INFO} guide={GUIDE} onBack={() => undefined} />);
+    expect(screen.getByRole("heading", { name: "Aufbau-Übersicht" })).toBeTruthy();
+    expect(screen.getByText(/klappt „Wie ist diese Fahrt aufgebaut\?“ auf/)).toBeTruthy();
+    expect(
+      screen.getByText(/Die Legende der Farben steht dort, wo Farben sichtbar sind/),
+    ).toBeTruthy();
+  });
+
   it("trennt durchgeführte und nicht durchgeführte Prüfungen", () => {
     render(<HelpPage appInfo={APP_INFO} guide={GUIDE} onBack={() => undefined} />);
     const performed = screen.getByText("Durchgeführte Prüfungen").nextElementSibling;

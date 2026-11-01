@@ -542,9 +542,9 @@ describe("JourneyView als Fahrplananzeige", () => {
       master: null,
     };
     view({ categories: [category] });
-    expect(within(screen.getByRole("heading", { level: 2 })).getByText("RE").className).toContain(
-      "badge",
-    );
+    expect(
+      within(document.querySelector(".journey-head") as HTMLElement).getByText("RE").className,
+    ).toContain("badge");
   });
 
   it("kennzeichnet fehlende Angaben im Kopf, statt etwas zu ergänzen", () => {
@@ -577,14 +577,14 @@ describe("JourneyView als Fahrplananzeige", () => {
 
   it("schaltet „Herkunft zeigen“ und zeigt dann die Legende der Frame-Farben", () => {
     const { onShowOriginChange } = view();
-    expect(screen.queryByText("Frame-Farben")).toBeNull();
+    expect(document.querySelector(".origin-bar + .legend")).toBeNull();
     fireEvent.click(screen.getByRole("checkbox", { name: "Herkunft zeigen" }));
     expect(onShowOriginChange).toHaveBeenCalledWith(true);
   });
 
   it("zeigt mit eingeschalteter Herkunft die Legende und die Farbbalken", () => {
     view({}, true);
-    expect(screen.getByText("Frame-Farben")).toBeTruthy();
+    expect(document.querySelector(".origin-bar + .legend")).not.toBeNull();
     expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(true);
   });
 

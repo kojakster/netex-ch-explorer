@@ -325,6 +325,18 @@ describe("App mit Fahrtansicht", () => {
     expect(screen.getAllByText("Haltestelle (StopPlace)").length).toBe(3);
   });
 
+  it("öffnet aus der Aufbau-Übersicht die Stelle einer Box im XML", async () => {
+    const getObjectXml = vi.fn(source().getObjectXml);
+    await openJourneyView({ getObjectXml });
+    const overview = screen.getByText("Wie ist diese Fahrt aufgebaut?").closest("details");
+    const pattern = within(overview as HTMLElement)
+      .getByText("ServiceJourneyPattern")
+      .closest("button") as HTMLElement;
+    fireEvent.click(pattern);
+    expect(getObjectXml).toHaveBeenLastCalledWith("SYNTHETICDATASET01.140");
+    expect(await screen.findByRole("complementary", { name: "Herkunft und XML" })).toBeTruthy();
+  });
+
   it("zeigt „nicht berechenbar“ mit Grund statt einer Uhrzeit", async () => {
     await openJourneyView();
     expect(screen.getByText("nicht berechenbar")).toBeTruthy();

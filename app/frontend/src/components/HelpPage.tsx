@@ -37,6 +37,7 @@ export function HelpPage({ appInfo, guide, onBack }: HelpPageProps) {
       <section>
         <h2>{t("help.frameColors")}</h2>
         <p>{t("help.frameColorsText")}</p>
+        <p>{t("help.frameColorsWhere")}</p>
         <table className="help-colors">
           <tbody>
             {appInfo.frameColors.map((color) => (
@@ -60,6 +61,11 @@ export function HelpPage({ appInfo, guide, onBack }: HelpPageProps) {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section>
+        <h2>{t("help.structure")}</h2>
+        <p>{t("help.structureText")}</p>
       </section>
 
       <section>

@@ -27,6 +27,7 @@ class Feature(StrEnum):
     NAVIGATION_HISTORY = "navigation_history"
     JOURNEY_VIEW = "journey_view"
     SHOW_ORIGIN = "show_origin"
+    STRUCTURE_OVERVIEW = "structure_overview"
     CALCULATED_TIMES = "calculated_times"
     MIDNIGHT = "midnight"
     OPERATING_DAYS = "operating_days"

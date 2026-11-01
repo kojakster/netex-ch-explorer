@@ -22,6 +22,7 @@ import { OperatingDays } from "./OperatingDays";
 import { PartList } from "./PartList";
 import { ReasonText, Sourced, ValueText } from "./Sourced";
 import { StopTable } from "./StopTable";
+import { StructureOverview } from "./StructureOverview";
 import type { SourceProps } from "./sourceProps";
 
 interface JourneyViewProps extends SourceProps {
@@ -379,6 +380,8 @@ export function JourneyView({
           />
         </section>
         <p className="note timetable-note">{t("stops.timesNote")}</p>
+
+        <StructureOverview journey={journey} {...source} />
 
         <MoreDetails journey={journey} {...source} />
 
