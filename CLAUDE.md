@@ -13,7 +13,7 @@ Sprache der Anwendung und der Dokumentation: Deutsch (de-CH); NeTEx-Bezeichner b
 - [docs/research/delivery-1.10-2027.md](docs/research/delivery-1.10-2027.md): Lieferung 2027 (NeTEx 1.10) in `../netex-files/`, zurückgestellt.
 - [docs/engineering-guidelines.md](docs/engineering-guidelines.md): verbindliche Qualitätsregeln (Sicherheit, Wartbarkeit, Erweiterbarkeit, Tests, Selbstkontrolle).
 - [README.md](README.md): Einrichtung (Guide klonen, Workspace, Start).
-- `../CHECKLISTE.md`: Findings des Benutzers aus dem Testen. Nur auf ausdrückliche Anweisung bearbeiten; Regeln in `../CLAUDE.md`.
+- [CHECKLIST.md](CHECKLIST.md): Findings des Benutzers aus dem Testen (nicht versioniert, in `.gitignore`). Nur auf ausdrückliche Anweisung bearbeiten; Regeln in `../CLAUDE.md`.
 
 ## Umfang in Kürze
 

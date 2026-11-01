@@ -34,3 +34,6 @@ test-results/
 Thumbs.db
 .idea/
 *.swp
+
+# Findings des Benutzers aus dem Testen (gehört dem Benutzer, nicht versioniert)
+/CHECKLIST.md
