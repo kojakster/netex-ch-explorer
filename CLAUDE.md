@@ -31,7 +31,7 @@ NeTEx-Viewer/                          Sammelordner (nicht versioniert)
 ```
 
 - `../netexRealisationGuideSwitzerland/` ist ein Git-Klon des Benutzers; nur per Git aktualisieren (`git pull`, `git submodule update --init --depth 1`), Dateien nie von Hand ändern. Zuletzt getesteter Stand: `guide-tested.json`.
-- Eigener Code liegt nur in `netex-ch-explorer/`. Guide-Dateien nie hierher kopieren, auch nicht nach `fixtures/`; `fixtures/` enthält nur selbst erstellte Testdaten.
+- Eigener Code liegt nur in `netex-ch-explorer/`. Guide-Dateien nie hierher kopieren, auch nicht nach `fixtures/`; `fixtures/` enthält nur selbst erstellte Testdaten. Einzige Ausnahme: die angereicherte Testdatei aus Guide-Beispielen (`docs/decisions.md`, 02.11.2026).
 - Pfade zu `netexRealisationGuideSwitzerland` und `netex-files` nur über `config/settings.json` (Standard `../netexRealisationGuideSwitzerland`, `../netex-files`), nie fest im Code.
 - Der Adapter „CH 2.0“ ist eigener Code. Er belegt jede fachliche Regel in `docs/mapping.md` mit Guide-Datei und Commit.
 
