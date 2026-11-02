@@ -1,6 +1,6 @@
 # Abgleich: ursprünglicher Plan → neuer Umsetzungsplan
 
-Zeigt für jeden Abschnitt des ursprünglichen Plans `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md` (Stand 30.10.2026; aus dem Projekt entfernt, im Git-Verlauf: `git show 4e8e378:NETEX_EXPLORER_IMPLEMENTATION_PLAN.md`), wo der Inhalt im [UMSETZUNGSPLAN.md](../UMSETZUNGSPLAN.md) steht oder warum er entfällt bzw. sich ändert. Verweise auf Entscheidungen beziehen sich auf [decisions.md](decisions.md).
+Zeigt für jeden Abschnitt des ursprünglichen Plans `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md` (Stand 30.10.2026; aus dem Projekt entfernt, im Git-Verlauf: `git show 62ab791:NETEX_EXPLORER_IMPLEMENTATION_PLAN.md`), wo der Inhalt im [UMSETZUNGSPLAN.md](../UMSETZUNGSPLAN.md) steht oder warum er entfällt bzw. sich ändert. Verweise auf Entscheidungen beziehen sich auf [decisions.md](decisions.md).
 
 | Ursprünglicher Abschnitt | Im neuen Plan | Änderung / Begründung |
 |---|---|---|

@@ -1,6 +1,6 @@
 # NeTEx CH Explorer – Umsetzungsplan, erste Ausbaustufe
 
-**Status:** **Freigegeben** durch den Benutzer am 31.10.2026. Ersetzt den ursprünglichen Plan `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md` (im Git-Verlauf, Commit `4e8e378`). **Umgesetzt:** Phasen 0–5 der ersten Ausbaustufe abgeschlossen am 01.11.2026; Nachweis je Phase in [docs/test-report.md](docs/test-report.md), bekannte Grenzen im README und im Testbericht.
+**Status:** **Freigegeben** durch den Benutzer am 31.10.2026. Ersetzt den ursprünglichen Plan `NETEX_EXPLORER_IMPLEMENTATION_PLAN.md` (im Git-Verlauf, Commit `62ab791`). **Umgesetzt:** Phasen 0–5 der ersten Ausbaustufe abgeschlossen am 01.11.2026; Nachweis je Phase in [docs/test-report.md](docs/test-report.md), bekannte Grenzen im README und im Testbericht.
 **Stand:** 01.11.2026
 **Massgebend für Details:** [docs/decisions.md](docs/decisions.md). Bei Abweichungen gilt `decisions.md`; der Widerspruch wird dem Benutzer vorgelegt.
 **Abgleich mit dem ursprünglichen Plan:** [docs/plan-abgleich.md](docs/plan-abgleich.md)

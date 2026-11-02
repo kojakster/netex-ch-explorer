@@ -4,11 +4,11 @@ Nachweis pro Phase (UMSETZUNGSPLAN Abschnitt 10, docs/engineering-guidelines.md)
 
 ## Phase 0: Grundgerüst (31.10.2026)
 
-Umsetzung: Commit `9f7d53a`. Umgebung: macOS, Python 3.13.3, Node.js 22.22.2, uv 0.11.14. Guide `b7ac158` (Branch `next`), XSD `73b337e`.
+Umsetzung: Commit `b6b3d9b`. Umgebung: macOS, Python 3.13.3, Node.js 22.22.2, uv 0.11.14. Guide `b7ac158` (Branch `next`), XSD `73b337e`.
 
 ### Prüfbefehl
 
-`uv run python scripts/check.py --hook`: **grün**, rund 11 s. Alle 14 Schritte OK: Arbeitsverzeichnis = Commit-Inhalt, `uv.lock` aktuell, ruff check, ruff format, mypy --strict (41 Dateien), pytest, npm ci, TypeScript, Biome, Vitest, Build, pip-audit (keine bekannten Lücken), npm audit (0 Lücken), Git-Hook aktiv. Der Git-Hook hat den Commit `9f7d53a` damit geprüft.
+`uv run python scripts/check.py --hook`: **grün**, rund 11 s. Alle 14 Schritte OK: Arbeitsverzeichnis = Commit-Inhalt, `uv.lock` aktuell, ruff check, ruff format, mypy --strict (41 Dateien), pytest, npm ci, TypeScript, Biome, Vitest, Build, pip-audit (keine bekannten Lücken), npm audit (0 Lücken), Git-Hook aktiv. Der Git-Hook hat den Commit `b6b3d9b` damit geprüft.
 
 ### Tests und Abdeckung
 
@@ -27,7 +27,7 @@ Umsetzung: Commit `9f7d53a`. Umgebung: macOS, Python 3.13.3, Node.js 22.22.2, uv
 
 ### Code-Review (eingebaute Prüfung `/code-review`, Stufe high)
 
-10 Funde, alle behoben, bevor `9f7d53a` committet wurde:
+10 Funde, alle behoben, bevor `b6b3d9b` committet wurde:
 
 1. `test.py` schrieb den Nachweis auch bei Teilläufen. Jetzt nur noch ohne eigene pytest-Argumente.
 2. Lesefehler in einem Excel-Blatt brachen den Start ab. Jetzt erscheint die Meldung `mapping.file_unreadable`.
@@ -42,9 +42,9 @@ Umsetzung: Commit `9f7d53a`. Umgebung: macOS, Python 3.13.3, Node.js 22.22.2, uv
 
 ### Sicherheits-Review (eingebaute Prüfung `/security-review`)
 
-Über `ca6df22..9f7d53a`: **keine Funde** mit hoher Sicherheit. Geprüft: Git-Lesen (Pfadprüfung der Referenzen), XML im Excel-Paket (defusedxml), JSON-Einstellungen, Server (nur 127.0.0.1, Host-Prüfung, kein CORS, keine Swagger-Seite, Fehler ohne Details, strenge CSP, StaticFiles), Oberfläche (kein `dangerouslySetInnerHTML`), Skripte (Unterprozesse ohne Shell).
+Über `ab1f0a3..b6b3d9b`: **keine Funde** mit hoher Sicherheit. Geprüft: Git-Lesen (Pfadprüfung der Referenzen), XML im Excel-Paket (defusedxml), JSON-Einstellungen, Server (nur 127.0.0.1, Host-Prüfung, kein CORS, keine Swagger-Seite, Fehler ohne Details, strenge CSP, StaticFiles), Oberfläche (kein `dangerouslySetInnerHTML`), Skripte (Unterprozesse ohne Shell).
 
-Die eingebaute Prüfung vergleicht mit `origin/HEAD`. Das Repository hat kein Remote, deshalb wurde für das Review vorübergehend eine lokale Referenz `refs/remotes/origin/HEAD` auf `ca6df22` angelegt und danach gelöscht.
+Die eingebaute Prüfung vergleicht mit `origin/HEAD`. Das Repository hat kein Remote, deshalb wurde für das Review vorübergehend eine lokale Referenz `refs/remotes/origin/HEAD` auf `ab1f0a3` angelegt und danach gelöscht.
 
 Zusätzlicher Fund aus der Prüfung der Testdateien: lxml stürzt bei der Schema-Prüfung von `fixtures/security_xxe.xml` ab. Daraus folgt, dass Dateien mit `DOCTYPE` in Phase 4 vor lxml abgewiesen werden müssen (offener Punkt 4).
 
@@ -56,7 +56,7 @@ Zusätzlicher Fund aus der Prüfung der Testdateien: lxml stürzt bei der Schema
 
 ## Phase 1: Einlesen und Objekt-Explorer (31.10.2026)
 
-Umsetzung: Commits `fe208d5` und `5bfb694` (Funde aus dem Code-Review). Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`.
+Umsetzung: Commits `936a249` und `834e262` (Funde aus dem Code-Review). Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`.
 
 ### Prüfbefehl
 
@@ -77,9 +77,9 @@ Umsetzung: Commits `fe208d5` und `5bfb694` (Funde aus dem Code-Review). Umgebung
 | Klick markiert exakt die Stelle | erfüllt: Markierung beginnt bei `<Quay id=…`; Klick auf `DepartureTime` markiert genau `<DepartureTime>10:35:00</DepartureTime>`; Frame-Bänder und Frame-Namen am Rand; keine Meldungen in der Browser-Konsole |
 | Beispielauswahl mit Status pro Beispiel, Prüfsummen in `guide-tested.json` | erfüllt |
 
-### Code-Review (eingebaute Prüfung `/code-review`, Stufe high, über `927633e..fe208d5`)
+### Code-Review (eingebaute Prüfung `/code-review`, Stufe high, über `3c92ae8..936a249`)
 
-10 Funde, alle behoben in `5bfb694`:
+10 Funde, alle behoben in `834e262`:
 
 1. Markierung bei CRLF-Dateien (Beispiel 15) und Zeichen ausserhalb der Basisebene verschoben. Jetzt Zeilenumbrüche LF und Offsets in UTF-16-Einheiten, Test mit CRLF und Emoji.
 2. UTF-16/32 wurde nicht abgewiesen. Jetzt Diagnose „nicht unterstützt“.
@@ -92,7 +92,7 @@ Umsetzung: Commits `fe208d5` und `5bfb694` (Funde aus dem Code-Review). Umgebung
 9. Suche ohne Gross-/Kleinschreibung nur für ASCII. Jetzt `casefold`, ID und Name getrennt (ein Treffer über die Feldgrenze ist nicht mehr möglich).
 10. Die Zeilentabelle wurde bei jedem Ausschnitt neu berechnet. Jetzt zwischengespeichert.
 
-### Sicherheits-Review (eingebaute Prüfung `/security-review`, über `927633e..5bfb694`)
+### Sicherheits-Review (eingebaute Prüfung `/security-review`, über `3c92ae8..834e262`)
 
 **Keine Funde.** Geprüft: Path Traversal beim Öffnen von Beispielen (nur Namen aus der Beispielliste), XXE (`DOCTYPE` abgewiesen), SQL (nur feste Teile, Werte als Parameter), IDs (zufällig, Format geprüft), XSS (kein `innerHTML`, CodeMirror-Beschriftungen über `textContent`). Vorübergehende lokale Referenz `origin/HEAD` wie in Phase 0, danach gelöscht.
 
@@ -107,7 +107,7 @@ Eigener Fund bei der Browser-Prüfung: Die strenge CSP blockierte die Stile von 
 
 ## Phase 2: Referenzen und Herkunft (31.10.2026)
 
-Umsetzung: Commits `ff81a5d` und `17e08dc` (Funde aus dem Code-Review). Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`.
+Umsetzung: Commits `e7c8bae` und `3aa9219` (Funde aus dem Code-Review). Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`.
 
 ### Prüfbefehl
 
@@ -134,9 +134,9 @@ Umsetzung: Commits `ff81a5d` und `17e08dc` (Funde aus dem Code-Review). Umgebung
 
 Mit „Zieltyp = Name ohne `Ref`“ blieben 125 von 1520 Referenzen der Beispiele unaufgelöst, obwohl das Ziel in der Datei steht (z. B. `ResponsibleOrganisationRef` → `Operator`). Gelöst mit `config/ref-targets.json` (16 Einträge, Entscheid vom Benutzer); ein Test prüft die Einträge gegen die XSD und meldet fehlende Einträge für die Beispiele. Zwei Fälle fielen beim Beispielstatus auf: Er wurde zunächst ohne die Liste berechnet (alle 22 Beispiele „mit Hinweisen“); behoben, mit Test.
 
-### Code-Review (eingebaute Prüfung `/code-review`, Stufe high, über `7e69a47..ff81a5d`)
+### Code-Review (eingebaute Prüfung `/code-review`, Stufe high, über `00f80ad..e7c8bae`)
 
-9 Funde. Behoben in `17e08dc`:
+9 Funde. Behoben in `3aa9219`:
 
 1. Eigenschaftsbaum rief je Referenz bis zu dreimal den Index ab; jetzt nur noch das Ziel.
 2. `references_among` mit bis zu 2000 Platzhaltern (ältere SQLite-Versionen: 999); jetzt in Stapeln zu 500, mit Test.
@@ -151,13 +151,13 @@ Nicht behoben, dem Benutzer vorgelegt ([open-points.md](open-points.md) Punkte 5
 - **Abweichende Version** einer Referenz auf genau ein Objekt ist „aufgelöst“ ohne Hinweis (so entschieden, Frage offen).
 - **Je Referenz eine Abfrage** beim Öffnen und alle Referenzen im Speicher: für kleine Dateien unkritisch, für grosse Lieferungen nicht geeignet (Variante B des Index).
 
-### Sicherheits-Review (eingebaute Prüfung `/security-review`, über `7e69a47..17e08dc`)
+### Sicherheits-Review (eingebaute Prüfung `/security-review`, über `00f80ad..3aa9219`)
 
-**Keine Funde.** Geprüft: SQL (nur Platzhalter und feste Spaltennamen, alle Werte als Parameter), neuer Aufruf `GET /api/objects/{id}/provenance` (nur zufällige Datensatz-ID plus Elementnummer, kein Pfad), `config/ref-targets.json` (Grösse, JSON-Form und Namensmuster geprüft), keine neue XML-Verarbeitung (`DOCTYPE`-Abweisung gilt weiter), Frontend (Werte nur als Text, Farben nur aus validiertem `#RRGGBB`), keine Datenpreisgabe über den bereits geöffneten Datensatz hinaus. Die eingebaute Prüfung vergleicht mit `origin/HEAD`; das Repository hat kein Remote, deshalb wurde vorübergehend eine lokale Referenz auf `7e69a47` angelegt und danach gelöscht.
+**Keine Funde.** Geprüft: SQL (nur Platzhalter und feste Spaltennamen, alle Werte als Parameter), neuer Aufruf `GET /api/objects/{id}/provenance` (nur zufällige Datensatz-ID plus Elementnummer, kein Pfad), `config/ref-targets.json` (Grösse, JSON-Form und Namensmuster geprüft), keine neue XML-Verarbeitung (`DOCTYPE`-Abweisung gilt weiter), Frontend (Werte nur als Text, Farben nur aus validiertem `#RRGGBB`), keine Datenpreisgabe über den bereits geöffneten Datensatz hinaus. Die eingebaute Prüfung vergleicht mit `origin/HEAD`; das Repository hat kein Remote, deshalb wurde vorübergehend eine lokale Referenz auf `00f80ad` angelegt und danach gelöscht.
 
-### Review durch Opus und Korrekturen (über `7e69a47..fdd2408`)
+### Review durch Opus und Korrekturen (über `00f80ad..0e38a37`)
 
-Funde und Entscheide des Benutzers (31.10.2026) sind in [decisions.md](decisions.md) „Entscheide nach Review Phase 2“ festgehalten. Korrekturen in den Commits `8750672` (Entscheide) und `f2842e6` (Frontend) sowie im Commit „Korrekturen aus dem Review Phase 2“ (Backend).
+Funde und Entscheide des Benutzers (31.10.2026) sind in [decisions.md](decisions.md) „Entscheide nach Review Phase 2“ festgehalten. Korrekturen in den Commits `b782b13` (Entscheide) und `92a8738` (Frontend) sowie im Commit „Korrekturen aus dem Review Phase 2“ (Backend).
 
 **Behoben:**
 
@@ -181,7 +181,7 @@ Funde und Entscheide des Benutzers (31.10.2026) sind in [decisions.md](decisions
 
 ## Phase 3: Fahrtansicht CH 2.0 (31.10.2026)
 
-Umsetzung: Commits `0567c29` (Kern), `305bd93` (Schnittstelle), `46e18db` (Oberfläche, Hilfeseite, README), `046b319` (Entscheide, offene Punkte, Korrekturen) und der Commit mit diesem Bericht. Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`. Die Phase wurde von Claude ohne Rückfragen an den Benutzer umgesetzt; alle fachlichen Festlegungen und Fragen stehen in [decisions.md](decisions.md) („Umsetzung Phase 3“), [assumptions.md](assumptions.md) und [open-points.md](open-points.md) (Punkte 12–17).
+Umsetzung: Commits `6940210` (Kern), `c530cc9` (Schnittstelle), `0557561` (Oberfläche, Hilfeseite, README), `1ba5c25` (Entscheide, offene Punkte, Korrekturen) und der Commit mit diesem Bericht. Umgebung wie Phase 0. Guide `b7ac158`, XSD `73b337e`. Die Phase wurde von Claude ohne Rückfragen an den Benutzer umgesetzt; alle fachlichen Festlegungen und Fragen stehen in [decisions.md](decisions.md) („Umsetzung Phase 3“), [assumptions.md](assumptions.md) und [open-points.md](open-points.md) (Punkte 12–17).
 
 ### Prüfbefehl
 
@@ -212,7 +212,7 @@ Umsetzung: Commits `0567c29` (Kern), `305bd93` (Schnittstelle), `46e18db` (Oberf
 3. Nur 4 von 22 Beispielen nennen den `OnwardTimingLinkRef`; für die übrigen bestimmt die vom Benutzer festgelegte Regel Z4 den `TimingLink` über Von-/Nach-Punkt (ℹ Hinweis).
 4. Beispiel 04 (`RunTime` `P3M`), 07 und 11 haben Lücken, die Zeiten „nicht berechenbar“ machen; sie bleiben sichtbar (Grund mit Stelle).
 
-### Selbstkontrolle (Code-Review und Sicherheits-Review über `e1eefa0..046b319`)
+### Selbstkontrolle (Code-Review und Sicherheits-Review über `95cfdd8..1ba5c25`)
 
 Eigene Durchsicht der Commits gegen die Regeln aus `CLAUDE.md` und `docs/engineering-guidelines.md` (Korrektheit, nichts erfinden, Herkunft, Texte in Sprachdateien, keine Ausnahmen von Prüfregeln, Schichten). Funde, alle behoben:
 
@@ -225,7 +225,7 @@ Eigene Durchsicht der Commits gegen die Regeln aus `CLAUDE.md` und `docs/enginee
 
 Sicherheit: keine Funde. Der neue Aufruf nimmt nur eine zufällige Datensatz-ID mit Elementnummer (Format geprüft, unbekannte IDs und Nicht-Fahrten ergeben 404), kein Pfad, kein neues SQL (nur bestehende Abfragen des Index), keine neue XML-Verarbeitung. Werte aus Dateien erscheinen im Frontend nur als Text oder Attribut-Text (kein `innerHTML`), Farben stammen aus der geprüften Konfiguration, die CSP blieb unverändert (Browser-Konsole ohne Verstösse).
 
-### Review durch Opus und Korrekturen (über `e1eefa0..a6de59a`)
+### Review durch Opus und Korrekturen (über `95cfdd8..3a558ae`)
 
 Acht Funde des Reviews, alle behoben; der Entscheid zu den Phase-3-Festlegungen bleibt beim Benutzer ([decisions.md](decisions.md) unverändert).
 
@@ -252,7 +252,7 @@ Acht Funde des Reviews, alle behoben; der Entscheid zu den Phase-3-Festlegungen 
 
 ## Phase 4: Eigene Dateien und Validierung (31.10.2026)
 
-Umgesetzt in `ae093b3` (Entscheide) und `e6706f5` (Umsetzung) sowie dem Abschluss-Commit mit diesem Bericht. Abweichungen vom Plan und technische Festlegungen: [decisions.md](decisions.md) „Umsetzung Phase 4“.
+Umgesetzt in `980fcd6` (Entscheide) und `032e2ee` (Umsetzung) sowie dem Abschluss-Commit mit diesem Bericht. Abweichungen vom Plan und technische Festlegungen: [decisions.md](decisions.md) „Umsetzung Phase 4“.
 
 ### Prüfbefehl
 
@@ -293,7 +293,7 @@ Umgesetzt in `ae093b3` (Entscheide) und `e6706f5` (Umsetzung) sowie dem Abschlus
 3. Der Index `A5_annex_index.md` kennt nicht jedes Element (z. B. `StopPointInJourneyPattern`) und nennt für `ServiceJourney` als erstes Kapitel `02_files`; deshalb nennen Kernregeln und Schematron-Regeln ihr Kapitel selbst, der Index dient für XSD-Befunde ([open-points.md](open-points.md) 20).
 4. Mit den Kernregeln verletzen die meisten `ch20_*`-Fixtures CH-SJ-07 (keine Produktkategorie); nur `ch20_three_stops.xml` wurde ergänzt ([open-points.md](open-points.md) 21).
 
-### Selbstkontrolle (Code-Review und Sicherheits-Review über `ae093b3..e6706f5`)
+### Selbstkontrolle (Code-Review und Sicherheits-Review über `980fcd6..032e2ee`)
 
 Eigene Durchsicht gegen `CLAUDE.md` und `docs/engineering-guidelines.md`; Funde, alle behoben:
 
@@ -318,7 +318,7 @@ Sicherheit (Upload, ZIP, lxml, Pfade, IDs, XSS) geprüft, keine offenen Funde: D
 
 ### Review durch Opus und Korrekturen (Stand der Korrekturen: 31.10.2026)
 
-Code-Review (Opus) über `c1a34ae..6051926`, Funde 1 bis 10; dazu die Härtung 11 aus dem Sicherheits-Review. Alle behoben; technische Festlegungen: [decisions.md](decisions.md) „Korrekturen nach Review Phase 4“, Schnittstelle: [api.md](api.md).
+Code-Review (Opus) über `2c6a3e1..96ec455`, Funde 1 bis 10; dazu die Härtung 11 aus dem Sicherheits-Review. Alle behoben; technische Festlegungen: [decisions.md](decisions.md) „Korrekturen nach Review Phase 4“, Schnittstelle: [api.md](api.md).
 
 | Nr. | Fund | Behebung | Test |
 |---|---|---|---|
@@ -351,7 +351,7 @@ Testzahlen nach den Korrekturen: pytest **805 Tests bestanden** (vorher 763), Ab
 
 ## Phase 5: Übergabe (31.10.2026)
 
-Umgesetzt in `a9256ad` (Korrektur der Origin-Prüfung, Test der Hilfeseiten-Daten) und `10a3228` (E2E-Test, Sprachdatei-Prüfung, Hilfeseite, README) sowie dem Abschluss-Commit mit diesem Bericht. Technische Festlegungen (Claude, zur Bestätigung): [decisions.md](decisions.md) „Umsetzung Phase 5“.
+Umgesetzt in `5fa264f` (Korrektur der Origin-Prüfung, Test der Hilfeseiten-Daten) und `7bd8f2b` (E2E-Test, Sprachdatei-Prüfung, Hilfeseite, README) sowie dem Abschluss-Commit mit diesem Bericht. Technische Festlegungen (Claude, zur Bestätigung): [decisions.md](decisions.md) „Umsetzung Phase 5“.
 
 ### Prüfbefehl
 
@@ -377,9 +377,9 @@ Umgesetzt in `a9256ad` (Korrektur der Origin-Prüfung, Test der Hilfeseiten-Date
 
 ### Wichtigster Befund der Phase
 
-`scripts/start.py --port <Port>` (im README als Option genannt) setzte nur den Port des Servers; die Origin-Prüfung erwartete weiter den Port aus `config/settings.json` und wies jede Änderung (Beispiel öffnen, Datei hochladen) mit 403 ab. Gefunden beim ersten E2E-Lauf auf dem Testport; behoben in `a9256ad` (`create_app(..., port)`), Test `test_origin_check_uses_the_port_the_server_runs_on`.
+`scripts/start.py --port <Port>` (im README als Option genannt) setzte nur den Port des Servers; die Origin-Prüfung erwartete weiter den Port aus `config/settings.json` und wies jede Änderung (Beispiel öffnen, Datei hochladen) mit 403 ab. Gefunden beim ersten E2E-Lauf auf dem Testport; behoben in `5fa264f` (`create_app(..., port)`), Test `test_origin_check_uses_the_port_the_server_runs_on`.
 
-### Selbstkontrolle (Code-Review und Sicherheits-Review über `0edce54..10a3228`)
+### Selbstkontrolle (Code-Review und Sicherheits-Review über `765613a..7bd8f2b`)
 
 Eigene Durchsicht gegen `CLAUDE.md` und `docs/engineering-guidelines.md`; keine `noqa`, `type: ignore` oder `biome-ignore` hinzugefügt. Funde und Prüfpunkte:
 
@@ -413,7 +413,7 @@ Aus den Testberichten der Phasen 0–4, [open-points.md](open-points.md) und [de
 
 ### Review durch Opus und Korrekturen (01.11.2026)
 
-Code-Review über `0edce54..3ff2d0c`; alle 10 Funde behoben in `65fa1e9`. Festlegungen: [decisions.md](decisions.md) „Korrekturen aus dem Review von Phase 5“.
+Code-Review über `765613a..8abb12a`; alle 10 Funde behoben in `87dafe9`. Festlegungen: [decisions.md](decisions.md) „Korrekturen aus dem Review von Phase 5“.
 
 | Fund | Behebung | Test |
 |---|---|---|
@@ -429,9 +429,9 @@ Nachweis: `scripts/check.py` grün; `scripts/test.py` 825 Tests bestanden (Guide
 
 ### Überarbeitung der Oberfläche (01.11.2026)
 
-Gegenstand: Commits `0124ec8`, `baf26d3`, `0e92ae4` (Teile A bis C) samt Kern-Erweiterung (`category` der Fahrtenliste, `operator` der Fahrtansicht). Festlegungen: [decisions.md](decisions.md) „Überarbeitung der Oberfläche“ und „Review der Oberflächen-Überarbeitung“.
+Gegenstand: Commits `85ad976`, `ff26928`, `142c23a` (Teile A bis C) samt Kern-Erweiterung (`category` der Fahrtenliste, `operator` der Fahrtansicht). Festlegungen: [decisions.md](decisions.md) „Überarbeitung der Oberfläche“ und „Review der Oberflächen-Überarbeitung“.
 
-**Code-Review und Sicherheits-Review** über `b740215..HEAD`.
+**Code-Review und Sicherheits-Review** über `4c60efd..HEAD`.
 
 | Fund | Behebung | Test |
 |---|---|---|
