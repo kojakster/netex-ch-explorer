@@ -13,6 +13,10 @@ Werden mit dem Benutzer **einzeln** geklärt: genau ein Punkt pro Nachricht. Erl
 7. **Öffnen grosser Dateien (Phase 2, Code-Review).** Die Auflösung stellt je Referenz mehrere Abfragen an den Index, und `object_detail`/`reference_view` fragen je Verweis einzeln ab (Ziel, Besitzer, Frame); alle Referenzen liegen bis zum Ende im Speicher; für die kleinen Guide-Dateien unkritisch, für grosse Lieferungen ungeeignet. Wird mit Variante B des Index (Entscheid „Index: alle Elemente im Arbeitsspeicher“) angepasst. Gilt auch für die Fahrtansicht (Phase 3): je Halt mehrere Einzelabfragen (Haltestellenzuordnung, Verweise, Stammdaten); bei den kleinen Dateien unkritisch.
 8. **E2E-Test und Windows (Phase 5).** Das Beenden des Servers durch Playwright (`SIGINT`, Prozessbaum von `uv run python scripts/start.py`) und der E2E-Test insgesamt sind unter Windows nicht geprüft; mit dem ersten Windows-Test klären (Windows-Testanleitung im README, Schritt 7). Ob der E2E-Test später in `scripts/check.py` bzw. den Git-Hook soll, ist mit dem Benutzer zu bestätigen (Empfehlung: nein, siehe [decisions.md](decisions.md) „Umsetzung Phase 5“).
 
+## Plan angereicherte Testdatei (unvollständig)
+
+Status: unvollständig, Punkte vor Umsetzung klären. 16 offene Punkte (Anlässe, Zielwechsel, Zugnummernwechsel, Formation, Anschluss, Angebote, Bedarfshalt, Fahrten 4/5, Dateiname, Basis, Lizenz u. a.) in [plan-angereicherte-testdatei.md](plan-angereicherte-testdatei.md) „Offene Punkte“; einzeln mit dem Benutzer klären, Entscheide in [decisions.md](decisions.md).
+
 ## Zurückgestellt
 
 - Grosse Lieferungen (1.10-Lieferung `../netex-files/`, 12 GB): Import aus Ordner, Index auf Festplatte, Hintergrundprozess, ZIP-Grenzwerte, Lesesperre, Ausschnitte im LLM-Kontext (siehe decisions.md „Zurückgestellt …“).
