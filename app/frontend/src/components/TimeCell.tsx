@@ -1,4 +1,4 @@
-import { dayMarker, trimSeconds } from "../format";
+import { dayMarker, trimSeconds, UTC_LABEL } from "../format";
 import { useI18n } from "../i18n";
 import type { TimeInfo } from "../types";
 
@@ -49,6 +49,11 @@ export function TimeCell({ time, selectedTime, onSelect, strong = false }: TimeC
           title={time.offsetOrigin === null ? undefined : t(`time.offset.${time.offsetOrigin}`)}
         >
           {marker}
+        </span>
+      )}
+      {time.utc && (
+        <span className="time-utc" title={t("time.utc")}>
+          {UTC_LABEL}
         </span>
       )}
       {time.status === "computed" && (

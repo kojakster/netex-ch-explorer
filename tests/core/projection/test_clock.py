@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 
 from app.core.projection.clock import (
+    ClockReading,
+    parse_clock,
     parse_day_offset,
     parse_duration,
     parse_time_of_day,
@@ -27,6 +29,26 @@ from app.core.projection.clock import (
 )
 def test_parse_time_of_day(text: str, expected: int | None) -> None:
     assert parse_time_of_day(text) == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("10:35:00", ClockReading(38100, False)),
+        (" 02:33:00Z ", ClockReading(2 * 3600 + 33 * 60, True)),
+        ("23:59:59Z", ClockReading(86399, True)),
+        ("24:00:00Z", None),
+        ("10:35:00z", None),
+        ("10:35:00+01:00", None),
+        ("10:35:00-05:00", None),
+        ("10:35Z", None),
+        ("", None),
+    ],
+)
+def test_parse_clock_marks_utc_and_rejects_other_zones(
+    text: str, expected: ClockReading | None
+) -> None:
+    assert parse_clock(text) == expected
 
 
 @pytest.mark.parametrize(

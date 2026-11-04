@@ -1,6 +1,6 @@
 """Zeiten an den Halten einer Fahrt berechnen, mit Rechenkette und Herkunft jedes Summanden.
 
-Belege in docs/mapping.md: Z2 bis Z7, M1 bis M3.
+Belege in docs/mapping.md: Z2 bis Z7, Z9, M1 bis M3.
 
 - Abfahrt am ersten Halt: `ServiceJourney/DepartureTime` (Z2), verschoben um
   `DepartureDayOffset`; fehlt dieses, gilt 0 als **Standardwert** (M2, gekennzeichnet).
@@ -13,11 +13,13 @@ Belege in docs/mapping.md: Z2 bis Z7, M1 bis M3.
 - Fehlt ein Summand oder ist er nicht eindeutig, ist die Zeit „nicht berechenbar“ mit Grund; alle
   folgenden Zeiten ebenfalls (Z7). Nichts wird ersetzt.
 - Der Tageswechsel folgt allein aus dem Aufsummieren (M3).
+- Trägt die `DepartureTime` ein `Z` (UTC, Sonderfall Zeitumstellung), sind alle Zeiten der Fahrt
+  UTC und gekennzeichnet; es wird nie in Ortszeit umgerechnet (Z9).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import Final
 
@@ -25,9 +27,9 @@ from app.core.index.dataset_index import DatasetIndex, ElementRow
 from app.core.messages import MessageKey, ParamValue, Severity
 from app.core.projection.clock import (
     SECONDS_PER_DAY,
+    parse_clock,
     parse_day_offset,
     parse_duration,
-    parse_time_of_day,
 )
 from app.core.projection.common import (
     Finding,
@@ -90,6 +92,8 @@ class CalcStep:
     """Weitere beteiligte Objekte (`TimingLink`, `JourneyRunTime`, `JourneyWaitTime`)."""
     via_from_to: bool = False
     """Der `TimingLink` wurde über Von-/Nach-Punkt bestimmt (kein `OnwardTimingLinkRef`)."""
+    utc: bool = False
+    """Der Zwischenstand ist UTC (die `DepartureTime` der Fahrt trägt ein `Z`)."""
 
 
 @dataclass(frozen=True)
@@ -104,6 +108,8 @@ class TimeResult:
     chain: tuple[CalcStep, ...]
     reason: Finding | None
     offset_origin: OffsetOrigin | None
+    utc: bool = False
+    """Die Zeit ist UTC (Z9), nicht Ortszeit; Vergleiche mit Ortszeit sind nicht möglich."""
 
 
 @dataclass(frozen=True)
@@ -181,6 +187,7 @@ class _Start:
     departure_element: ElementRow
     offset_element: ElementRow | None
     base_day: int
+    utc: bool
 
 
 def _link_from_to(context: _Context, position: int) -> ElementRow | Finding:
@@ -254,7 +261,14 @@ def _duration_step(
             Severity.WARNING, MessageKey.TIME_DURATION_INVALID, {"value": value.text}, element
         )
     return CalcStep(
-        kind, value.text, element, False, seconds, previous_total + seconds, related, via_from_to
+        kind,
+        value.text,
+        element,
+        False,
+        seconds,
+        previous_total + seconds,
+        related,
+        via_from_to,
     )
 
 
@@ -329,11 +343,12 @@ def _start(index: DatasetIndex, journey: ElementRow) -> _Start | Finding:
     value = text_of(element)
     if element is None or value.text is None:
         return Finding(Severity.WARNING, MessageKey.TIME_DEPARTURE_MISSING, {}, journey)
-    clock = parse_time_of_day(value.text)
-    if clock is None:
+    reading = parse_clock(value.text)
+    if reading is None:
         return Finding(
             Severity.WARNING, MessageKey.TIME_DEPARTURE_INVALID, {"value": value.text}, element
         )
+    clock = reading.seconds
     offset_element = child(index, journey, "DepartureDayOffset")
     offset_text = text_of(offset_element)
     days = 0
@@ -355,10 +370,17 @@ def _start(index: DatasetIndex, journey: ElementRow) -> _Start | Finding:
         not explicit,
         days * SECONDS_PER_DAY,
         clock + days * SECONDS_PER_DAY,
+        utc=reading.utc,
     )
-    departure_step = CalcStep(StepKind.DEPARTURE_TIME, value.text, element, False, clock, clock)
+    departure_step = CalcStep(
+        StepKind.DEPARTURE_TIME, value.text, element, False, clock, clock, utc=reading.utc
+    )
     return _Start(
-        (departure_step, offset_step), element, offset_element if explicit else None, days
+        (departure_step, offset_step),
+        element,
+        offset_element if explicit else None,
+        days,
+        reading.utc,
     )
 
 
@@ -383,6 +405,7 @@ def _first_departure(start: _Start) -> TimeResult:
         start.steps,
         None,
         _origin(start, total),
+        start.utc,
     )
 
 
@@ -391,7 +414,14 @@ def _computed(
 ) -> TimeResult:
     total = chain[-1].total
     return TimeResult(
-        identifier, TimeStatus.COMPUTED, total, source, chain, None, _origin(start, total)
+        identifier,
+        TimeStatus.COMPUTED,
+        total,
+        source,
+        chain,
+        None,
+        _origin(start, total),
+        start.utc,
     )
 
 
@@ -409,6 +439,7 @@ def _walk(
         if isinstance(run, Finding):
             findings.append(run)
             break
+        run = replace(run, utc=start.utc)
         chain = (*chain, run)
         arrivals[position] = _computed(f"arrival-{position + 1}", start, chain, run.element)
         if position == count - 1:
@@ -417,6 +448,7 @@ def _walk(
         if isinstance(wait, Finding):
             findings.append(wait)
             break
+        wait = replace(wait, utc=start.utc)
         chain = (*chain, wait)
         departures[position] = _computed(f"departure-{position + 1}", start, chain, wait.element)
     return arrivals, departures
@@ -453,6 +485,8 @@ def compute_times(
     if isinstance(start, Finding):
         return TimingResult(_assemble(count, [None] * count, [None] * count, start), [start])
     findings: list[Finding] = []
+    if start.utc:
+        findings.append(Finding(Severity.INFO, MessageKey.TIME_UTC, {}, start.departure_element))
     if start.offset_element is None:
         findings.append(Finding(Severity.INFO, MessageKey.DAY_OFFSET_DEFAULT, {}, journey))
     demand, problem = follow_child(index, journey, "TimeDemandTypeRef")

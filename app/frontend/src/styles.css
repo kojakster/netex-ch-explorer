@@ -1362,9 +1362,14 @@ input {
   vertical-align: super;
 }
 
-.time-calc {
+.time-calc,
+.time-utc {
   font-size: 0.8em;
   color: var(--muted);
+}
+
+.time-utc {
+  margin-left: 0.25em;
 }
 
 .time-none {

@@ -50,7 +50,7 @@ function Step({ step, ...source }: SourceProps & { step: StepInfo }) {
         </span>
       ))}
       {step.viaFromTo && <span className="note"> ({t("calc.viaFromTo")})</span>}
-      <span className="calc-result"> = {timeWithDay(step.clock, step.dayOffset)}</span>
+      <span className="calc-result"> = {timeWithDay(step.clock, step.dayOffset, step.utc)}</span>
     </li>
   );
 }
@@ -73,7 +73,9 @@ export function CalculationChain({ journey, timeId, ...source }: CalculationChai
       <p>
         {t(`calc.of.${kind}`, { number: stop.position, stop: stop.stopPoint.text ?? "" })}{" "}
         <strong>
-          {time.clock === null ? t("time.notComputable") : timeWithDay(time.clock, time.dayOffset)}
+          {time.clock === null
+            ? t("time.notComputable")
+            : timeWithDay(time.clock, time.dayOffset, time.utc)}
         </strong>{" "}
         <span className="note">{t(`calc.status.${time.status}`)}</span>
       </p>

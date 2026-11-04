@@ -395,6 +395,7 @@ def test_other_valid_fixtures_have_no_xsd_errors(guide_engine: ValidationEngine)
         "ch20_midnight.xml",
         "ch20_network_offer.xml",
         "ch20_site_offer.xml",
+        "ch20_utc_departure.xml",
     ):
         dataset = validate_fixture(guide_engine, name)
         assert not dataset.index.diagnostics(DiagnosticCategory.XSD), name

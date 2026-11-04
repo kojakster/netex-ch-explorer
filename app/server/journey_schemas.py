@@ -105,16 +105,21 @@ class StepOut(ApiModel):
     element: ObjectOut | None
     related: list[ObjectOut]
     via_from_to: bool
+    utc: bool
 
 
 class TimeOut(ApiModel):
-    """Eine Zeit an einem Halt; `clock` ist `hh:mm:ss`, `dayOffset` der Tag ab Betriebstag."""
+    """Eine Zeit an einem Halt; `clock` ist `hh:mm:ss`, `dayOffset` der Tag ab Betriebstag.
+
+    `utc` = die Zeit ist UTC (Sonderfall Zeitumstellung), sonst Ortszeit.
+    """
 
     id: str
     status: TimeStatus
     clock: str | None
     day_offset: int
     offset_origin: OffsetOrigin | None
+    utc: bool
     source: ObjectOut | None
     chain: list[StepOut]
     reason: FindingOut | None
@@ -358,6 +363,7 @@ class JourneyConverter:
             element=self._optional(step.element),
             related=[self._object(item) for item in step.related],
             via_from_to=step.via_from_to,
+            utc=step.utc,
         )
 
     def _time(self, time: TimeResult | None) -> TimeOut | None:
@@ -370,6 +376,7 @@ class JourneyConverter:
             clock=clock,
             day_offset=day,
             offset_origin=time.offset_origin,
+            utc=time.utc,
             source=self._optional(time.source),
             chain=[self._step(step) for step in time.chain],
             reason=self._finding(time.reason),

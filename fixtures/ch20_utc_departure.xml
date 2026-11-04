@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETISCHE TESTDATEN des Projekts netex-ch-explorer, keine echten Fahrplandaten, kein Guide-Inhalt.
+     Sonderfall Zeitumstellung (Guide 08_timetable.md): Fahrt SYN 1 wie in ch20_offers.xml, aber die
+     DepartureTime ist UTC (01:33:00Z). Die Folgezeiten (B an 01:43 / ab 01:45, C an 02:00) sind
+     UTC; die JourneyPart A bis B trägt Ortszeit (08:00 bis 08:10) und ist deshalb nicht vergleichbar. -->
+<PublicationDelivery xmlns="http://www.netex.org.uk/netex" version="2.1">
+	<PublicationTimestamp>2026-10-31T09:00:00</PublicationTimestamp>
+	<ParticipantRef>SYNTHETIC</ParticipantRef>
+	<dataObjects>
+		<CompositeFrame id="ch:1:CompositeFrame:SYN" version="1">
+			<frames>
+				<ResourceFrame id="ch:1:ResourceFrame:SYN" version="1">
+					<typesOfValue>
+						<ValueSet id="ch:1:ValueSet:TypeOfProductCategory" version="1" nameOfClass="TypeOfProductCategory">
+							<Name>ProductCategories</Name>
+							<values>
+								<TypeOfProductCategory id="ch:1:TypeOfProductCategory:SYN" version="1">
+									<Name lang="de">Synthetischer Zug
+										<Text lang="en">Synthetic train</Text>
+									</Name>
+									<ShortName>SYN</ShortName>
+								</TypeOfProductCategory>
+							</values>
+						</ValueSet>
+						<ValueSet id="ch:1:ValueSet:PurposeOfJourneyPartition" version="1" nameOfClass="PurposeOfJourneyPartition">
+							<Name>Usage of JourneyPart</Name>
+							<values>
+								<PurposeOfJourneyPartition id="ch:1:PurposeOfJourneyPartition:FacilityChange" version="1">
+									<Name>Facility change</Name>
+								</PurposeOfJourneyPartition>
+							</values>
+						</ValueSet>
+					</typesOfValue>
+					<organisations>
+						<Operator id="ch:1:sboid:SYN1" version="1">
+							<Name>Synthetische Bahn</Name>
+						</Operator>
+					</organisations>
+					<serviceFacilitySets>
+						<ServiceFacilitySet id="ch:1:ServiceFacilitySet:SYN-all" version="1">
+							<FareClasses>firstClass secondClass</FareClasses>
+							<PassengerCommsFacilityList>freeWifi</PassengerCommsFacilityList>
+						</ServiceFacilitySet>
+						<ServiceFacilitySet id="ch:1:ServiceFacilitySet:SYN-bistro" version="1">
+							<CateringFacilityList>bistro</CateringFacilityList>
+						</ServiceFacilitySet>
+					</serviceFacilitySets>
+				</ResourceFrame>
+				<SiteFrame id="ch:1:SiteFrame:SYN" version="1">
+					<stopPlaces>
+						<StopPlace id="ch:1:sloid:SYN1" version="1">
+							<Name>Synthetisch A</Name>
+							<quays>
+								<Quay id="ch:1:sloid:SYN1:0:1" version="1">
+									<PublicCode>1</PublicCode>
+								</Quay>
+							</quays>
+						</StopPlace>
+						<StopPlace id="ch:1:sloid:SYN2" version="1">
+							<Name>Synthetisch B</Name>
+							<quays>
+								<Quay id="ch:1:sloid:SYN2:0:1" version="1">
+									<PublicCode>2</PublicCode>
+								</Quay>
+							</quays>
+						</StopPlace>
+						<StopPlace id="ch:1:sloid:SYN3" version="1">
+							<Name>Synthetisch C</Name>
+							<quays>
+								<Quay id="ch:1:sloid:SYN3:0:1" version="1">
+									<PublicCode>3</PublicCode>
+								</Quay>
+							</quays>
+						</StopPlace>
+					</stopPlaces>
+				</SiteFrame>
+				<ServiceFrame id="ch:1:ServiceFrame:SYN" version="1">
+					<lines>
+						<Line id="ch:1:slnid:SYN1" version="1">
+							<Name>Synthetische Linie</Name>
+							<TransportMode>rail</TransportMode>
+							<TransportSubmode>
+								<RailSubmode>regionalRail</RailSubmode>
+							</TransportSubmode>
+							<TypeOfProductCategoryRef ref="ch:1:TypeOfProductCategory:SYN" version="1"/>
+						</Line>
+					</lines>
+					<scheduledStopPoints>
+						<!-- Gleiche ID wie die Kante (Quay), wie in den Guide-Beispielen. -->
+						<ScheduledStopPoint id="ch:1:sloid:SYN1:0:1" version="1">
+							<Name>Synthetisch A</Name>
+						</ScheduledStopPoint>
+						<ScheduledStopPoint id="ch:1:sloid:SYN2:0:1" version="1">
+							<Name>Synthetisch B</Name>
+						</ScheduledStopPoint>
+						<ScheduledStopPoint id="ch:1:sloid:SYN3:0:1" version="1">
+							<Name>Synthetisch C</Name>
+						</ScheduledStopPoint>
+					</scheduledStopPoints>
+					<stopAssignments>
+						<PassengerStopAssignment id="ch:1:PassengerStopAssignment:SYN1" version="1">
+							<ScheduledStopPointRef ref="ch:1:sloid:SYN1:0:1" version="1"/>
+							<StopPlaceRef ref="ch:1:sloid:SYN1" version="1"/>
+							<QuayRef ref="ch:1:sloid:SYN1:0:1" version="1"/>
+						</PassengerStopAssignment>
+						<PassengerStopAssignment id="ch:1:PassengerStopAssignment:SYN2" version="1">
+							<ScheduledStopPointRef ref="ch:1:sloid:SYN2:0:1" version="1"/>
+							<StopPlaceRef ref="ch:1:sloid:SYN2" version="1"/>
+							<QuayRef ref="ch:1:sloid:SYN2:0:1" version="1"/>
+						</PassengerStopAssignment>
+						<PassengerStopAssignment id="ch:1:PassengerStopAssignment:SYN3" version="1">
+							<ScheduledStopPointRef ref="ch:1:sloid:SYN3:0:1" version="1"/>
+							<StopPlaceRef ref="ch:1:sloid:SYN3" version="1"/>
+							<QuayRef ref="ch:1:sloid:SYN3:0:1" version="1"/>
+						</PassengerStopAssignment>
+					</stopAssignments>
+					<timingLinks>
+						<TimingLink id="ch:1:TimingLink:SYN1-2" version="1">
+							<FromPointRef ref="ch:1:sloid:SYN1:0:1" version="1" nameOfRefClass="ScheduledStopPoint"/>
+							<ToPointRef ref="ch:1:sloid:SYN2:0:1" version="1" nameOfRefClass="ScheduledStopPoint"/>
+						</TimingLink>
+						<TimingLink id="ch:1:TimingLink:SYN2-3" version="1">
+							<FromPointRef ref="ch:1:sloid:SYN2:0:1" version="1" nameOfRefClass="ScheduledStopPoint"/>
+							<ToPointRef ref="ch:1:sloid:SYN3:0:1" version="1" nameOfRefClass="ScheduledStopPoint"/>
+						</TimingLink>
+					</timingLinks>
+					<journeyPatterns>
+						<ServiceJourneyPattern id="ch:1:ServiceJourneyPattern:SYN1" version="1">
+							<RouteView>
+								<LineRef ref="ch:1:slnid:SYN1" version="1"/>
+							</RouteView>
+							<DirectionType>outbound</DirectionType>
+							<pointsInSequence>
+								<StopPointInJourneyPattern id="ch:1:StopPointInJourneyPattern:SYN1-1" version="1">
+									<ScheduledStopPointRef ref="ch:1:sloid:SYN1:0:1" version="1"/>
+									<ForAlighting>false</ForAlighting>
+									<ForBoarding>true</ForBoarding>
+								</StopPointInJourneyPattern>
+								<StopPointInJourneyPattern id="ch:1:StopPointInJourneyPattern:SYN1-2" version="1">
+									<ScheduledStopPointRef ref="ch:1:sloid:SYN2:0:1" version="1"/>
+									<ForAlighting>true</ForAlighting>
+									<ForBoarding>true</ForBoarding>
+									<RequestStop>true</RequestStop>
+									<StopUse>access</StopUse>
+								</StopPointInJourneyPattern>
+								<StopPointInJourneyPattern id="ch:1:StopPointInJourneyPattern:SYN1-3" version="1">
+									<ScheduledStopPointRef ref="ch:1:sloid:SYN3:0:1" version="1"/>
+									<ForAlighting>true</ForAlighting>
+									<ForBoarding>false</ForBoarding>
+								</StopPointInJourneyPattern>
+							</pointsInSequence>
+						</ServiceJourneyPattern>
+					</journeyPatterns>
+					<timeDemandTypes>
+						<TimeDemandType id="ch:1:TimeDemandType:SYN1" version="1">
+							<runTimes>
+								<JourneyRunTime id="ch:1:JourneyRunTime:SYN1-1" version="1">
+									<TimingLinkRef ref="ch:1:TimingLink:SYN1-2" version="1"/>
+									<RunTime>PT10M</RunTime>
+								</JourneyRunTime>
+								<JourneyRunTime id="ch:1:JourneyRunTime:SYN1-2" version="1">
+									<TimingLinkRef ref="ch:1:TimingLink:SYN2-3" version="1"/>
+									<RunTime>PT15M</RunTime>
+								</JourneyRunTime>
+							</runTimes>
+							<waitTimes>
+								<JourneyWaitTime id="ch:1:JourneyWaitTime:SYN1-1" version="1">
+									<ScheduledStopPointRef ref="ch:1:sloid:SYN2:0:1" version="1"/>
+									<WaitTime>PT2M</WaitTime>
+								</JourneyWaitTime>
+							</waitTimes>
+						</TimeDemandType>
+					</timeDemandTypes>
+					<notices>
+						<Notice id="ch:1:Notice:SYN-1" version="1">
+							<Text lang="de">Synthetischer Hinweis
+								<Text lang="en">Synthetic notice</Text>
+							</Text>
+							<ShortCode>SYN1</ShortCode>
+						</Notice>
+						<Notice id="ch:1:Notice:SYN-2" version="1">
+							<Text lang="de">Nur auf der Teilstrecke</Text>
+							<ShortCode>SYN2</ShortCode>
+						</Notice>
+					</notices>
+				</ServiceFrame>
+				<ServiceCalendarFrame id="ch:1:ServiceCalendarFrame:SYN" version="1">
+					<validityConditions>
+						<!-- 13.12.2026 (Sonntag) bis 19.12.2026: Montag bis Freitag. -->
+						<AvailabilityCondition id="ch:1:AvailabilityCondition:SYN1" version="1">
+							<FromDate>2026-12-13T00:00:00</FromDate>
+							<ToDate>2026-12-19T23:59:59</ToDate>
+							<ValidDayBits>0111110</ValidDayBits>
+						</AvailabilityCondition>
+					</validityConditions>
+				</ServiceCalendarFrame>
+				<TimetableFrame id="ch:1:TimetableFrame:SYN" version="1">
+					<vehicleJourneys>
+						<ServiceJourney id="ch:1:sjyid:SYN:1" version="1">
+							<validityConditions>
+								<AvailabilityConditionRef ref="ch:1:AvailabilityCondition:SYN1" version="1"/>
+							</validityConditions>
+							<TransportMode>rail</TransportMode>
+							<TypeOfProductCategoryRef ref="ch:1:TypeOfProductCategory:SYN" version="1"/>
+							<noticeAssignments>
+								<NoticeAssignment id="ch:1:NoticeAssignment:SYN-journey" version="1">
+									<NoticeRef ref="ch:1:Notice:SYN-1" version="1"/>
+								</NoticeAssignment>
+							</noticeAssignments>
+							<ServiceAlteration>planned</ServiceAlteration>
+							<DepartureTime>01:33:00Z</DepartureTime>
+							<DepartureDayOffset>0</DepartureDayOffset>
+							<ServiceJourneyPatternRef ref="ch:1:ServiceJourneyPattern:SYN1" version="1"/>
+							<TimeDemandTypeRef ref="ch:1:TimeDemandType:SYN1" version="1"/>
+							<OperatorRef ref="ch:1:sboid:SYN1" version="1"/>
+							<trainNumbers>
+								<TrainNumberRef ref="ch:1:TrainNumber:SYN1" version="1"/>
+							</trainNumbers>
+							<parts>
+								<JourneyPart id="ch:1:JourneyPart:SYN-1" version="1">
+									<FromStopPointRef ref="ch:1:sloid:SYN1:0:1" version="1" nameOfRefClass="ScheduledStopPoint"/>
+									<ToStopPointRef ref="ch:1:sloid:SYN2:0:1" version="1" nameOfRefClass="ScheduledStopPoint"/>
+									<StartTime>08:00:00</StartTime>
+									<StartTimeDayOffset>0</StartTimeDayOffset>
+									<EndTime>08:10:00</EndTime>
+									<EndTimeDayOffset>0</EndTimeDayOffset>
+									<PurposeOfJourneyPartitionRef ref="ch:1:PurposeOfJourneyPartition:FacilityChange" version="1"/>
+									<facilities>
+										<ServiceFacilitySetRef ref="ch:1:ServiceFacilitySet:SYN-bistro" version="1"/>
+									</facilities>
+								</JourneyPart>
+							</parts>
+							<facilities>
+								<ServiceFacilitySetRef ref="ch:1:ServiceFacilitySet:SYN-all" version="1"/>
+							</facilities>
+						</ServiceJourney>
+					</vehicleJourneys>
+					<trainNumbers>
+						<TrainNumber id="ch:1:TrainNumber:SYN1" version="1">
+							<ForAdvertisement>1</ForAdvertisement>
+						</TrainNumber>
+					</trainNumbers>
+					<noticeAssignments>
+						<NoticeAssignment id="ch:1:NoticeAssignment:SYN-range" version="1">
+							<NoticeRef ref="ch:1:Notice:SYN-2" version="1"/>
+							<JourneyPatternRef ref="ch:1:ServiceJourneyPattern:SYN1" version="1"/>
+							<StartPointInPatternRef ref="ch:1:StopPointInJourneyPattern:SYN1-2" version="1"/>
+							<EndPointInPatternRef ref="ch:1:StopPointInJourneyPattern:SYN1-3" version="1"/>
+						</NoticeAssignment>
+						<NoticeAssignment id="ch:1:NoticeAssignment:SYN-lonely" version="1">
+							<NoticeRef ref="ch:1:Notice:SYN-1" version="1"/>
+						</NoticeAssignment>
+					</noticeAssignments>
+				</TimetableFrame>
+			</frames>
+		</CompositeFrame>
+	</dataObjects>
+</PublicationDelivery>

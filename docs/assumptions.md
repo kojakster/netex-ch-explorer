@@ -58,6 +58,10 @@ Historisch (`b7ac158`): `NJ470_IC60470` hat `FromDate` 2026-01-01T00:00:00 und `
 
 `08_timetable.md` Z. 97 sagt, der `TimingLink` stehe im `OnwardTimingLinkRef`. Nur die Beispiele 06, 09, 13 und 18 verwenden ihn; alle anderen ergeben die Strecken nur über `FromPointRef`/`ToPointRef`. Festlegung des Benutzers (Regel Z4): `OnwardTimingLinkRef`, sonst Von-/Nach-Punkt mit ℹ Hinweis.
 
+### 12. Zeitumstellung: Beispielwert `02:33:00Z` liegt nicht in der doppelten Stunde
+
+`08_timetable.md` Z. 102 (`d0a8e6d`): Die zweite Fahrt in der Stunde 02:00–03:00 bekommt eine `DepartureTime` in UTC, „E.g. `02:33:00Z`“. Als UTC gelesen entspricht `02:33:00Z` aber 03:33 MEZ (Winterzeit, UTC+1) und liegt damit nicht in der doppelten Stunde 02:00–03:00 Ortszeit; die doppelte Stunde entspricht in UTC 00:00–01:00 (Sommerzeit) bzw. 01:00–02:00 (Winterzeit). Das Beispiel ist vermutlich ungenau. Daraus wird nichts abgeleitet: Das Tool liest `Z` als UTC und rechnet nicht um ([mapping.md](mapping.md) Z9). Kein Guide-Beispiel enthält eine UTC-Zeit.
+
 ## Annahmen des Tools
 
 | # | Annahme | Begründung | Wirkung |

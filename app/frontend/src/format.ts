@@ -13,10 +13,14 @@ export function dayMarker(dayOffset: number): string {
   return dayOffset > 0 ? `+${dayOffset}` : `−${Math.abs(dayOffset)}`;
 }
 
-/** Zeit mit Tagesmarke, z. B. `00:17 +1`. */
-export function timeWithDay(clock: string, dayOffset: number): string {
+/** Kennzeichen für UTC-Zeiten (Sonderfall Zeitumstellung); es wird nie in Ortszeit umgerechnet. */
+export const UTC_LABEL = "UTC";
+
+/** Zeit mit Tagesmarke, z. B. `00:17 +1`, bei UTC mit Zusatz, z. B. `01:33 UTC`. */
+export function timeWithDay(clock: string, dayOffset: number, utc = false): string {
   const marker = dayMarker(dayOffset);
-  return marker === "" ? trimSeconds(clock) : `${trimSeconds(clock)} ${marker}`;
+  const text = marker === "" ? trimSeconds(clock) : `${trimSeconds(clock)} ${marker}`;
+  return utc ? `${text} ${UTC_LABEL}` : text;
 }
 
 /** ISO-Datum (`2026-12-14`) als `14.12.2026` für Deutsch, sonst unverändert. */

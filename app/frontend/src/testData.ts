@@ -358,6 +358,7 @@ function timeInfo(
     clock,
     dayOffset: 0,
     offsetOrigin: "explicit",
+    utc: false,
     source: chain[chain.length - 1]?.element ?? null,
     chain,
     reason: null,
@@ -374,6 +375,7 @@ const DEPARTURE_STEP: StepInfo = {
   element: element(104, "DepartureTime", "TimetableFrame"),
   related: [],
   viaFromTo: false,
+  utc: false,
 };
 
 const RUN_STEP: StepInfo = {
@@ -386,6 +388,7 @@ const RUN_STEP: StepInfo = {
   element: element(130, "RunTime", "ServiceFrame"),
   related: [element(120, "TimingLink", "ServiceFrame", "tl-1")],
   viaFromTo: true,
+  utc: false,
 };
 
 const WAIT_DEFAULT_STEP: StepInfo = {
@@ -398,6 +401,7 @@ const WAIT_DEFAULT_STEP: StepInfo = {
   element: null,
   related: [],
   viaFromTo: false,
+  utc: false,
 };
 
 const NOT_COMPUTABLE: TimeInfo = {
@@ -406,6 +410,7 @@ const NOT_COMPUTABLE: TimeInfo = {
   clock: null,
   dayOffset: 0,
   offsetOrigin: null,
+  utc: false,
   source: null,
   chain: [],
   reason: {

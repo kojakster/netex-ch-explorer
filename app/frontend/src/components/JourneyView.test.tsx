@@ -89,6 +89,7 @@ describe("TimeCell", () => {
     clock: "00:17:00",
     dayOffset: 1,
     offsetOrigin: "computed",
+    utc: false,
     source: null,
     chain: [],
     reason: null,
@@ -103,6 +104,19 @@ describe("TimeCell", () => {
     const symbol = screen.getByRole("img", { name: "berechnet" });
     expect(symbol.textContent).toBe("Σ");
     expect(screen.queryByText("berechnet")).toBeNull();
+  });
+
+  it("kennzeichnet UTC-Zeiten und lässt Ortszeiten ohne Zusatz", () => {
+    const utc: TimeInfo = { ...base, clock: "01:33:00", dayOffset: 0, utc: true };
+    const { rerender } = render(
+      <TimeCell time={utc} selectedTime={null} onSelect={() => undefined} />,
+    );
+    expect(screen.getByText("01:33")).toBeTruthy();
+    expect(screen.getByText("UTC").getAttribute("title")).toContain(
+      "nicht in Ortszeit umgerechnet",
+    );
+    rerender(<TimeCell time={base} selectedTime={null} onSelect={() => undefined} />);
+    expect(screen.queryByText("UTC")).toBeNull();
   });
 
   it("setzt die Abfahrt fett und die Ankunft normal", () => {
@@ -357,6 +371,21 @@ describe("CalculationChain", () => {
     render(<CalculationChain journey={JOURNEY_VIEW} timeId="departure-1" {...PROPS} />);
     expect(screen.getByText(/Abfahrt an Halt 1 \(Synthetisch A\):/)).toBeTruthy();
     expect(screen.getByText("steht so in der Datei")).toBeTruthy();
+  });
+
+  it("zeigt bei einer UTC-Zeit Zeit und Zwischenstände mit Zusatz UTC", () => {
+    const stops = JOURNEY_VIEW.stops.map((stop, position) => {
+      const departure = stop.departure;
+      if (position !== 0 || departure === null) {
+        return stop;
+      }
+      const chain = departure.chain.map((step) => ({ ...step, utc: true }));
+      return { ...stop, departure: { ...departure, utc: true, chain } };
+    });
+    render(
+      <CalculationChain journey={{ ...JOURNEY_VIEW, stops }} timeId="departure-1" {...PROPS} />,
+    );
+    expect(screen.getAllByText(/08:00 UTC/).length).toBeGreaterThan(1);
   });
 
   it("zeigt den Grund und seine Stelle bei einer nicht berechenbaren Zeit", () => {

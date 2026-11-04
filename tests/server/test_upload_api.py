@@ -120,6 +120,19 @@ def test_upload_one_xml_file(client: TestClient, work_dir: Path) -> None:
     assert client.get(f"/api/datasets/{data['id']}/journeys").json()
 
 
+def test_uploaded_journey_with_utc_departure_marks_utc_times(client: TestClient) -> None:
+    dataset_id = upload(client, ("utc.xml", fixture("ch20_utc_departure.xml"))).json()["id"]
+    [entry] = client.get(f"/api/datasets/{dataset_id}/journeys").json()
+    view = client.get(f"/api/journeys/{entry['object']['id']}").json()
+    first, _second, third = view["stops"]
+    assert (first["departure"]["clock"], first["departure"]["utc"]) == ("01:33:00", True)
+    assert (third["arrival"]["clock"], third["arrival"]["utc"]) == ("02:00:00", True)
+    assert all(step["utc"] for step in third["arrival"]["chain"])
+    keys = [d["key"] for d in view["diagnostics"]]
+    assert "projection.time.utc" in keys
+    assert keys.count("projection.part_time_utc") == 2
+
+
 def test_close_removes_the_files(client: TestClient, work_dir: Path) -> None:
     dataset_id = upload(client, ("a.xml", fixture("ch20_three_stops.xml"))).json()["id"]
     assert len(sessions(work_dir)) == 1

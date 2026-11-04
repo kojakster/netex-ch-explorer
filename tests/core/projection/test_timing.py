@@ -276,7 +276,7 @@ def test_wait_time_without_value_is_a_gap_not_a_default() -> None:
         ("", MessageKey.TIME_DEPARTURE_MISSING),
         ("<DepartureTime/>", MessageKey.TIME_DEPARTURE_MISSING),
         ("<DepartureTime>08:00</DepartureTime>", MessageKey.TIME_DEPARTURE_INVALID),
-        ("<DepartureTime>08:00:00Z</DepartureTime>", MessageKey.TIME_DEPARTURE_INVALID),
+        ("<DepartureTime>08:00:00+01:00</DepartureTime>", MessageKey.TIME_DEPARTURE_INVALID),
     ],
 )
 def test_departure_problems(departure: str, key: MessageKey) -> None:
@@ -288,6 +288,47 @@ def test_departure_problems(departure: str, key: MessageKey) -> None:
                 assert reason_of(time) is key
     assert view.stops[0].times.arrival is None
     assert view.stops[2].times.departure is None
+
+
+def test_utc_departure_is_read_and_all_following_times_are_utc() -> None:
+    """Sonderfall Zeitumstellung (mapping.md Z9): `Z` ist UTC, ohne Umrechnung."""
+    view = fixture_view("ch20_utc_departure.xml")
+    first, second, third = (stop.times for stop in view.stops)
+    times = [first.departure, second.arrival, second.departure, third.arrival]
+    assert [clock(t) for t in times] == [
+        "01:33:00 +0",
+        "01:43:00 +0",
+        "01:45:00 +0",
+        "02:00:00 +0",
+    ]
+    for time in times:
+        assert time is not None
+        assert time.utc
+        assert all(step.utc for step in time.chain)
+    assert first.departure is not None
+    assert first.departure.status is TimeStatus.EXPLICIT
+    notes = [f for f in view.findings if f.key is MessageKey.TIME_UTC]
+    assert [(f.severity, f.element.name if f.element else None) for f in notes] == [
+        (Severity.INFO, "DepartureTime")
+    ]
+
+
+def test_local_times_are_not_marked_utc() -> None:
+    view = fixture_view("ch20_three_stops.xml")
+    for stop in view.stops:
+        for time in (stop.times.arrival, stop.times.departure):
+            if time is not None:
+                assert not time.utc
+                assert not any(step.utc for step in time.chain)
+    assert MessageKey.TIME_UTC not in keys(view)
+
+
+def test_utc_departure_without_day_offset_keeps_the_default() -> None:
+    view = Scenario(departure="<DepartureTime>02:33:00Z</DepartureTime>").view()
+    departure = view.stops[0].times.departure
+    assert departure is not None
+    assert (departure.utc, departure.offset_origin) == (True, OffsetOrigin.DEFAULT)
+    assert MessageKey.DAY_OFFSET_DEFAULT in keys(view)
 
 
 def test_invalid_day_offset() -> None:

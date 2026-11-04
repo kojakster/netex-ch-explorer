@@ -377,11 +377,15 @@ def _time_difference(
 ) -> Finding | None:
     if stated.total is None or computed is None or computed.total is None:
         return None
+    if computed.utc:
+        # Die Zeit der Teilstrecke ist Ortszeit, die berechnete UTC: kein Vergleich (Z9).
+        params: dict[str, ParamValue] = {"part": part.element.xml_id or "", "field": field_name}
+        return Finding(Severity.INFO, MessageKey.PART_TIME_UTC, params, stated.time.element)
     if stated.total == computed.total:
         return None
     stated_day, stated_clock = split_seconds(stated.total)
     computed_day, computed_clock = split_seconds(computed.total)
-    params: dict[str, ParamValue] = {
+    differs: dict[str, ParamValue] = {
         "part": part.element.xml_id or "",
         "field": field_name,
         "stated": stated_clock,
@@ -389,7 +393,7 @@ def _time_difference(
         "computed": computed_clock,
         "computedDay": computed_day,
     }
-    return Finding(Severity.WARNING, MessageKey.PART_TIME_DIFFERS, params, stated.time.element)
+    return Finding(Severity.WARNING, MessageKey.PART_TIME_DIFFERS, differs, stated.time.element)
 
 
 def _part_findings(parts: list[PartView], stops: list[StopView]) -> list[Finding]:
@@ -415,7 +419,7 @@ def _dst_findings(
         time.total
         for stop in stops
         for time in (stop.times.arrival, stop.times.departure)
-        if time is not None and time.total is not None
+        if time is not None and time.total is not None and not time.utc
     ]
     days = tuple(
         sorted({day for item in validity if item.days is not None for day in item.days.days})

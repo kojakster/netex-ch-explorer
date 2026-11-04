@@ -290,6 +290,18 @@ def test_part_time_that_contradicts_the_calculation_is_a_warning() -> None:
     assert differences[0].element.name == "StartTime"
 
 
+def test_part_time_is_not_compared_with_utc_times() -> None:
+    view = fixture_view("ch20_utc_departure.xml")
+    assert MessageKey.PART_TIME_DIFFERS not in keys(view)
+    notes = [f for f in view.findings if f.key is MessageKey.PART_TIME_UTC]
+    assert [(f.severity, f.params["field"]) for f in notes] == [
+        (Severity.INFO, "StartTime"),
+        (Severity.INFO, "EndTime"),
+    ]
+    assert notes[0].element is not None
+    assert notes[0].element.name == "StartTime"
+
+
 def test_part_day_offset_is_compared() -> None:
     extra = "<EndTimeDayOffset>1</EndTimeDayOffset>"
     part = (
@@ -489,6 +501,15 @@ def test_dst_night_hint_spring_and_autumn() -> None:
     autumn = _dst_view("01:50:00", offset, ("2026-10-24", "2026-10-25"))
     [hint] = [f for f in autumn.findings if f.key is MessageKey.DST_NIGHT_BACK]
     assert hint.params == {"date": "2026-10-25"}
+
+
+def test_utc_times_are_left_out_of_the_time_change_night_check() -> None:
+    offset = "<DepartureDayOffset>1</DepartureDayOffset>"
+    local = _dst_view("01:50:00", offset, ("2026-10-24", "2026-10-25"))
+    assert MessageKey.DST_NIGHT_BACK in keys(local)
+    utc = _dst_view("01:50:00Z", offset, ("2026-10-24", "2026-10-25"))
+    assert MessageKey.DST_NIGHT_BACK not in keys(utc)
+    assert MessageKey.TIME_UTC in keys(utc)
 
 
 def test_no_dst_hint_when_the_journey_ends_before_two_o_clock() -> None:

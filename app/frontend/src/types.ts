@@ -339,6 +339,8 @@ export interface StepInfo {
   element: ObjectInfo | null;
   related: ObjectInfo[];
   viaFromTo: boolean;
+  /** Der Zwischenstand ist UTC (Sonderfall Zeitumstellung), nicht Ortszeit. */
+  utc: boolean;
 }
 
 export type TimeStatus = "explicit" | "computed" | "not_computable";
@@ -350,6 +352,8 @@ export interface TimeInfo {
   clock: string | null;
   dayOffset: number;
   offsetOrigin: OffsetOrigin | null;
+  /** Die Zeit ist UTC (Sonderfall Zeitumstellung), nicht Ortszeit. */
+  utc: boolean;
   source: ObjectInfo | null;
   chain: StepInfo[];
   reason: FindingInfo | null;

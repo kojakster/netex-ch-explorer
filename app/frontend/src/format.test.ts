@@ -13,6 +13,8 @@ describe("Zeitdarstellung", () => {
     expect(dayMarker(-1)).toBe("−1");
     expect(timeWithDay("00:17:00", 1)).toBe("00:17 +1");
     expect(timeWithDay("08:00:00", 0)).toBe("08:00");
+    expect(timeWithDay("01:33:00", 0, true)).toBe("01:33 UTC");
+    expect(timeWithDay("00:17:00", 1, true)).toBe("00:17 +1 UTC");
   });
 
   it("formatiert Daten nach Sprache", () => {
