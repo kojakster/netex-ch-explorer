@@ -1,6 +1,6 @@
 # Annahmen und Widersprüche im Guide
 
-Stand: Phase 3 (31.10.2026), Guide `b7ac158`, XSD `73b337e`. Hier stehen (1) Widersprüche und Auffälligkeiten im Guide und in seinen Beispielen und (2) Annahmen, die das Tool trifft, weil der Guide-Text etwas nicht ausdrücklich sagt. Das Tool meldet nichts an den Guide (Entscheid „Fehler in Guide-Dateien“); es zeigt, was in der Datei steht, und macht Unsicherheiten in der Anwendung sichtbar. Belege zu den Regeln: [mapping.md](mapping.md). Offene Fragen an den Benutzer: [open-points.md](open-points.md).
+Stand: Phase 3 (31.10.2026), Guide `d0a8e6d`, XSD `73b337e`. Hier stehen (1) Widersprüche und Auffälligkeiten im Guide und in seinen Beispielen und (2) Annahmen, die das Tool trifft, weil der Guide-Text etwas nicht ausdrücklich sagt. Das Tool meldet nichts an den Guide (Entscheid „Fehler in Guide-Dateien“); es zeigt, was in der Datei steht, und macht Unsicherheiten in der Anwendung sichtbar. Belege zu den Regeln: [mapping.md](mapping.md). Offene Fragen an den Benutzer: [open-points.md](open-points.md).
 
 ## Widersprüche und Auffälligkeiten im Guide
 
@@ -14,7 +14,7 @@ Der Kommentar am Anfang von `01_NeTEx_Spiez_Interlaken_Ost.xml` nennt die Ankunf
 
 ### 3. `ValidDayBits` passt in 15 von 22 Beispielen nicht zum Zeitraum
 
-Der Guide verlangt „genau ein Bit je Kalendertag des Zeitraums“ (`07_service_calendars.md` Z. 111). Geprüft am Stand `b7ac158` (Tage zwischen `FromDate` und `ToDate`, beide eingeschlossen, gegen die Länge der Bitfolge):
+Der Guide verlangt „genau ein Bit je Kalendertag des Zeitraums“ (`07_service_calendars.md` Z. 111). Geprüft am Stand `d0a8e6d` (Tage zwischen `FromDate` und `ToDate`, beide eingeschlossen, gegen die Länge der Bitfolge):
 
 | Beispiel | Zeitraum | Tage | Bits | Bemerkung |
 |---|---|---|---|---|
@@ -24,19 +24,19 @@ Der Guide verlangt „genau ein Bit je Kalendertag des Zeitraums“ (`07_service
 | 14 | 15.12.2025 – 12.12.2026 | 363 | 7 | 5 Bits gesetzt: sieht nach einem Wochenmuster aus |
 | 03, 12, 15, 21, 22 | | | | stimmen |
 
-Das Tool listet die Tage nur, wenn die Länge stimmt (Regel B6), und zeigt sonst die Anzahl gesetzter Bits mit einer △ Warnung. Es rät nicht, wie die Bits den Tagen zuzuordnen wären. Beispiel 16 und 19 haben keine `ValidDayBits`.
+Das Tool listet die Tage nur, wenn die Länge stimmt (Regel B6), und zeigt sonst die Anzahl gesetzter Bits mit einer △ Warnung. Es rät nicht, wie die Bits den Tagen zuzuordnen wären. Beispiel 16 hat keine `ValidDayBits` (Beispiel 19 wurde im Guide entfernt, `a054e26`).
 
 ### 4. Beispiel 01: `StopPlace` „Bern“ für Spiez, fünfstellige Jahreszahl
 
 `StopPlace` `ch:1:sloid:7483` trägt `Name` „Bern“ und `AlternativeText` „Spiez“; `ValidBetween/FromDate` lautet `20205-12-14T00:00:00` (fünfstellige Jahreszahl; die XSD lässt das zu). Das Tool zeigt den `Name` aus der Datei („Bern“) neben dem Namen des Fahrplanpunkts „Spiez“. Nichts wird korrigiert.
 
-### 5. `uc05`: Angebote der Teilstrecke „überschreiben“ die der Fahrt, Beispiel 08 meint ergänzend
+### 5. `uc05`: Angebote der Teilstrecke „gelten nur für diese Teilstrecke“, Beispiel 08 meint ergänzend
 
-`uc05_journey_parts.md` Z. 104: „`ServiceFacilitySet` defined on a `JourneyPart` overrides the one on the `ServiceJourney` for that section.“ In Beispiel 08 stehen an der Fahrt `firstClass` und `freeWifi` (Kommentar: „the two attributes that are valid for the whole ServiceJourney“) und an den Teilstrecken `bistro` („the restaurant when it is open“); gemeint ist offensichtlich ergänzend, nicht ersetzend. Das Tool zeigt die Angebote der ganzen Fahrt und die der Teilstrecken getrennt und rechnet keine „gültige Menge“ aus (offener Punkt).
+`uc05_journey_parts.md` Z. 155 (`d0a8e6d`): „A `ServiceFacilitySet` on a `JourneyPart` is valid for this part only.“ (Stand `b7ac158`, Z. 104: „… overrides the one on the `ServiceJourney` for that section.“) In Beispiel 08 stehen an der Fahrt `firstClass` und `freeWifi` (Kommentar: „the two attributes that are valid for the whole ServiceJourney“) und an den Teilstrecken `bistro` („the restaurant when it is open“); gemeint ist offensichtlich ergänzend, nicht ersetzend. Das Tool zeigt die Angebote der ganzen Fahrt und die der Teilstrecken getrennt und rechnet keine „gültige Menge“ aus (offener Punkt).
 
-### 6. Kurswagen: `uc08` sagt „kein `JourneyPart`“, Beispiel 21 verwendet `JourneyPart`
+### 6. Kurswagen: `uc08` sagte „kein `JourneyPart`“, Beispiel 21 verwendet `JourneyPart` (aufgelöst in `d0a8e6d`)
 
-`uc08_kurswagen.md` Z. 43: „`JourneyPart` and `JourneyPartCouple` are **not used** for this in RG 2.0.“ Beispiel 21 bildet den Kurswagen Zürich–Bremen mit drei `JourneyPart` ab (`ParentJourneyRef`, `FromPointInPatternRef`/`ToPointInPatternRef`, `PurposeOfJourneyPartition` `DirectCarriage`); `uc05` §3 bis §5 nennen weitere Verwendungen als „not used“. Das Tool zeigt die Teilstrecken aus der Datei. Die Verweise zeigen auf Halte der Fahrtmuster der Zubringerzüge, nicht auf Halte der Kurswagen-Fahrt; deshalb werden die Teilstrecken nicht den Halten der Fahrt zugeordnet.
+**Aufgelöst:** `uc08_kurswagen.md` ist in `d0a8e6d` neu geschrieben und sagt jetzt: „Direct carriages are modelled with `JourneyPart`“ (Z. 41–43); erlaubter Zweck `PurposeOfJourneyPartition:DirectCarriage` (`uc05_journey_parts.md` Z. 25, 68; `mgmt/Decisions.md` Z. 42, 27.10.2026). Bei Kurswagen zeigen `FromPointInPatternRef`/`ToPointInPatternRef` auf das Fahrtmuster der ziehenden Fahrt (`ParentJourneyRef`, `uc05_journey_parts.md` Z. 154). Ursprünglich (`b7ac158`) stand in `uc08` Z. 43: „`JourneyPart` and `JourneyPartCouple` are **not used** for this in RG 2.0.“ Wie das Tool die Teilstrecken den Halten zuordnet: [mapping.md](mapping.md) P2.
 
 ### 7. Hinweiszuweisungen auf Frame-Ebene ohne Ziel (Beispiel 08)
 
@@ -50,9 +50,9 @@ Die Vorlage `Notice.xml` verbietet `alternativeTexts` (Mehrsprachigkeit über ve
 
 Beispiel 04 enthält `<RunTime>P3M</RunTime>` (drei Monate, vermutlich PT3M gemeint). Monate sind keine feste Dauer; die Zeiten dieser Fahrt sind „nicht berechenbar“ mit Grund. In derselben Datei hat bei zwei Fahrten je eine Strecke keinen `TimingLink`; in Beispiel 07 (Fahrt `…4208-003B_DB`, Basel Bad – Freiburg) ebenso, in Beispiel 11 fehlt für `ch:1:TimingLink:8215-8218` die `RunTime`. Das Tool lässt diese Lücken sichtbar.
 
-### 10. Beispiel 19: `AvailabilityCondition` ohne `ValidDayBits`
+### 10. Beispiel 19: `AvailabilityCondition` ohne `ValidDayBits` (Beispiel im Guide entfernt, `a054e26`)
 
-`NJ470_IC60470` hat `FromDate` 2026-01-01T00:00:00 und `ToDate` 2026-12-31T00:00:00, aber keine `ValidDayBits`. Betriebstage sind nicht bestimmbar; die Fahrtansicht meldet das als △ Warnung.
+Historisch (`b7ac158`): `NJ470_IC60470` hat `FromDate` 2026-01-01T00:00:00 und `ToDate` 2026-12-31T00:00:00, aber keine `ValidDayBits`. Betriebstage sind nicht bestimmbar; die Fahrtansicht meldet das als △ Warnung.
 
 ### 11. Wenige Beispiele nennen den `OnwardTimingLinkRef`
 
@@ -62,7 +62,7 @@ Beispiel 04 enthält `<RunTime>P3M</RunTime>` (drei Monate, vermutlich PT3M geme
 
 | # | Annahme | Begründung | Wirkung |
 |---|---|---|---|
-| a | `Abk` in `VMArt->NeTEx` entspricht dem `ShortName` der `TypeOfProductCategory`. | Die ID wird aus dem `ShortName` gebildet (`03_xml_modelling.md` Z. 202–203); die Tabelle enthält die Produktkategorien (`02_files.md` Z. 29). | Die Zeile der Tabelle erscheint als Bedeutung. Ohne Treffer: „keine Erläuterung in den Stammdaten“. |
+| a | `Abk` in `VMArt->NeTEx` entspricht dem `ShortName` der `TypeOfProductCategory`. | Die ID wird aus dem `ShortName` gebildet (`03_xml_modelling.md` Z. 206–207); die Tabelle enthält die Produktkategorien (`02_files.md` Z. 29). | Die Zeile der Tabelle erscheint als Bedeutung. Ohne Treffer: „keine Erläuterung in den Stammdaten“. |
 | b | Codes werden mit der Spalte `Facility Value` des Blatts `Angebote` verglichen; mehrere Treffer werden alle gezeigt (z. B. `cyclesAllowed` in sechs Zeilen). | Die Tabelle nennt das Facility und seinen Wert; der Guide verweist für die Bedeutung auf die Tabelle. | Der Code bestimmt nicht immer eine Zeile eindeutig; das Tool wählt keine. |
 | c | Beim Vergleich mit den Stammdaten bleibt umgebender Leerraum unberücksichtigt (die Tabelle enthält z. B. `regionalRail␣`); sonst exakt. | Tippfehler und Leerzeichen der Tabelle bleiben unverändert sichtbar (Entscheid „Mappingtabelle auslesen“). | Treffer auch bei überzähligem Leerzeichen. |
 | d | `StartTime` einer `JourneyPart` ist die Abfahrt am Anfangshalt, `EndTime` die Ankunft am Endhalt. | Der Guide sagt nur „Time bounds of the part“. Beispiel 08: alle vier Zeiten stimmen mit den berechneten überein. | Abweichungen sind △ Warnungen. |

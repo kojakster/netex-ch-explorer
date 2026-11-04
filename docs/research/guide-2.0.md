@@ -6,7 +6,7 @@ Stand 30.10.2026. Per Skript verifiziert an einem flachen Klon des Branches `nex
 
 - Guide (Webseite): https://opentdatach.github.io/netexRealisationGuideSwitzerland/main/index.html. Release Candidate 1 vom 07.09.2026, Release geplant 2026-11. Die Seite `…/main/…` entspricht möglicherweise einem älteren Stand.
 - Repository: https://github.com/openTdataCH/netexRealisationGuideSwitzerland
-  - Default-Branch `next` = `b7ac158` (Commit vom 27.10.2026); `main` = `3b5c0d2`.
+  - Default-Branch `next` = `d0a8e6d` (Stand 03.11.2026; vorher `b7ac158`, 27.10.2026); `main` = `3b5c0d2`.
   - Keine Releases; Lizenz nicht angegeben; Kontakt info.fachbus@sbb.ch.
 - Echte Lieferungen im Profil 2.0 gibt es noch nicht, weil NeTEx 2.1 selbst noch in Entwicklung ist. Auch das SKI+-Handout vom 25.03.2026 nennt keinen Termin: https://www.oev-info.ch/sites/default/files/2026-04/2026_03_25_Handout_NeTEx.pdf
 - Weitere CH-Profildokumente (für spätere Adapter, nicht geprüft): Profil 1.0.0 https://www.oev-info.ch/sites/default/files/2024-05/NeTEx_Core-Realisation_Guide_TP_Suisse-v1.00.pdf
@@ -28,9 +28,9 @@ Stand 30.10.2026. Per Skript verifiziert an einem flachen Klon des Branches `nex
 - Dateitypen:
   - **`NETWORK_OFFER`**: Linien, Routen, Fahrpläne; ggf. mehrere Dateien.
   - **`INTERCHANGE`**: Anschlüsse, Flügelungen, Durchbindungen.
-  - **`STOP_OFFER`**: so im Text; die Templates heissen `SITE_OFFER` (Inkonsistenz im Guide).
+  - **`SITE_OFFER`**: Haltestellen, Perrons, Umsteigezeiten, Barrierefreiheit (`02_files.md` Z. 76). Bis `b7ac158` hiess der Typ im Text `STOP_OFFER` (Inkonsistenz); mit `d0a8e6d` einheitlich `SITE_OFFER`.
   - `SINGLE_FILE`: nur als Template vorhanden.
-- SKI liefert ein SITE/STOP_OFFER, mehrere NETWORK_OFFER, ein INTERCHANGES-XML und eine README-Datei mit dem Inhalt jeder XML-Datei.
+- SKI liefert ein SITE_OFFER, mehrere NETWORK_OFFER, ein INTERCHANGES-XML und eine README-Datei mit dem Inhalt jeder XML-Datei.
 - ZIP-Name, Beispiel: `TEST_NETEX_TT_2.0_CHE_SKI_2026_OEV-SCHWEIZ_202602010402.zip`.
 - INTERCHANGE ist laut Guide nur dann XSD-valide, wenn `versionRef` statt `version` verwendet wird.
 
@@ -57,7 +57,7 @@ Stand 30.10.2026. Per Skript verifiziert an einem flachen Klon des Branches `nex
 
 ## Fahrten über Mitternacht
 
-Geprüft am Stand `b7ac158`.
+Geprüft am Stand `b7ac158`; Zeilenangaben und Regeln am 04.11.2026 gegen `d0a8e6d` geprüft. Neu in `d0a8e6d`: Sonderfall Zeitumstellung in `08_timetable.md` (zweite Fahrt in der doppelten Stunde, `DepartureTime` in UTC, z. B. `02:33:00Z`), siehe [mapping.md](../mapping.md) Z8, Z9.
 
 | # | Regel | Quelle |
 |---|---|---|
@@ -79,7 +79,7 @@ Vorkommen in den Beispielen:
 
 ## Codes in den Beispielen und Mappingtabelle
 
-Geprüft am Stand `b7ac158` (XSD `73b337e`).
+Geprüft am Stand `b7ac158` (XSD `73b337e`); Mappingtabelle in `d0a8e6d` unverändert.
 
 - **Häufigkeit:** In den 22 Beispielen stehen an 360 Stellen reine Codes, etwa 48 verschiedene in rund 30 Elementtypen. Nicht mitgezählt sind Platzhalter und Freitext wie `blabla`, `de`, `x`, `running`.
 - **Schweiz-spezifisch gepflegte Werte:** Sie kommen in Blättern der Mappingtabelle vor. Beispiele: `TransportMode`/Submodes (`VMArt->NeTEx`), Facilities wie `bistro`, `lowFloor`, `freeWifi`, `firstClass` (`Angebote`, `Facilities_gemappt`), `StopPlaceType`, `QuayType`, `StopUse`, `LineType`, `Weighting` (`Weightening`). Wortübereinstimmung bei 200 der 360 Stellen. Ob die Tabelle den Wert jeweils auch erklärt, ist erst beim gezielten Auslesen zu bestätigen.
@@ -99,7 +99,7 @@ Untersucht wurden die Blätter, die Codes erklären (`VMArt->NeTEx`, `Angebote`,
 
 ## XSD- und Schematron-Prüfung der Beispiele (31.10.2026)
 
-Mit lxml lokal geprüft (`b7ac158`, XSD `73b337e`):
+Mit lxml lokal geprüft (`b7ac158`, XSD `73b337e`; die Angaben zu `order` gelten nur für diesen Stand, seit `d0a8e6d` enthalten die Beispiele kein `order` mehr und ergeben 0 Verstösse; alle Beispiele bleiben XSD-gültig):
 
 - Die NeTEx-2.1-XSD lädt in ~17 s, ist also beim Start einmal im Hintergrund zu laden.
 - **Alle 22 Beispiele sind XSD-gültig.** Verschachtelte `<Text lang="…">` innerhalb von `<Text>`/`<Name>` (Beispiel 05 Zeile 399, Beispiel 16 Zeile 64) sind die NeTEx-2.x-Form für Übersetzungen, kein Fehler.
