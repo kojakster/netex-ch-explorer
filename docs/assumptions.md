@@ -36,7 +36,7 @@ Das Tool listet die Tage nur, wenn die Länge stimmt (Regel B6), und zeigt sonst
 
 ### 6. Kurswagen: `uc08` sagte „kein `JourneyPart`“, Beispiel 21 verwendet `JourneyPart` (aufgelöst in `d0a8e6d`)
 
-**Aufgelöst:** `uc08_kurswagen.md` ist in `d0a8e6d` neu geschrieben und sagt jetzt: „Direct carriages are modelled with `JourneyPart`“ (Z. 41–43); erlaubter Zweck `PurposeOfJourneyPartition:DirectCarriage` (`uc05_journey_parts.md` Z. 25, 68; `mgmt/Decisions.md` Z. 42, 27.10.2026). Bei Kurswagen zeigen `FromPointInPatternRef`/`ToPointInPatternRef` auf das Fahrtmuster der ziehenden Fahrt (`ParentJourneyRef`, `uc05_journey_parts.md` Z. 154). Ursprünglich (`b7ac158`) stand in `uc08` Z. 43: „`JourneyPart` and `JourneyPartCouple` are **not used** for this in RG 2.0.“ Wie das Tool die Teilstrecken den Halten zuordnet: [mapping.md](mapping.md) P2.
+**Aufgelöst:** `uc08_kurswagen.md` ist in `d0a8e6d` neu geschrieben und sagt jetzt: „Direct carriages are modelled with `JourneyPart`“ (Z. 41–43); erlaubter Zweck `PurposeOfJourneyPartition:DirectCarriage` (`uc05_journey_parts.md` Z. 25, 68; `mgmt/Decisions.md` Z. 42, 27.10.2026). Bei Kurswagen zeigen `FromPointInPatternRef`/`ToPointInPatternRef` auf das Fahrtmuster der ziehenden Fahrt (`ParentJourneyRef`, `uc05_journey_parts.md` Z. 154). Ursprünglich (`b7ac158`) stand in `uc08` Z. 43: „`JourneyPart` and `JourneyPartCouple` are **not used** for this in RG 2.0.“ Wie das Tool die Teilstrecken den Halten zuordnet: [mapping.md](mapping.md) P3 (Entscheid B).
 
 ### 7. Hinweiszuweisungen auf Frame-Ebene ohne Ziel (Beispiel 08)
 

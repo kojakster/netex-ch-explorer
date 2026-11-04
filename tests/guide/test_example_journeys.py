@@ -223,8 +223,12 @@ def test_example_21_coach_across_midnight(guide_path: Path) -> None:
             (24 * 3600 + 6 * 3600 + 44 * 60, 24 * 3600 + 7 * 3600 + 54 * 60),
         ]
         assert [p.end.day_offset.text for p in coach.parts] == ["0", "1", "1"]
-        # Die Teilstrecken verweisen auf Halte anderer Fahrtmuster: keine Zuordnung zu Halten.
-        assert [p.start_stop.position for p in coach.parts] == [None, None, None]
+        # Die Teilstrecken verweisen auf Punkte der Fahrtmuster der ziehenden Fahrten; der
+        # ScheduledStopPoint ordnet sie den Halten des Kurswagens zu (mapping.md P3, uc05 Z. 154).
+        assert [p.start_stop.position for p in coach.parts] == [1, 2, 3]
+        assert [p.end_stop.position for p in coach.parts] == [2, 3, 4]
+        assert [stop.part_numbers for stop in coach.stops] == [(1,), (1, 2), (2, 3), (3,)]
+        assert MessageKey.PART_TIME_DIFFERS not in [f.key for f in coach.findings]
         assert [p.start_stop.stop.text for p in coach.parts] == [
             "Zürich HB",
             "Basel Bad Bf",

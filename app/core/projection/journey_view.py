@@ -282,6 +282,36 @@ def _part_time(index: DatasetIndex, part: ElementRow, time_name: str, offset_nam
     return PartTime(time, offset, total)
 
 
+def _position_of_stop_point(
+    index: DatasetIndex, stops: list[ElementRow], scheduled: ElementRow
+) -> int | None:
+    """Position (ab 1) des einzigen Halts mit diesem `ScheduledStopPoint`; sonst `None`."""
+    matches = [
+        number
+        for number, stop in enumerate(stops, start=1)
+        if (candidate := follow_child(index, stop, "ScheduledStopPointRef")[0]) is not None
+        and candidate.id == scheduled.id
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _pointer_position(
+    index: DatasetIndex, stops: list[ElementRow], pointer: ElementRow
+) -> int | None:
+    """Position eines `…PointInPatternRef`-Ziels unter den Halten dieser Fahrt.
+
+    Liegt der Punkt im eigenen Fahrtmuster, gilt seine Position. Sonst (Kurswagen: Fahrtmuster der
+    ziehenden Fahrt, `ParentJourneyRef`) entscheidet sein `ScheduledStopPoint`: Genau ein Halt der
+    eigenen Fahrt mit demselben Fahrplanpunkt ergibt die Position, sonst keine Zuordnung
+    (docs/mapping.md, P3).
+    """
+    own = next((number for number, stop in enumerate(stops, 1) if stop.id == pointer.id), None)
+    if own is not None:
+        return own
+    scheduled, _ = follow_child(index, pointer, "ScheduledStopPointRef")
+    return None if scheduled is None else _position_of_stop_point(index, stops, scheduled)
+
+
 def _boundary(
     index: DatasetIndex,
     part: ElementRow,
@@ -292,21 +322,14 @@ def _boundary(
     stop_ref, point_ref = names
     target, problem = follow_child(index, part, stop_ref)
     if target is not None:
-        matches = [
-            number
-            for number, stop in enumerate(stops, start=1)
-            if (scheduled := follow_child(index, stop, "ScheduledStopPointRef")[0]) is not None
-            and scheduled.id == target.id
-        ]
-        position = matches[0] if len(matches) == 1 else None
+        position = _position_of_stop_point(index, stops, target)
         return PartBoundary(_named(target, None, _name_of(index, target)), position)
     if problem is not None and problem.status is not LookupStatus.ABSENT:
         return PartBoundary(problem, None)
     pointer, pointer_problem = follow_child(index, part, point_ref)
     if pointer is None:
         return PartBoundary(pointer_problem or ABSENT, None)
-    position = next((number for number, stop in enumerate(stops, 1) if stop.id == pointer.id), None)
-    return PartBoundary(stop_name(index, pointer), position)
+    return PartBoundary(stop_name(index, pointer), _pointer_position(index, stops, pointer))
 
 
 def _purpose(index: DatasetIndex, part: ElementRow) -> Lookup:

@@ -290,6 +290,60 @@ def test_part_time_that_contradicts_the_calculation_is_a_warning() -> None:
     assert differences[0].element.name == "StartTime"
 
 
+def _other_point(number: int, stop: str) -> str:
+    return (
+        f"<StopPointInJourneyPattern id='o{number}'>"
+        f"<ScheduledStopPointRef ref='{stop}'/></StopPointInJourneyPattern>"
+    )
+
+
+_OTHER_PATTERN = (
+    "<ServiceJourneyPattern id='other'><pointsInSequence>"
+    + _other_point(1, "b")
+    + _other_point(2, "z")
+    + _other_point(3, "q")
+    + "</pointsInSequence></ServiceJourneyPattern>"
+)
+
+
+def _coach_part(from_point: str, to_point: str) -> str:
+    return (
+        "<parts><JourneyPart id='jp'>"
+        f"<FromPointInPatternRef ref='{from_point}'/><ToPointInPatternRef ref='{to_point}'/>"
+        "<StartTime>08:00:00</StartTime><EndTime>08:10:00</EndTime></JourneyPart></parts>"
+    )
+
+
+def test_part_points_of_another_pattern_are_matched_by_scheduled_stop_point() -> None:
+    """Kurswagen: Punkt im Fahrtmuster der ziehenden Fahrt, Zuordnung über den Fahrplanpunkt."""
+    view = Scenario(journey_extra=_coach_part("o1", "p3"), extra=_OTHER_PATTERN).view()
+    [part] = view.parts
+    # o1 (Fahrtmuster „other“) zeigt auf den Fahrplanpunkt b: Halt 2 der eigenen Fahrt.
+    assert (part.start_stop.stop.text, part.start_stop.position) == ("Halt b", 2)
+    # p3 liegt im eigenen Fahrtmuster: unverändert Position 3.
+    assert part.end_stop.position == 3
+
+
+def test_part_point_without_matching_stop_is_not_placed() -> None:
+    # o2 zeigt auf z (nicht in der eigenen Fahrt), o3 auf q (nicht einmal als Objekt vorhanden).
+    view = Scenario(journey_extra=_coach_part("o2", "o3"), extra=_OTHER_PATTERN).view()
+    [part] = view.parts
+    assert (part.start_stop.position, part.end_stop.position) == (None, None)
+    assert MessageKey.PART_TIME_DIFFERS not in keys(view)
+
+
+def test_part_point_with_several_matching_stops_is_not_placed() -> None:
+    scenario = Scenario(journey_extra=_coach_part("o1", "o1"), extra=_OTHER_PATTERN)
+    # Der eigene Halt c wird zu b: b kommt zweimal vor, die Zuordnung ist nicht eindeutig.
+    xml = scenario.xml().replace(
+        "<StopPointInJourneyPattern id='p3'><ScheduledStopPointRef ref='c'/>",
+        "<StopPointInJourneyPattern id='p3'><ScheduledStopPointRef ref='b'/>",
+    )
+    assert xml.count("<ScheduledStopPointRef ref='b'/><ForAlighting>") == 2
+    [part] = view_from_xml(xml).parts
+    assert (part.start_stop.position, part.end_stop.position) == (None, None)
+
+
 def test_part_time_is_not_compared_with_utc_times() -> None:
     view = fixture_view("ch20_utc_departure.xml")
     assert MessageKey.PART_TIME_DIFFERS not in keys(view)
