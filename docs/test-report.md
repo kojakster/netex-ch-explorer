@@ -484,3 +484,12 @@ Per Skript (`python3 -I`, nur lesend; Zeilen von `b7ac158` per Diff auf `d0a8e6d
 ### Selbstkontrolle
 
 Code- und Sicherheitsüberlegung zu den Änderungen: UTC wird nur als Kennzeichen geführt (kein Datum, keine Zonenregeln, keine Ersatzwerte); andere Zeitzonen bleiben „nicht berechenbar“. Die Zuordnung der Teilstrecken rät nicht (genau ein Treffer, sonst keine Zuordnung). Keine neuen Abhängigkeiten, keine Datenwerte als HTML (nur React-Text), keine Pfade in der API. Hilfeseite (`feature.midnight.description`, `feature.offers.description`, `part.notPlaced`) und Texte de/en nachgeführt; `tests/test_help_texts.py` grün.
+
+### Code- und Sicherheits-Review (Commits `3c613f5..HEAD`, 04.11.2026)
+
+- **Code:** `parse_clock` akzeptiert nur `hh:mm:ss` und `hh:mm:ssZ` (andere Zonen, `24:00:00Z`, kleines `z`, `hh:mm` ergeben `None`, getestet); `parse_time_of_day` liefert für UTC `None`, einziger Aufrufer ausserhalb von `clock.py` ist `_part_time` (Ortszeit der Teilstrecken). UTC steht durchgängig in `_Start`, `CalcStep`, `TimeResult`, API (`utc`) und Anzeige (`TimeCell`, `CalculationChain`); Vergleich Teilstrecke gegen UTC entfällt mit Hinweis `projection.part_time_utc`, Nacht der Zeitumstellung zählt UTC-Zeiten nicht. Entscheid B: `_position_of_stop_point` ordnet nur bei genau einem Treffer zu, sonst `None`; getestet (kein, mehrdeutiger, ein Treffer, Punkt im eigenen Muster). Keine Funde.
+- **Hilfe/Doku:** `projection.time.utc`, `projection.part_time_utc`, `time.utc` in de und en vorhanden; `feature.midnight`/`feature.offers`/`part.notPlaced` nachgeführt; `docs/api.md` nennt `utc` bei Zeit und Rechenkette.
+- **Sicherheit:** keine neuen Eingaben oder Endpunkte; Werte nur als React-Text, `.time-utc` als CSS-Klasse (kein Inline-Style, kein `dangerouslySetInnerHTML`); `ref-targets.json` nur statische Daten.
+- **Belege:** Z9 (`08_timetable.md` Z. 99–102), Z6 (Z. 87), P3 (`uc05_journey_parts.md` Z. 154, `uc08_kurswagen.md` Z. 54–58) und `JourneyPart.xml` Z. 88 per `git show d0a8e6d:` bestätigt.
+- **Sichtprüfung** (Playwright, laufende Anwendung): Beispiel 21 mit Teilstrecken 1–2, 2–3, 3–4 den Halten zugeordnet, keine Warnung CH-JP-01; Beispiel 23 öffnet, 55 Objekte, ein Fehler `ParentSiteRef` auf `ch:1:sloid:169`; Beispiel 02 ohne `order`-Befund.
+- **Beobachtung (keine Änderung):** Trägt eine `JourneyPart`-Zeit selbst ein `Z`, wird sie als „keine Zeit“ gelesen und stillschweigend nicht verglichen (kein Hinweis); dem Benutzer vorgelegt.
