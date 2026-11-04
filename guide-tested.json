@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "guide": {
-    "commit": "b7ac15860369818a8fb53c64ed6f71318f019380",
+    "commit": "d0a8e6dff2ebecfb47195b5f9aedd79a899d8c33",
     "xsdCommit": "73b337e22ceed7905a1be14e4e506f1afa359b54"
   },
   "examples": {
@@ -10,12 +10,12 @@
       "result": "clean"
     },
     "02_NeTEx_CH_PAG_11929.xml": {
-      "sha256": "765e01b795019ecb782f5ba2c0bc7754df91ebba12f5943cb84d09f0817d30af",
-      "result": "errors"
+      "sha256": "243d2150019b51bd2b9af5ce591046eeebb4d9b26c6b3fc3c49e254564e4b009",
+      "result": "clean"
     },
     "03_NeTEx_CH_Bus803_Nyon.xml": {
-      "sha256": "d40e320855c8745a25eac9eb7ff9276068e6fc5a757ce5afc0b909382d8a569c",
-      "result": "errors"
+      "sha256": "c1b1404892cdc24fd209a36e99a40b47da4159f46335fffc953d35ec854d73cc",
+      "result": "clean"
     },
     "04_NeTEx_CH_DRT_Line_50.110.xml": {
       "sha256": "828e2c0aff40ba85ce788a6a6ab3ac0852a22af0e98c764ad1b34c6237f528b6",
@@ -34,8 +34,8 @@
       "result": "clean"
     },
     "08_NeTEX_CH_Bern_Olten_ZuerichHB_Winterthur_StGallen_with_Facilities.xml": {
-      "sha256": "c7458e8f4c968febbc6598b80c938bcd3418954d87da037490e5a1c8401f2aba",
-      "result": "errors"
+      "sha256": "6894eeda462e67c64f5f19c666638f2da05cbff01e648b0f44840f0e550a5792",
+      "result": "clean"
     },
     "09_NeTEx_CH_Fribourg_Bern_Zuerich_Perron.xml": {
       "sha256": "8ea90a3b57a6f6caaad1caf61b7ad5ec629ed79da248359e2739bd6b14c9f576",
@@ -50,16 +50,16 @@
       "result": "clean"
     },
     "12_NeTEx_CH_Frequency_Based_Line.xml": {
-      "sha256": "60a71493120c74bb3799b2400b2d1a8166ae12a1bb06057598c40539ba01db4a",
-      "result": "errors"
+      "sha256": "122fa8ebb36317b02db7b551988ab013be195be6eb016c90b923988473e625ba",
+      "result": "clean"
     },
     "13_NeTEx_CH_Bern_Spiez_Zweisimmen_TimeDemandType_Quay_Change.xml": {
       "sha256": "2f1e0d37424a82f7ec7df2c3e3a712209a50f7e3968a9159f9ba6a14a3a05452",
       "result": "clean"
     },
     "14_NeTEx_CH_Linie_722_Mischbetrieb.xml": {
-      "sha256": "dcd2ae3f34a80a8c7ee1f8822b90249dbe618b42b72e22106ba7ad3138735a66",
-      "result": "errors"
+      "sha256": "01f6530c65db01ac06b3cc055e49dd21472664922c31466357cc85784ce26fe7",
+      "result": "clean"
     },
     "15_NeTEx_CH_1026478_11957.xml": {
       "sha256": "8ac346a0c1897ff67675bf20f26edc39c7e4a73db848eb802fc0be8d93bc5d52",
@@ -77,20 +77,20 @@
       "sha256": "8123be965d2da084167fb2d112c3040c867cb9223a1c209bec435014271ea209",
       "result": "clean"
     },
-    "19_NeTEx_CH_NJ470_IC60470_Kurswagen.xml": {
-      "sha256": "eeb78c8b0e88a05a3b027af09ee31aa91852f2abc7891f0390686867f8e8c436",
-      "result": "errors"
-    },
     "20_NeTEx_Interlaken_Spiez_Formation.xml": {
-      "sha256": "f66a714f95a303949d0f792f19b98aaf3b2e7d0865ef8c2f541a4e4d1276bc89",
-      "result": "errors"
+      "sha256": "8b1612ed7e877082831f4a11de39144d8b3626fb09172322eb3bb0a5622cb698",
+      "result": "clean"
     },
     "21_NeTEx_CH_Kurswagen_Zuerich_Bremen.xml": {
-      "sha256": "1fbd2f4b85d7fbff108d8ecce16bdb8be628759a197b10bf1e8ba4e266f2beb7",
-      "result": "errors"
+      "sha256": "3b7eee9b8a7ccdc5a6311be3b53673cb57e7715b5e7dd7f4089addeaf886f5a5",
+      "result": "clean"
     },
     "22_NeTEx_CH_Line_5_Partial_Lines_Owner_Subcontractor.xml": {
-      "sha256": "44de9dc5878832feff78ce4b54e51340adeb0ccd3de1108bc489e22a8c591e28",
+      "sha256": "39c2cdc50e38d0d52deec16026d95d74f695c2a99f012a86c7270b64c0b05668",
+      "result": "clean"
+    },
+    "23_NeTEx_CH_CH_SITE_OFFER_Test_ERSAD.xml": {
+      "sha256": "e737c44de568a32460299e6749238feaa6cda419ac5879ff0b705dfa4e796abc",
       "result": "errors"
     }
   }

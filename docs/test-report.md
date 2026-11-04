@@ -446,3 +446,41 @@ Sicherheit: kein `dangerouslySetInnerHTML`, kein `innerHTML`, kein `setAttribute
 Verloren gegangene Funktionen gegenüber vorher: keine gefunden (Verlauf, Objektansicht, Suche, Diagnosen mit Sprung, Rechenkette, Herkunftskette, XML-Markierung, Datei öffnen, Prüfen inkl. „Trotzdem als CH 2.0 prüfen“, Guide-Status, Sprachwechsel sind erreichbar; „Geöffnete Dateien“ und „Prüfen“ stehen im Reiter „Prüfung“).
 
 Nachweis: `scripts/check.py` grün; pytest 835 Tests, Abdeckung `app/core` 98 %; Vitest 234 Tests; E2E (`npm run e2e`) bestanden (1 Test, rund 19 s).
+
+## Guide-Update d0a8e6d (04.11.2026)
+
+Gegenstand: Guide-Klon von `b7ac158` auf `d0a8e6d` (26 Commits, 27 Dateien); XSD `73b337e`, `general_rules.sch` und Mappingtabelle unverändert. Commits im Projekt: `88c23ad` (Tests, Verweisziele), `2445a17` (fremde Arbeit, nicht Teil dieses Updates), `53790ef` (CH-JP-01), `f8c2d4b` (Belege), `709e669` (Entscheid A), `db1e716` (Entscheid B), dazu dieser Bericht, `decisions.md` und `guide-tested.json`.
+
+### Änderungen im Guide und Auswirkungen
+
+| Änderung im Guide | Auswirkung | Behebung |
+|---|---|---|
+| Attribut `order` aus allen Beispielen entfernt (rund 120 Stellen) | 121 `order`-Befunde in 9 Beispielen entfallen; Test erwartete 121 | Test prüft jetzt „0 Befunde in allen Beispielen“; die Regel selbst belegen die synthetischen Tests weiter |
+| Beispiel 19 gelöscht (`a054e26`), Beispiel 23 neu (`SITE_OFFER`) | 23 nutzt `PlaceRef`/`ParentSiteRef` ohne Eintrag in `config/ref-targets.json` (2 Tests rot); 23 hat einen Befund: `ParentSiteRef` auf `ch:1:sloid:169`, das in der Datei nicht steht (Status „Fehler“, Guide-Datei, nichts geändert) | Einträge aus der XSD abgeleitet (31 bzw. 49 Zieltypen), Test `test_ref_targets` grün |
+| Kurswagen offiziell mit `JourneyPart` und `DirectCarriage` | Beispiel 21 hatte 3 Warnungen CH-JP-01; Widerspruch P2/`assumptions.md` Nr. 6 | CH-JP-01 erlaubt `DirectCarriage`; Widerspruch als aufgelöst eingetragen |
+| Sonderfall Zeitumstellung: `DepartureTime` in UTC (`02:33:00Z`) | `parse_time_of_day` lehnte `Z` ab („nicht berechenbar“) | Entscheid A: UTC lesen, nicht umrechnen, kennzeichnen ([mapping.md](mapping.md) Z9) |
+| Bezüge der Kurswagen-Teilstrecken auf das Fahrtmuster der ziehenden Fahrt (`uc05` Z. 154) | Teilstrecken waren bewusst nicht den Halten zugeordnet | Entscheid B ([mapping.md](mapping.md) P3) |
+| `STOP_OFFER` → `SITE_OFFER`, `StopPlace`-Vorlage erweitert, `uc05` Usage Notes umformuliert | Texte in `mapping.md` H7, `guide-2.0.md`; A7 („overrides“ ist jetzt „valid for this part only“, `uc05` Z. 155; Frage ergänzend/ersetzend bleibt offen) | Belege nachgeführt |
+
+### Belegprüfung
+
+Per Skript (`python3 -I`, nur lesend; Zeilen von `b7ac158` per Diff auf `d0a8e6d` abgebildet, Zitate in „…“ gegen die Datei geprüft) über `mapping.md`, `core-rules.md`, `research/guide-2.0.md` und `assumptions.md`:
+
+- **189 Zeilenverweise** gefunden: **153 unverändert**, **14 automatisch verschoben** (`08_timetable.md` +4 Zeilen, `03_xml_modelling.md` +4 Zeilen), **22 mit geänderter Zeile** (Inhalt der Stelle neu geschrieben oder gelöscht) und von Hand geprüft: 3× `02_files.md` Z. 160–165 → Z. 163, `02_files.md` Z. 142 (Inhalt `SITE_OFFER`), `uc05` Z. 104 → Z. 155 (Text geändert), `uc08` Z. 43 (Text ersetzt), `JourneyPart.xml` Z. 86–90 → 86–89, `uc05` Z. 5–7/24–66 → Z. 9, 22–25, 29–66, 68–110; 6 Verweise waren Zeilen in Beispieldateien (Beispiele 08 und 21, Zeilen unverändert, von Hand bestätigt); übrige Meldungen waren eigene Formulierungen in Anführungszeichen, keine Guide-Zitate.
+- Nach der Nachführung: **220 Verweise** erneut geprüft (Datei und Zeile vorhanden), keine Abweichung ausser den 3 Zeilen in Beispieldateien (Skript kennt sie nicht).
+- Commit-Angaben in den Belegen stehen überall dort auf `d0a8e6d`, wo geprüft; Stellen, die ausdrücklich den früheren Stand beschreiben (Beispiel 19, „overrides“, Messungen der `order`-Befunde), nennen `b7ac158` mit diesem Vermerk.
+- **Zählungen der Beispiele** (`core-rules.md`, Kernregeln) neu erhoben, weil Beispiel 19 fehlt: 37 `ServiceJourney` (vorher 39), 36 `ServiceJourneyPattern` (38), 201 `StopPointInJourneyPattern` (206), 34 `TimeDemandType` (36), 133 `JourneyRunTime` (136), 24 `JourneyWaitTime` (25), 119 `TimingLink` (121), 5 `JourneyPart`; `ServiceJourneyPatternType` fehlt in 24 von 36 Mustern in 14 von 22 Beispielen; `ServiceAlteration` in 34 von 34 Fahrten mit Muster; `sjyid` fehlt in 8 von 37 Fahrten (6 Beispiele). Kernregel-Verstösse: unverändert nur die 3 Rumpf-Fahrten in Beispiel 17. `ValidDayBits`-Tabelle (`assumptions.md` Nr. 3) unverändert gültig.
+
+### Beispielstatus (`guide-tested.json`, Guide `d0a8e6d`, XSD `73b337e`)
+
+22 Beispiele: **20 ohne Meldungen**, 1 mit Hinweisen, 1 mit Fehler (vorher: 12 / 1 / 9). Gewechselt auf „ohne Meldungen“: 02, 03, 08, 12, 14, 20, 21, 22 (waren nur wegen `order` bzw. CH-JP-01 auffällig). Beispiel 19 weg, Beispiel 23 neu mit dem einen Befund (`ParentSiteRef`).
+
+### Tests
+
+- `scripts/check.py` grün bei jedem Commit (Hook): ruff, mypy --strict, pytest, Biome, Vitest, Build, pip-audit, npm audit.
+- pytest **866 Tests bestanden** (Stand vor dem Update 835 + Entscheid-Tests), Abdeckung `app/core` **98 %**; Vitest **279 Tests**; E2E (`npm run e2e`) bestanden (1 Test, rund 20 s); `scripts/test.py` bestanden, `guide-tested.json` auf `d0a8e6d` geschrieben.
+- Neue Tests: `parse_clock` (UTC, andere Zonen), UTC-Fahrt mit synthetischer Datei `fixtures/ch20_utc_departure.xml` (Kern, API, Vitest für `TimeCell`/`CalculationChain`/`timeWithDay`), kein Vergleich mit Zeiten der `JourneyPart`, kein Hinweis „Nacht der Zeitumstellung“ für UTC-Zeiten, Zuordnung der Kurswagen-Teilstrecken (Beispiel 21: Positionen 1–2, 2–3, 3–4; kein Treffer; mehrdeutiger Treffer), CH-JP-01 mit `DirectCarriage` und unerlaubtem Wert, Beispiel 21 ohne CH-JP-01-Befund.
+
+### Selbstkontrolle
+
+Code- und Sicherheitsüberlegung zu den Änderungen: UTC wird nur als Kennzeichen geführt (kein Datum, keine Zonenregeln, keine Ersatzwerte); andere Zeitzonen bleiben „nicht berechenbar“. Die Zuordnung der Teilstrecken rät nicht (genau ein Treffer, sonst keine Zuordnung). Keine neuen Abhängigkeiten, keine Datenwerte als HTML (nur React-Text), keine Pfade in der API. Hilfeseite (`feature.midnight.description`, `feature.offers.description`, `part.notPlaced`) und Texte de/en nachgeführt; `tests/test_help_texts.py` grün.
