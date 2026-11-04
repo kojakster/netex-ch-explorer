@@ -400,10 +400,13 @@ def test_other_valid_fixtures_have_no_xsd_errors(guide_engine: ValidationEngine)
         assert not dataset.index.diagnostics(DiagnosticCategory.XSD), name
 
 
-def test_guide_examples_have_121_order_violations_in_9_files(
+def test_guide_examples_have_no_order_violations(
     guide_engine: ValidationEngine, guide_path: Path
 ) -> None:
-    per_file: Counter[str] = Counter()
+    """Seit Guide `d0a8e6d` enthalten die Beispiele kein `order`-Attribut mehr (vorher 121 Befunde).
+
+    Dass die Regel `no_order_attribute` weiterhin greift, belegen die synthetischen Tests oben.
+    """
     for file in sorted(examples_dir(guide_path).glob("*.xml")):
         dataset = dataset_of((file.name, file.read_bytes()))
         guide_engine.validate(dataset)
@@ -413,11 +416,4 @@ def test_guide_examples_have_121_order_violations_in_9_files(
             for d in dataset.index.diagnostics(DiagnosticCategory.PROFILE_RULE)
             if d.diagnostic.key is MessageKey.SCHEMATRON_NO_ORDER_ATTRIBUTE
         ]
-        if orders:
-            per_file[file.name] = len(orders)
-            assert all(d.diagnostic.position is not None for d in orders)
-    assert sum(per_file.values()) == 121
-    # Die Summe 121 und Beispiel 22 (66) stimmen mit dem Entscheid „Prüfergebnisse Guide-Beispiele“;
-    # die dort genannten „11 Beispiele“ sind tatsächlich 9 (docs/open-points.md).
-    assert len(per_file) == 9
-    assert per_file["22_NeTEx_CH_Line_5_Partial_Lines_Owner_Subcontractor.xml"] == 66
+        assert orders == [], file.name
