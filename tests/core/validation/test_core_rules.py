@@ -190,6 +190,22 @@ def test_purpose_of_journey_partition_accepts_both_spellings() -> None:
     assert "ch:1:PurposeOfJouryneyPartition:TypeOfProductCategoryChange" in rule.allowed
     assert "ch:1:PurposeOfJourneyPartition:TypeOfProductCategoryChange" in rule.allowed
     assert "ch:1:PurposeOfJourneyPartition:FacilityChange" in rule.allowed
+    assert "ch:1:PurposeOfJourneyPartition:DirectCarriage" in rule.allowed
+
+
+def test_purpose_of_journey_partition_reports_unknown_value_only() -> None:
+    def purpose(value: str) -> str:
+        return document("JourneyPart", f'<PurposeOfJourneyPartitionRef ref="{value}"/>')
+
+    assert "CH-JP-01" not in ids(check(purpose("ch:1:PurposeOfJourneyPartition:DirectCarriage")))
+    assert "CH-JP-01" in ids(check(purpose("ch:1:PurposeOfJourneyPartition:TrainNumberChange")))
+
+
+def test_example_21_has_no_purpose_finding(guide_path: Path) -> None:
+    """Beispiel 21 (Kurswagen) verwendet `DirectCarriage`; der Guide `d0a8e6d` erlaubt es."""
+    path = next(guide_path.joinpath("src", "examples").glob("21_*.xml"))
+    index = index_of(path.read_bytes().decode("utf-8"), path.name)
+    assert "CH-JP-01" not in ids(check_core_rules(index, frozenset({1})))
 
 
 def test_value_rule_without_attribute_is_ignored() -> None:

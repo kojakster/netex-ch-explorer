@@ -212,10 +212,12 @@ CORE_RULES: Final = (
         (_JP, "86-90"),
         severity=Severity.WARNING,
         chapter=str(CHAPTER_JOURNEY_PARTS),
-        # Beide Schreibweisen gelten als erlaubt, auch der Tippfehler „Jouryney“ des Guides
-        # (Entscheid „Kernregeln Phase 4“ (5)).
+        # Drei Zwecke laut Guide `d0a8e6d` (templates/JourneyPart.xml Z. 88); beide Schreibweisen
+        # von TypeOfProductCategoryChange gelten als erlaubt, auch der Tippfehler „Jouryney“, der
+        # in uc05_journey_parts.md Z. 113 weiter vorkommt (Entscheid „Kernregeln Phase 4“ (5)).
         allowed=(
             "ch:1:PurposeOfJourneyPartition:FacilityChange",
+            "ch:1:PurposeOfJourneyPartition:DirectCarriage",
             "ch:1:PurposeOfJourneyPartition:TypeOfProductCategoryChange",
             "ch:1:PurposeOfJouryneyPartition:TypeOfProductCategoryChange",
         ),
