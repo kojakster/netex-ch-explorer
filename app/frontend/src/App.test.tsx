@@ -359,7 +359,7 @@ describe("App mit Fahrtansicht", () => {
     await openJourneyView();
     expect(screen.getByText("Teilstrecken")).toBeTruthy();
     expect(screen.getAllByText("bistro").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("WS · Bistro").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Bistro (WS)").length).toBeGreaterThan(0);
     expect(screen.getByText("Synthetischer Hinweis")).toBeTruthy();
     expect(screen.getByText("Synthetic notice")).toBeTruthy();
   });

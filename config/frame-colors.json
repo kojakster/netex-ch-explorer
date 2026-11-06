@@ -1,10 +1,10 @@
 {
-  "TimetableFrame": { "background": "#0057B8", "text": "#FFFFFF" },
-  "ServiceFrame": { "background": "#1B8A2F", "text": "#000000" },
-  "SiteFrame": { "background": "#F57C00", "text": "#000000" },
-  "ServiceCalendarFrame": { "background": "#FFD600", "text": "#000000" },
-  "ResourceFrame": { "background": "#D32F2F", "text": "#FFFFFF" },
   "CompositeFrame": { "background": "#7B1FA2", "text": "#FFFFFF" },
+  "ResourceFrame": { "background": "#D32F2F", "text": "#FFFFFF" },
+  "SiteFrame": { "background": "#F57C00", "text": "#000000" },
+  "ServiceFrame": { "background": "#1B8A2F", "text": "#000000" },
+  "ServiceCalendarFrame": { "background": "#FFD600", "text": "#000000" },
+  "TimetableFrame": { "background": "#0057B8", "text": "#FFFFFF" },
   "unknown": { "background": "#6D4C2F", "text": "#FFFFFF" },
   "notRelevant": { "background": "#8A8A8A", "text": "#000000" }
 }

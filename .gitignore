@@ -37,6 +37,7 @@ Thumbs.db
 
 # Findings des Benutzers aus dem Testen (gehört dem Benutzer, nicht versioniert)
 /CHECKLIST.md
+/AGENTS.md
 
 # Lokale Zugangsdaten (z. B. GitHub-Token), nie versionieren
 /.env

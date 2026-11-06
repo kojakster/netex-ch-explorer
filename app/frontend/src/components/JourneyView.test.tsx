@@ -59,14 +59,19 @@ describe("MasterText", () => {
 
   it("zeigt Blatt, Zeile und Guide-Stand zu jeder Zeile", () => {
     render(<MasterText master={found} guideCommit="b7ac15860369" />);
-    expect(screen.getByText(/Blatt „Angebote“, Zeile 90, Guide b7ac158/)).toBeTruthy();
-    expect(screen.getByText(/Blatt „Angebote“, Zeile 91/)).toBeTruthy();
+    expect(
+      screen.getByText(/Blatt „Angebote“, Zeile 90, Guide b7ac158/, { selector: ".master-source" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Blatt „Angebote“, Zeile 91/, { selector: ".master-source" }),
+    ).toBeTruthy();
     expect(screen.getByText("Velos")).toBeTruthy();
   });
 
   it("kürzt in der Tabellenzelle auf zwei Werte je Zeile", () => {
     render(<MasterText master={found} guideCommit={null} compact />);
-    expect(screen.getByText("VB · Velos")).toBeTruthy();
+    expect(screen.getByText("Velos (VB)")).toBeTruthy();
+    expect(screen.getAllByRole("img", { name: /Mappingtabelle, Blatt „Angebote“/ }).length).toBe(2);
     expect(screen.queryByText("LuggageCarriageType")).toBeNull();
   });
 

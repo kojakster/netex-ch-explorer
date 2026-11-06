@@ -75,7 +75,18 @@ def test_app_endpoint(client: TestClient) -> None:
     data = client.get("/api/app").json()
     assert data["language"] == "de-CH"
     assert data["languages"] == ["de-CH", "en"]
-    assert data["frameColors"][0] == {
+    # Feste Reihenfolge der Frames (Entscheid vom 06.11.2026), Farben unverändert.
+    assert [color["key"] for color in data["frameColors"]] == [
+        "CompositeFrame",
+        "ResourceFrame",
+        "SiteFrame",
+        "ServiceFrame",
+        "ServiceCalendarFrame",
+        "TimetableFrame",
+        "unknown",
+        "notRelevant",
+    ]
+    assert data["frameColors"][-3] == {
         "key": "TimetableFrame",
         "background": "#0057B8",
         "text": "#FFFFFF",

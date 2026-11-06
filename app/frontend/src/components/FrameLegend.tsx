@@ -1,6 +1,7 @@
 import { useI18n } from "../i18n";
 import type { FrameColor } from "../types";
 import { FrameSwatch } from "./FrameLabel";
+import { ExcelIcon } from "./MasterText";
 
 interface FrameLegendProps {
   colors: readonly FrameColor[];
@@ -21,6 +22,9 @@ export function FrameLegend({ colors, onHelp }: FrameLegendProps) {
           </li>
         ))}
       </ul>
+      <p className="legend-source">
+        <ExcelIcon title={t("legend.mapping")} /> {t("legend.mapping")}
+      </p>
       {onHelp !== undefined && (
         <button type="button" className="link-button" onClick={onHelp}>
           {t("legend.explain")}

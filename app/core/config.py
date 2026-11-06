@@ -64,12 +64,12 @@ DEFAULT_LANGUAGE: Final = "de-CH"
 DEFAULT_PORT: Final = 8765
 
 DEFAULT_FRAME_COLORS: Final[dict[str, FrameColor]] = {
-    "TimetableFrame": FrameColor("#0057B8", "#FFFFFF"),
-    "ServiceFrame": FrameColor("#1B8A2F", "#000000"),
-    "SiteFrame": FrameColor("#F57C00", "#000000"),
-    "ServiceCalendarFrame": FrameColor("#FFD600", "#000000"),
-    "ResourceFrame": FrameColor("#D32F2F", "#FFFFFF"),
     "CompositeFrame": FrameColor("#7B1FA2", "#FFFFFF"),
+    "ResourceFrame": FrameColor("#D32F2F", "#FFFFFF"),
+    "SiteFrame": FrameColor("#F57C00", "#000000"),
+    "ServiceFrame": FrameColor("#1B8A2F", "#000000"),
+    "ServiceCalendarFrame": FrameColor("#FFD600", "#000000"),
+    "TimetableFrame": FrameColor("#0057B8", "#FFFFFF"),
     "unknown": FrameColor("#6D4C2F", "#FFFFFF"),
     "notRelevant": FrameColor("#8A8A8A", "#000000"),
 }
