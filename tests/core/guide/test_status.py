@@ -23,7 +23,7 @@ from app.core.guide.status import (
 from app.core.messages import MessageKey, Severity
 from app.core.validation.engine import ValidationEngine
 from app.core.validation.result import ValidationSummary
-from tests.support import REF_TARGETS, SHA_A, SHA_B
+from tests.support import EXPECTED_DATE, REF_TARGETS, SHA_A, SHA_B, write_loose
 
 
 @pytest.fixture
@@ -112,6 +112,20 @@ def test_guide_without_git(tmp_path: Path) -> None:
     assert status.revision.commit is None
     assert status.test_state is GuideTestState.UNKNOWN
     assert MessageKey.GUIDE_NOT_GIT in keys(status.issues)
+
+
+def test_revision_has_the_commit_date_when_the_object_is_readable(guide: Path) -> None:
+    assert read_guide_revision(guide).commit_date is None  # SHA_A gibt es als Objekt nicht
+    sha = write_loose(guide / ".git")
+    (guide / ".git" / "refs" / "heads" / "next").write_text(f"{sha}\n", encoding="utf-8")
+    revision = read_guide_revision(guide)
+    assert revision.commit == sha
+    assert revision.commit_date == EXPECTED_DATE
+
+
+def test_revision_without_commit_has_no_date(guide: Path) -> None:
+    (guide / ".git" / "refs" / "heads" / "next").unlink()
+    assert read_guide_revision(guide).commit_date is None
 
 
 def test_unreadable_git(guide: Path) -> None:

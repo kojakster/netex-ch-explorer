@@ -14,6 +14,7 @@ from app.core.guide.status import inspect_guide
 from tests.support import REF_TARGETS
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
+DATE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$")
 
 
 def test_guide_revision_is_read(guide_path: Path, tmp_path: Path) -> None:
@@ -22,6 +23,9 @@ def test_guide_revision_is_read(guide_path: Path, tmp_path: Path) -> None:
     assert status.revision.branch == "next"
     assert status.revision.commit is not None
     assert SHA.match(status.revision.commit)
+    # Der Klon ist echt: lose oder im Pack ohne Delta, das Datum muss lesbar sein.
+    assert status.revision.commit_date is not None
+    assert DATE.match(status.revision.commit_date)
     assert status.revision.xsd_commit is not None
     assert SHA.match(status.revision.xsd_commit)
     assert status.xsd_present

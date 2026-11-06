@@ -49,6 +49,7 @@ Guide-Status für die Guide-Status-Box. Wird beim Start ermittelt; nach einem Gu
   "found": true,
   "branch": "next",
   "commit": "b7ac15860369818a8fb53c64ed6f71318f019380",
+  "commitDate": "2026-10-27T14:05:30+01:00",
   "xsdCommit": "73b337e22ceed7905a1be14e4e506f1afa359b54",
   "xsdPresent": true,
   "testState": "tested | differs | never_tested | unknown",
@@ -71,7 +72,8 @@ Guide-Status für die Guide-Status-Box. Wird beim Start ermittelt; nach einem Gu
 
 - `result` zählt die Prüfungen der **Datei** (Entscheid „Kernregeln Phase 4“ (6)): XML-Syntax, XSD, `general_rules.sch` (inkl. `order`), Kernregeln und Referenzen. Befunde der Fahrtansicht zählen nicht. `check_failed` heisst: Die Prüfung dieses Beispiels ist an einem Fehler der Prüfung selbst (lxml, SQLite, Datei) gescheitert; die übrigen Beispiele sind nicht betroffen. Bricht die Prüfung der Beispiele unerwartet ab (Programmfehler, im Serverprotokoll), gelten die offenen Beispiele als `check_failed`, und `examplesReady` wird `true`. Die Oberfläche fragt nach einem einzelnen fehlgeschlagenen Nachfragen weiter und zeigt den Fehler erst nach 5 Fehlschlägen in Folge.
 - `branch` ist `null` bei losgelöstem HEAD; `commit`/`xsdCommit` sind `null`, wenn nicht bestimmbar.
-- Kein Commit-Datum (Entscheid „Guide-Stand ohne Datum“). `testState` `differs` heisst „weicht vom zuletzt getesteten Stand ab“ (Guide- oder XSD-Commit).
+- `commitDate`: Datum des Commits (Committer) als ISO 8601 mit Zeitzone des Committers; `null`, wenn nicht lesbar (Delta-Objekt im Pack, SHA-256-Repository, beschädigte Datei). Die Oberfläche zeigt dann „Datum nicht ermittelbar“.
+- Das Commit-Datum steht in `commitDate` (Entscheid „Commit-Datum“). `testState` `differs` heisst „weicht vom zuletzt getesteten Stand ab“ (Guide- oder XSD-Commit).
 - Mögliche Meldungen: `guide.not_found`, `guide.not_git`, `guide.git_unreadable`, `guide.xsd_missing`, `guide.never_tested`, `guide.tested_differs`, `guide.test_record_invalid`, `mapping.*`.
 
 ### `GET /api/app`

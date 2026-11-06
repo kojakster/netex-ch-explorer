@@ -254,6 +254,6 @@ Vollständige Übersicht mit Herkunft: [docs/test-report.md](docs/test-report.md
 **Betrieb**
 
 - Der Guide-Status wird beim Start ermittelt; nach einem Guide-Update neu starten. Ändert ein `git pull` eine Datei bei geöffnetem Datensatz, stimmen Stellen von Befunden nicht mehr; Server neu starten.
-- Kein Commit-Datum des Guides (bewusst, siehe `docs/decisions.md`). Nur ein Guide-Stand gleichzeitig; keine Einstellungsseite für Farben (Datei `config/frame-colors.json`); die Sprachdateien enthalten vorläufige Fachbegriffe (Glossar offen).
+- Das Commit-Datum des Guides erscheint nur, wenn das Tool es lesen kann (lose Objekte und Commits im Pack ohne Delta); sonst steht „Datum nicht ermittelbar“. Nur ein Guide-Stand gleichzeitig; keine Einstellungsseite für Farben (Datei `config/frame-colors.json`); die Sprachdateien enthalten vorläufige Fachbegriffe (Glossar offen).
 - Der Prüfbefehl braucht für `pip-audit` und `npm audit` Internet; der Build meldet ein Skriptpaket über 500 kB (CodeMirror, lokal unkritisch).
 - Windows: noch nicht getestet; das gilt auch für den E2E-Test. Eine Prüfung der Einrichtung „von null“ auf einem frischen Rechner steht aus (siehe Testbericht).

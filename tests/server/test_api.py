@@ -51,6 +51,7 @@ def test_guide_endpoint(client: TestClient, tmp_path: Path) -> None:
         "found": True,
         "branch": "next",
         "commit": SHA_A,
+        "commitDate": None,
         "xsdCommit": SHA_B,
         "xsdPresent": True,
         "testState": "differs",

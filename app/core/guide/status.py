@@ -22,6 +22,7 @@ from app.core.guide.examples import (
     read_example,
 )
 from app.core.guide.git import GitHead, GitReadError, find_git_dir, read_head
+from app.core.guide.git_objects import read_commit_date
 from app.core.guide.guide_tested import (
     TEST_COMMAND,
     GuideTestRecord,
@@ -84,6 +85,8 @@ class GuideRevision:
 
     branch: str | None = None
     commit: str | None = None
+    commit_date: str | None = None
+    """Datum des Commits (ISO 8601 mit Zeitzone); `None`, wenn nicht lesbar."""
     xsd_commit: str | None = None
     issues: tuple[Issue, ...] = ()
 
@@ -114,6 +117,7 @@ def read_guide_revision(guide_path: Path) -> GuideRevision:
     return GuideRevision(
         branch=head.branch if head else None,
         commit=head.commit if head else None,
+        commit_date=_read_commit_date(guide_path, head),
         xsd_commit=xsd_head.commit if xsd_head else None,
         issues=tuple(issues),
     )
@@ -200,6 +204,16 @@ def complete_examples(
 
 def _pending_example(example: Example) -> ExampleStatus:
     return ExampleStatus(example.name, example.title, None, None, {}, ExampleChange.UNTESTED)
+
+
+def _read_commit_date(work_tree: Path, head: GitHead | None) -> str | None:
+    if head is None or head.commit is None:
+        return None
+    try:
+        git_dir = find_git_dir(work_tree)
+    except GitReadError:
+        return None
+    return None if git_dir is None else read_commit_date(git_dir, head.commit)
 
 
 def _read_git_head(

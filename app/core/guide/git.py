@@ -1,8 +1,8 @@
 """Branch und Commit eines Git-Klons direkt aus dem `.git`-Ordner lesen, ohne Git-Programm.
 
 Unterstützt werden ein `.git`-Ordner, eine `.git`-Datei mit `gitdir:` (Submodul, Worktree),
-lose Referenzen, `packed-refs` und ein losgelöster HEAD. Das Commit-Datum wird bewusst nicht
-gelesen (siehe docs/decisions.md, „Guide-Stand ohne Datum“).
+lose Referenzen, `packed-refs` und ein losgelöster HEAD. Das Commit-Datum liest
+`git_objects.py` (docs/decisions.md, „Commit-Datum“).
 """
 
 from __future__ import annotations

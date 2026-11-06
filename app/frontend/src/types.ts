@@ -21,6 +21,7 @@ export interface GuideInfo {
   found: boolean;
   branch: string | null;
   commit: string | null;
+  commitDate: string | null;
   xsdCommit: string | null;
   xsdPresent: boolean;
   testState: GuideTestState;

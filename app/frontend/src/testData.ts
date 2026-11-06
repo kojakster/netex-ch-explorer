@@ -61,6 +61,7 @@ export const GUIDE: GuideInfo = {
   found: true,
   branch: "next",
   commit: "b7ac15860369818a8fb53c64ed6f71318f019380",
+  commitDate: "2026-10-27T14:05:30+01:00",
   xsdCommit: "73b337e22ceed7905a1be14e4e506f1afa359b54",
   xsdPresent: true,
   testState: "tested",

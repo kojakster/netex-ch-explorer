@@ -69,6 +69,7 @@ class GuideOut(ApiModel):
     found: bool
     branch: str | None
     commit: str | None
+    commit_date: str | None
     xsd_commit: str | None
     xsd_present: bool
     test_state: GuideTestState
@@ -90,6 +91,7 @@ class GuideOut(ApiModel):
             found=status.found,
             branch=status.revision.branch,
             commit=status.revision.commit,
+            commit_date=status.revision.commit_date,
             xsd_commit=status.revision.xsd_commit,
             xsd_present=status.xsd_present,
             test_state=status.test_state,

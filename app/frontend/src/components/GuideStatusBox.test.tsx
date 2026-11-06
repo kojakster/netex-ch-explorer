@@ -50,6 +50,17 @@ describe("GuideStatusBox", () => {
     expect(screen.queryByText("next")).toBeNull();
   });
 
+  it("zeigt zum Commit das Datum und sonst „Datum nicht ermittelbar“", () => {
+    renderOpen(GUIDE);
+    expect(screen.getByText("27.10.2026 14:05").getAttribute("title")).toBe(GUIDE.commitDate);
+    expect(screen.queryByText("Datum nicht ermittelbar")).toBeNull();
+  });
+
+  it("sagt, wenn das Datum nicht ermittelbar ist", () => {
+    renderOpen({ ...GUIDE, commitDate: null });
+    expect(screen.getByText("Datum nicht ermittelbar")).toBeTruthy();
+  });
+
   it("meldet fehlende XSD und abweichenden Stand mit Symbol und Text", () => {
     renderOpen({
       ...GUIDE,
