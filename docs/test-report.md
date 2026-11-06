@@ -493,3 +493,47 @@ Code- und Sicherheitsüberlegung zu den Änderungen: UTC wird nur als Kennzeiche
 - **Belege:** Z9 (`08_timetable.md` Z. 99–102), Z6 (Z. 87), P3 (`uc05_journey_parts.md` Z. 154, `uc08_kurswagen.md` Z. 54–58) und `JourneyPart.xml` Z. 88 per `git show d0a8e6d:` bestätigt.
 - **Sichtprüfung** (Playwright, laufende Anwendung): Beispiel 21 mit Teilstrecken 1–2, 2–3, 3–4 den Halten zugeordnet, keine Warnung CH-JP-01; Beispiel 23 öffnet, 55 Objekte, ein Fehler `ParentSiteRef` auf `ch:1:sloid:169`; Beispiel 02 ohne `order`-Befund.
 - **Beobachtung (keine Änderung):** Trägt eine `JourneyPart`-Zeit selbst ein `Z`, wird sie als „keine Zeit“ gelesen und stillschweigend nicht verglichen (kein Hinweis); dem Benutzer vorgelegt.
+
+## Guide-Update 5faccdec (06.11.2026)
+
+Gegenstand: `d0a8e6dff2ebecfb47195b5f9aedd79a899d8c33` → `5faccdec4e3065f0774b832a785a935fb00539ed` (04.11.2026). Genau zwei Commits (`6587658a`, Merge `5faccdec` / PR #290) und fünf Dateien: `src/05_stops.md`, `src/templates/StopPlace.xml` sowie neu `StopPlaceEntrance.xml`, `AssistanceService.xml`, `AssistanceBookingService.xml`. Alle fünf vollständig gelesen, Diff gegen den bisher getesteten Stand geprüft. Der Guide-Klon und das XSD-Submodul haben keine lokalen Änderungen.
+
+### Fachliche Prüfung und Belege
+
+- Die neuen Kapitel und Vorlagen beschreiben Eingänge als Bezugspunkte der Barrierefreiheitsbewertung, Hilfsdienste sowie deren Buchung/Kontakt. `StopPlace.xml` ergänzt einen optionalen `AssistanceBookingService` unter `localServices` und präzisiert Kommentare.
+- Keine Codeanpassung erforderlich: Die bestehende Haltestellen-Zuordnung folgt weiterhin `PassengerStopAssignment` → `StopPlaceRef`/`QuayRef`; die 30 Fahrplan-Kernregeln sind nicht betroffen. Eingangs-/Hilfsdienst-Inhalte bleiben im Objekt-Explorer/XML sichtbar; `entrances` und `localServices` stehen bereits in der Grau-Liste. Weitere Profilregeln bleiben wie bisher nicht eingebunden.
+- Bestehende Guide-Quellen aus `mapping.md`, `core-rules.md`, `assumptions.md` und `research/guide-2.0.md` per lokalem Git-Diff abgeglichen: keine der konkret benannten bestehenden Quelldateien geändert, daher keine Verschiebung ihrer Zeilenbelege. In den fünf geänderten/neuen Dateien neue Belege mit Zeilen und Commit `5faccdec` aufgenommen; Kapiteltext nach der Inhaltsliste +3 Zeilen, `StopPlace.xml` nach dem neuen Buchungsdienst insgesamt +34 Zeilen. Einzelheiten: [research/guide-2.0.md](research/guide-2.0.md#guide-update-5faccdec-06112026).
+- Offene Angaben ohne eigene Auslegung dokumentiert ([assumptions.md](assumptions.md) Nr. 13): `AssistanceAvailability` in `StopPlace.xml` Z. 183 `optional`, in `AssistanceService.xml` Z. 105 `expected`; offene Diskussionsvermerke in `StopPlaceEntrance.xml` Z. 104–105 und 127. Keine neue Prüfung daraus abgeleitet.
+- **Nach Rückfrage vom Benutzer bestätigt:** Veraltete Dokumentationsangaben berichtigt. `mapping.md` nennt jetzt die aktuelle Referenzzählung und 0 `order`-Verstösse; die 121 früheren Verstösse sind ausdrücklich `b7ac158` zugeordnet. Historische Entscheide und Messungen behalten ihren damaligen Stand. Die aktuelle Zahl der XML-Templates beträgt 76.
+
+### Unveränderte Prüfgrundlagen
+
+`git diff --exit-code d0a8e6d 5faccdec -- src/examples src/media src/schematron_rules xsd`: leer, Exit-Code 0. `git ls-tree` liefert in beiden Ständen dieselben Werte:
+
+| Artefakt | Identischer Git-Hash |
+|---|---|
+| `src/examples` (Tree) | `1a7c309f948e837aa598afaf29dee20c49189cfa` |
+| `src/media` (Tree) | `1d52aca6e5b33b469143a8d81a9d603d1d523083` |
+| Mappingtabelle `src/media/Mappingtabellen_NeTEx_v2.0.xlsx` (Blob) | `cfe4ed51adbf319354c77f58a64d8a7d921cffc7` |
+| `src/schematron_rules/general_rules.sch` (Blob) | `bfc6067e6b8c637f5d200f0b116c02e00c561e19` |
+| XSD (Gitlink und ausgecheckter Submodul-Commit) | `73b337e22ceed7905a1be14e4e506f1afa359b54` |
+
+Zusätzlich SHA-256 der Mappingtabelle: `c4db0b16ede1d2dbae5b716f0bbc6dd21a885c41f54e8b1232339e382d8231d1`. Analysen mit `.venv/bin/python3 -I`, nur lesend; kein Code aus dem Guide ausgeführt.
+
+### Erneute Beispielprüfung und Testnachweis
+
+Vor dem Schreiben des neuen Testnachweises alle 22 Beispiele mit der Prüfmaschine (XSD, `general_rules.sch`, Kernregeln und Referenzen) erneut geprüft und je Dateiname **SHA-256 und Ergebnis** gegen das bisherige `guide-tested.json` verglichen: keine Abweichung, keine neue oder entfernte Beispieldatei.
+
+- **20 ohne Meldungen**, **1 mit Hinweisen** (Beispiel 17: 3 Rumpf-Fahrten, 4 externe/nicht geladene Referenzen), **1 mit Fehler** (Beispiel 23: `ParentSiteRef` auf das fehlende Ziel `ch:1:sloid:169`). Das sind die bisherigen Ergebnisse, keine neu entstandenen Befunde.
+- Alle 22 Beispiele XSD-gültig; keine Schematron-Verstösse, insbesondere kein `order`-Befund. 1492 Referenzen: 1487 aufgelöst, 4 `external_or_unloaded`, 1 nicht aufgelöst (Beispiel 23).
+- Objektzählungen erneut bestätigt: 37 `ServiceJourney`, 36 `ServiceJourneyPattern`, 201 `StopPointInJourneyPattern`, 34 `TimeDemandType`, 133 `JourneyRunTime`, 24 `JourneyWaitTime`, 119 `TimingLink`, 5 `JourneyPart`.
+- `.venv/bin/python3 -I scripts/test.py`: **894 Tests bestanden**, keine übersprungen; `guide-tested.json` vom Skript auf `5faccdec4e3065f0774b832a785a935fb00539ed` geschrieben. XSD-Commit und sämtliche Beispiel-Prüfsummen/Ergebnisse unverändert.
+- Abschliessende Statusprüfung über `inspect_guide`: `test_state = tested`, keine Guide-Probleme. Der Nachweis-Diff enthält ausschliesslich den neuen Guide-Commit.
+
+### Qualitätsprüfung und Selbstkontrolle
+
+- `.venv/bin/python scripts/check.py` **grün**: ruff, Formatierung, mypy --strict, **894 Python-Tests**, Kernabdeckung **98,35 %**, TypeScript, Biome, **284 Vitest-Tests**, Build, pip-audit und npm audit (keine bekannten Sicherheitslücken), Git-Hook aktiv.
+- Erster Lauf innerhalb der Sandbox scheiterte an gesperrtem lokalen Test-Port, Paket-Cache und Netzwerkzugriff für die Audits. Derselbe Prüfbefehl mit den nötigen Ausführungsrechten vollständig grün; keine Prüfung entfernt oder abgeschwächt.
+- E2E mit `NETEX_REQUIRE_GUIDE=1 npm run e2e`: **1 Test bestanden** (19,6 s), Beispiel 01 → Halt → XML-Stelle und Frame. Testserver danach beendet.
+- Review des Update-Diffs: ausschliesslich Dokumentation und Guide-Testnachweis, keine neue Laufzeitlogik, Abhängigkeit, Eingabe oder API. Keine zusätzlichen Sicherheitsfunde. Die bestehenden uncommitteten Änderungen wurden nicht zurückgesetzt oder für dieses Update verändert; `docs/decisions.md` nur um den Update-Entscheid ergänzt.
+- Funktionen, Prüfungen, Farben, Einrichtung und Start bleiben durch dieses Update unverändert. Daher keine zusätzlichen Änderungen an Hilfeseite, Sprachdateien oder README; dort bereits vorhandene Änderungen bleiben erhalten. Keine Guide-Dateien geändert/kopiert, keine Lieferdaten gelesen, `CHECKLIST.md` nicht bearbeitet, kein Commit und kein Upload.

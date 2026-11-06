@@ -1,6 +1,6 @@
 # Annahmen und Widersprüche im Guide
 
-Stand: Phase 3 (31.10.2026), Guide `d0a8e6d`, XSD `73b337e`. Hier stehen (1) Widersprüche und Auffälligkeiten im Guide und in seinen Beispielen und (2) Annahmen, die das Tool trifft, weil der Guide-Text etwas nicht ausdrücklich sagt. Das Tool meldet nichts an den Guide (Entscheid „Fehler in Guide-Dateien“); es zeigt, was in der Datei steht, und macht Unsicherheiten in der Anwendung sichtbar. Belege zu den Regeln: [mapping.md](mapping.md). Offene Fragen an den Benutzer: [open-points.md](open-points.md).
+Stand: Guide `5faccdec`, XSD `73b337e` (06.11.2026; ursprüngliche Erhebung in Phase 3, 31.10.2026). Bestehende Quelldateien und Zeilenangaben gegenüber `d0a8e6d` unverändert geprüft. Hier stehen (1) Widersprüche und Auffälligkeiten im Guide und in seinen Beispielen und (2) Annahmen, die das Tool trifft, weil der Guide-Text etwas nicht ausdrücklich sagt. Das Tool meldet nichts an den Guide (Entscheid „Fehler in Guide-Dateien“); es zeigt, was in der Datei steht, und macht Unsicherheiten in der Anwendung sichtbar. Belege zu den Regeln: [mapping.md](mapping.md). Offene Fragen an den Benutzer: [open-points.md](open-points.md).
 
 ## Widersprüche und Auffälligkeiten im Guide
 
@@ -14,7 +14,7 @@ Der Kommentar am Anfang von `01_NeTEx_Spiez_Interlaken_Ost.xml` nennt die Ankunf
 
 ### 3. `ValidDayBits` passt in 15 von 22 Beispielen nicht zum Zeitraum
 
-Der Guide verlangt „genau ein Bit je Kalendertag des Zeitraums“ (`07_service_calendars.md` Z. 111). Geprüft am Stand `d0a8e6d` (Tage zwischen `FromDate` und `ToDate`, beide eingeschlossen, gegen die Länge der Bitfolge):
+Der Guide verlangt „genau ein Bit je Kalendertag des Zeitraums“ (`07_service_calendars.md` Z. 111). Erneut geprüft am Stand `5faccdec` (Tage zwischen `FromDate` und `ToDate`, beide eingeschlossen, gegen die Länge der Bitfolge):
 
 | Beispiel | Zeitraum | Tage | Bits | Bemerkung |
 |---|---|---|---|---|
@@ -32,7 +32,7 @@ Das Tool listet die Tage nur, wenn die Länge stimmt (Regel B6), und zeigt sonst
 
 ### 5. `uc05`: Angebote der Teilstrecke „gelten nur für diese Teilstrecke“, Beispiel 08 meint ergänzend
 
-`uc05_journey_parts.md` Z. 155 (`d0a8e6d`): „A `ServiceFacilitySet` on a `JourneyPart` is valid for this part only.“ (Stand `b7ac158`, Z. 104: „… overrides the one on the `ServiceJourney` for that section.“) In Beispiel 08 stehen an der Fahrt `firstClass` und `freeWifi` (Kommentar: „the two attributes that are valid for the whole ServiceJourney“) und an den Teilstrecken `bistro` („the restaurant when it is open“); gemeint ist offensichtlich ergänzend, nicht ersetzend. Das Tool zeigt die Angebote der ganzen Fahrt und die der Teilstrecken getrennt und rechnet keine „gültige Menge“ aus (offener Punkt).
+`uc05_journey_parts.md` Z. 155 (`5faccdec`, seit `d0a8e6d` unverändert): „A `ServiceFacilitySet` on a `JourneyPart` is valid for this part only.“ (Stand `b7ac158`, Z. 104: „… overrides the one on the `ServiceJourney` for that section.“) In Beispiel 08 stehen an der Fahrt `firstClass` und `freeWifi` (Kommentar: „the two attributes that are valid for the whole ServiceJourney“) und an den Teilstrecken `bistro` („the restaurant when it is open“); gemeint ist offensichtlich ergänzend, nicht ersetzend. Das Tool zeigt die Angebote der ganzen Fahrt und die der Teilstrecken getrennt und rechnet keine „gültige Menge“ aus (offener Punkt).
 
 ### 6. Kurswagen: `uc08` sagte „kein `JourneyPart`“, Beispiel 21 verwendet `JourneyPart` (aufgelöst in `d0a8e6d`)
 
@@ -60,7 +60,11 @@ Historisch (`b7ac158`): `NJ470_IC60470` hat `FromDate` 2026-01-01T00:00:00 und `
 
 ### 12. Zeitumstellung: Beispielwert `02:33:00Z` liegt nicht in der doppelten Stunde
 
-`08_timetable.md` Z. 102 (`d0a8e6d`): Die zweite Fahrt in der Stunde 02:00–03:00 bekommt eine `DepartureTime` in UTC, „E.g. `02:33:00Z`“. Als UTC gelesen entspricht `02:33:00Z` aber 03:33 MEZ (Winterzeit, UTC+1) und liegt damit nicht in der doppelten Stunde 02:00–03:00 Ortszeit; die doppelte Stunde entspricht in UTC 00:00–01:00 (Sommerzeit) bzw. 01:00–02:00 (Winterzeit). Das Beispiel ist vermutlich ungenau. Daraus wird nichts abgeleitet: Das Tool liest `Z` als UTC und rechnet nicht um ([mapping.md](mapping.md) Z9). Kein Guide-Beispiel enthält eine UTC-Zeit.
+`08_timetable.md` Z. 102 (`5faccdec`, seit `d0a8e6d` unverändert): Die zweite Fahrt in der Stunde 02:00–03:00 bekommt eine `DepartureTime` in UTC, „E.g. `02:33:00Z`“. Als UTC gelesen entspricht `02:33:00Z` aber 03:33 MEZ (Winterzeit, UTC+1) und liegt damit nicht in der doppelten Stunde 02:00–03:00 Ortszeit; die doppelte Stunde entspricht in UTC 00:00–01:00 (Sommerzeit) bzw. 01:00–02:00 (Winterzeit). Das Beispiel ist vermutlich ungenau. Daraus wird nichts abgeleitet: Das Tool liest `Z` als UTC und rechnet nicht um ([mapping.md](mapping.md) Z9). Kein Guide-Beispiel enthält eine UTC-Zeit.
+
+### 13. Neue Entrance-/Assistance-Vorlagen: offene Angaben ohne neue Auslegung
+
+Guide `5faccdec`: `StopPlace.xml` Z. 183 nennt `AssistanceAvailability` weiterhin `optional`, die neue eigenständige Vorlage `AssistanceService.xml` Z. 105 dagegen `expected`. Die neue Vorlage `StopPlaceEntrance.xml` lässt die Behandlung von `LevelAccessIntoVehicle` und `AudibleSignalsAvailable` ausdrücklich offen (Z. 104–105, Kommentare fragen nach `forbidden`, stehen aber auf `optional`); `DroppedKerbOutside` trägt ebenfalls einen Diskussionsvermerk (Z. 127). Der Kapiteltext verwendet unterschiedliche Namen für den Bordstein (`05_stops.md` Z. 284 `DroppedKerb`, Z. 292 `DroppedKerbOutside`; Vorlage Z. 127 `DroppedKerbOutside`). Daraus wird keine zusätzliche Pflicht-, Verbots- oder Ersatzregel abgeleitet. Diese Inhalte werden im Objekt-Explorer/XML gezeigt, ohne fachliche Auswertung oder zusätzliche Profilprüfung ([research/guide-2.0.md](research/guide-2.0.md#guide-update-5faccdec-06112026)).
 
 ## Annahmen des Tools
 
